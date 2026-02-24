@@ -18,3 +18,15 @@ Funcionalidade: Alterar quantidade de ítens um produto
 		Dado que o produto possui zero ítens
 		Quando o usuário clica na opção de diminuir em um a quantidade ítens
 		Então o usuário visualiza que a quantidade de ítens não foi alterada
+
+	Cenário: Erro interno do sistema ao aumentar a quantidade
+		Dado que ocorre um erro interno no sistema
+		Quando o usuário clica na opção de aumentar em um a quantidade de ítens
+		Então o usuário visualiza o mesmo número que estava antes 
+		E uma mensagem informando que não foi possível realizar a alteração
+	
+	Cenário: Erro interno do sistema ao diminuir a quantidade
+		Dado que ocorre um erro interno no sistema
+		Quando o usuário clica na opção de diminuir em um a quantidade de ítens
+		Então o usuário visualiza o mesmo número que estava antes
+		E uma mensagem informando que não foi possível realizar a alteração

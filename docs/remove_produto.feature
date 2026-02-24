@@ -4,11 +4,19 @@ Funcionalidade: Remoção de produtos
 	Para atualizar as informações do inventário
 
 	Contexto:
-		Dado que o usuário está no seu inventário
-		E possui produtos adicionados
+		Dado que o usuário está visualizando os produtos de um tipo de alimento
 
 	Cenário: Remover produto
-		Quando o usuário seleciona um produto do inventário
-		E seleciona a opção "remover"
+		Quando o usuário seleciona um produto
+		E clica na opção de remover este produto do inventário
+		E confirma a remoção
 		Então o usuário visualiza a confirmação de remoção 
-		E retorna para a página inicial do meu inventário
+		E retorna para onde estava antes de realizar a remoção
+	
+	Cenário: Erro interno do sistema
+		Dado que ocorre um erro interno no sistema
+		Quando clica na opção de remover este produto do inventário
+		E clica na opção de remover este produto do inventário
+		E confirma a remoção
+		Então o usuário visualiza o produto no inventário
+		E uma mensagem informando que não foi possível realizar a remoção

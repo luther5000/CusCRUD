@@ -4,7 +4,7 @@ Funcionalidade: Editar um produto
 	Para atualizar as informações do sistema
 
 	Contexto:
-		Dado que o usuário visualiza um produto adicionado
+		Dado que o usuário visualiza os detalhes de um produto adicionado
 		E seleciona a opção de editar produto
 
 	Cenário: Edição do produto
@@ -16,6 +16,7 @@ Funcionalidade: Editar um produto
 	Cenário: Cancelar a ação
 		Quando o usuário insere as novas informações do produto
 		E seleciona o botão "cancelar"
+		E confirma o cancelamento
 		Então o usuário retorna para a tela inicial do seu inventário
 		E nenhuma informação é salva no sistema
 
@@ -32,3 +33,10 @@ Funcionalidade: Editar um produto
 		E confirma a edição das informações
 		Então o sistema informa o usuário que é necessário informar uma quantidade positiva para fazer a adição
 		E nenhuma informação é salva no sistema
+
+	Cenário: Erro interno do sistema
+		Dado que ocorre um erro interno no sistema
+		Quando o usuário insere as novas informações do produto
+		E confirma a edição das informações
+		Então o usuário visualiza as informações que ele inseriu
+		E uma mensagem informando que não foi possível realizar a alteração

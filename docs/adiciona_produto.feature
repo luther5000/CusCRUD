@@ -16,6 +16,7 @@ Funcionalidade: Adicionar novos produtos ao inventário
 	Cenário: Cancelar a ação
 		Quando o usuário insere as informações relacionadas ao novo produto
 		E seleciona o botão "cancelar"
+		E confirma o cancelamento
 		Então o usuário retorna para a tela inicial do seu inventário
 		E nenhuma informação é salva no sistema
 
@@ -32,3 +33,10 @@ Funcionalidade: Adicionar novos produtos ao inventário
 		E clica no botão de adicionar
 		Então o sistema informa o usuário que é necessário informar uma quantidade positiva para fazer a adição
 		E nenhuma informação é salva no sistema
+
+	Cenário: Erro interno do sistema
+		Dado que ocorre um erro interno no sistema
+		Quando o usuário insere as informações relacionadas ao novo produto
+		E clica no botão de adicionar
+		Então o usuário visualiza as informações que havia inserido
+		E uma mensagem informando que não foi possível realizar a inserção
