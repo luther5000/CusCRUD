@@ -99,41 +99,72 @@ RemoverDialogoTela --> RemoverDialogoViewModel : observa
 
 
 class ProdutoRepository{
-    -localRepository: LocalRepository
-    -editaProduto(Produto)
-    -adicionaProduto(Produto)
-    -getProduto(Produto)
-    -removeProduto(Produto)
-    -funcQuePegaTodosOsProdutosDeUmTipo(Tipo)
+    -produtoDatabase: ProdutoDatabase
+    +editaProduto(Produto)
+    +adicionaProduto(Produto)
+    +getProduto(Produto)
+    +removeProduto(Produto)
+    +getProdutosDoTipo(Tipo)
 }
 
-class LocalRepository{
-    -editaProduto(Produto)
-    -adicionaProduto(Produto)
-    -getProduto(Produto)
-    -removeProduto(Produto)
+class ProdutoDatabase{
+    +editaProduto(Produto)
+    +adicionaProduto(Produto)
+    +getProduto(Produto)
+    +removeProduto(Produto)
+    +getTodosProdutosDoTipo(Tipo)
 }
 
-ProdutoRepository --> LocalRepository
+ProdutoRepository --> ProdutoDatabase
 EdicaoProdutoViewModel --> ProdutoRepository
 DetalhesProdutoViewModel --> ProdutoRepository
 ProdutosViewModel --> ProdutoRepository
 AdicionaProdutoViewModel--> ProdutoRepository
 InventarioViewModel --> ProdutoRepository
 
-class Produto {}
+class BuscaTodosProdutos{
+    -produtoRepository: ProdutoRepository
+    -tipoRepository: TipoRepository
+    +getTodosProdutosETipos()
+}
 
-class Tipo{}
+class TipoRepository{
+    -tipoDatabase: TipoDatabase
+    +getTodosTipos()
+}
+
+class TipoDatabase{
+    +getTodosTipos()
+}
+
+BuscaTodosProdutos --> TipoRepository
+BuscaTodosProdutos --> ProdutoRepository
+InventarioViewModel --> BuscaTodosProdutos
+TipoRepository --> TipoDatabase
+
+class Produto {
+    -id: Long
+    -tipo: String
+    -marca: String
+    -data_validade: Date
+    -unidade: Long
+    -unidade_medida: String
+    -quantidade: Long
+}
+
+class Tipo{
+    -id: Long
+    -nome: String
+    -imagem: Imagem
+}
 
 ProdutoRepository ..> Produto
-LocalRepository ..> Produto
 EdicaoProdutoViewModel ..> Produto
 DetalhesProdutoViewModel ..> Produto
 ProdutosViewModel ..> Produto
 AdicionaProdutoViewModel ..> Produto
 InventarioViewModel ..> Produto
 ProdutoRepository ..> Tipo
-LocalRepository ..> Tipo
 EdicaoProdutoViewModel ..> Tipo
 DetalhesProdutoViewModel ..> Tipo
 ProdutosViewModel ..> Tipo

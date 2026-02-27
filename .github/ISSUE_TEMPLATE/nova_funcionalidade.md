@@ -32,7 +32,6 @@ assignees: ''
 
 ---
 
-##  Tarefas Técnicas (Opcional)
-- [ ] Criar a rota na API
-- [ ] Atualizar a tabela no banco de dados
-- [ ] Criar o componente visual no front-end
+## Bloqueios e Dependências
+- [ ] Depende da Issue #__
+- [ ] Sem dependências (Pode ser iniciada imediatamente).
