@@ -31,3 +31,7 @@ replay_pid*
 local.properties
 
 *.swp
+
+# Build files
+build/
+app/build/
