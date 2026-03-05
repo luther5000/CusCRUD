@@ -41,9 +41,16 @@ class RoomDatabaseTest {
     @Test
     @Throws(Exception::class)
     fun writeProdutoAndReadInList() = runBlocking {
+        // First insert a type because of ForeignKey constraint in ProdutoEntity
+        val tipo = TipoEntity(
+            id = 1,
+            nome = "Eletrônico",
+            imagem = byteArrayOf(0x01)
+        )
+        tipoDao.insert(tipo)
         val produto = ProdutoEntity(
             id = 1,
-            tipo = "Eletrônico",
+            tipo = 1,
             marca = "Samsung",
             dataValidade = System.currentTimeMillis(),
             unidade = 1,
@@ -51,6 +58,7 @@ class RoomDatabaseTest {
             quantidade = 10
         )
         produtoDao.insert(produto)
+
         val allProdutos = produtoDao.getAll()
         assertEquals(allProdutos[0].marca, "Samsung")
     }
@@ -58,20 +66,8 @@ class RoomDatabaseTest {
     @Test
     @Throws(Exception::class)
     fun writeTipoAndReadInList() = runBlocking {
-        // First insert a product because of ForeignKey constraint in TipoEntity
-        val produto = ProdutoEntity(
-            id = 1,
-            tipo = "Eletrônico",
-            marca = "Samsung",
-            dataValidade = System.currentTimeMillis(),
-            unidade = 1,
-            unidadeMedida = "un",
-            quantidade = 10
-        )
-        produtoDao.insert(produto)
-
         val tipo = TipoEntity(
-            id = 1, // Must match the product ID due to ForeignKey in your current definition
+            id = 1,
             nome = "Smartphones",
             imagem = byteArrayOf(0x01)
         )

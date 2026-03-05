@@ -5,19 +5,13 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
-@Entity(
-    tableName = "tipo",
-    foreignKeys = [
-        ForeignKey(
-            entity = ProdutoEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["id"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ]
-)
+/**
+ * Modelos de dados representando um tipo de produto.
+ * Essa classe é utilizada pelo banco de dados.
+ */
+@Entity("tipo")
 data class TipoEntity(
-    @PrimaryKey val id: Int,
+    @PrimaryKey(autoGenerate = true) val id: Long,
     val nome: String,
     @ColumnInfo(typeAffinity = ColumnInfo.BLOB) val imagem: ByteArray
 )
