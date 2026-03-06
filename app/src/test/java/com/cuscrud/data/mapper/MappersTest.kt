@@ -9,8 +9,18 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Date
 
+/**
+ * Testes unitários para as funções de mapeamento (Mappers).
+ * 
+ * Estes testes garantem que a conversão entre as entidades do banco de dados (Room Entities)
+ * e os modelos de domínio (Domain Models) ocorra sem perda de dados ou erros de lógica,
+ * permitindo que as camadas de UI e Negócio permaneçam isoladas da persistência.
+ */
 class MappersTest {
 
+    /**
+     * Valida a conversão de [TipoEntity] (Banco) para [Tipo] (Domínio).
+     */
     @Test
     fun tipoEntityToDomainMapping() {
         val image = byteArrayOf(0x01, 0x02)
@@ -23,6 +33,9 @@ class MappersTest {
         assertArrayEquals(entity.imagem, domain.imagem)
     }
 
+    /**
+     * Valida a conversão de [Tipo] (Domínio) para [TipoEntity] (Banco).
+     */
     @Test
     fun tipoDomainToEntityMapping() {
         val image = byteArrayOf(0x03, 0x04)
@@ -35,6 +48,10 @@ class MappersTest {
         assertArrayEquals(domain.imagem, entity.imagem)
     }
 
+    /**
+     * Valida a conversão de [ProdutoEntity] (Banco) para [Produto] (Domínio).
+     * Verifica também se o objeto [Tipo] aninhado é mapeado corretamente.
+     */
     @Test
     fun produtoEntityToDomainMapping() {
         val date = Date()
@@ -58,11 +75,15 @@ class MappersTest {
         assertEquals(entity.unidadeMedida, domain.unidadeMedida)
         assertEquals(entity.quantidade, domain.quantidade)
         
-        // Verify nested Tipo mapping
+        // Verifica o mapeamento do Tipo aninhado
         assertEquals(tipoEntity.id, domain.tipo.id)
         assertEquals(tipoEntity.nome, domain.tipo.nome)
     }
 
+    /**
+     * Valida a conversão de [Produto] (Domínio) para [ProdutoEntity] (Banco).
+     * Garante que o ID do tipo e a data em milissegundos sejam preservados.
+     */
     @Test
     fun produtoDomainToEntityMapping() {
         val date = Date()

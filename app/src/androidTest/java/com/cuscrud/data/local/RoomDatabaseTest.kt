@@ -16,12 +16,24 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.IOException
 
+/**
+ * Testes de integração de baixo nível para o banco de dados Room.
+ * 
+ * Esta classe testa diretamente os DAOs ([ProdutoDao] e [TipoDao]) usando um banco de dados
+ * em memória. O objetivo é validar se as queries SQL, restrições de chave estrangeira
+ * e mapeamentos do Room estão funcionando conforme o esperado antes de testar o repositório.
+ */
 @RunWith(AndroidJUnit4::class)
 class RoomDatabaseTest {
     private lateinit var produtoDao: ProdutoDao
     private lateinit var tipoDao: TipoDao
     private lateinit var db: AppDatabase
 
+    /**
+     * Cria uma instância temporária do banco de dados em memória antes de cada teste.
+     * Bancos de dados em memória são ideais para testes pois são rápidos e os dados
+     * são descartados automaticamente quando o processo termina.
+     */
     @Before
     fun createDb() {
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -32,22 +44,32 @@ class RoomDatabaseTest {
         tipoDao = db.tipoDao()
     }
 
+    /**
+     * Fecha o banco de dados após a execução de cada teste para liberar recursos.
+     */
     @After
     @Throws(IOException::class)
     fun closeDb() {
         db.close()
     }
 
+    /**
+     * Testa a inserção e leitura de um produto.
+     * 
+     * Nota: Como existe uma restrição de Chave Estrangeira (ForeignKey) na entidade Produto,
+     * é necessário inserir um [TipoEntity] correspondente antes de inserir o produto.
+     */
     @Test
     @Throws(Exception::class)
     fun writeProdutoAndReadInList() = runBlocking {
-        // First insert a type because of ForeignKey constraint in ProdutoEntity
+        // Primeiro insere um tipo devido à restrição de chave estrangeira em ProdutoEntity
         val tipo = TipoEntity(
             id = 1,
             nome = "Eletrônico",
             imagem = byteArrayOf(0x01)
         )
         tipoDao.insert(tipo)
+        
         val produto = ProdutoEntity(
             id = 1,
             tipo = 1,
@@ -59,10 +81,14 @@ class RoomDatabaseTest {
         )
         produtoDao.insert(produto)
 
+        // Recupera a lista diretamente do DAO (chamada suspend)
         val allProdutos = produtoDao.getAll()
         assertEquals(allProdutos[0].marca, "Samsung")
     }
 
+    /**
+     * Testa a inserção e leitura de uma categoria (Tipo).
+     */
     @Test
     @Throws(Exception::class)
     fun writeTipoAndReadInList() = runBlocking {
@@ -72,6 +98,7 @@ class RoomDatabaseTest {
             imagem = byteArrayOf(0x01)
         )
         tipoDao.insert(tipo)
+
         val allTipos = tipoDao.getAll()
         assertEquals(allTipos[0].nome, "Smartphones")
     }

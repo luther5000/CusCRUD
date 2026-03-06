@@ -7,7 +7,7 @@ import com.cuscrud.domain.model.Tipo
 import java.util.Date
 
 /**
- * Maps [TipoEntity] (Database) to [Tipo] (Domain)
+ * Mapeia [TipoEntity] (Banco de Dados) para [Tipo] (Domínio)
  */
 fun TipoEntity.toDomain(): Tipo {
     return Tipo(
@@ -18,7 +18,7 @@ fun TipoEntity.toDomain(): Tipo {
 }
 
 /**
- * Maps [Tipo] (Domain) to [TipoEntity] (Database)
+ * Mapeia [Tipo] (Domínio) para [TipoEntity] (Banco de Dados)
  */
 fun Tipo.toEntity(): TipoEntity {
     return TipoEntity(
@@ -29,7 +29,7 @@ fun Tipo.toEntity(): TipoEntity {
 }
 
 /**
- * Maps [ProdutoEntity] (Database) and [TipoEntity] (Database) to [Produto] (Domain)
+ * Mapeia [ProdutoEntity] (Banco de Dados) e [TipoEntity] (Banco de Dados) para [Produto] (Domínio)
  */
 fun ProdutoEntity.toDomain(tipoEntity: TipoEntity): Produto {
     return Produto(
@@ -44,7 +44,7 @@ fun ProdutoEntity.toDomain(tipoEntity: TipoEntity): Produto {
 }
 
 /**
- * Maps [Produto] (Domain) to [ProdutoEntity] (Database)
+ * Mapeia [Produto] (Domínio) para [ProdutoEntity] (Banco de Dados)
  */
 fun Produto.toEntity(): ProdutoEntity {
     return ProdutoEntity(

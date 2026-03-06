@@ -6,8 +6,12 @@ import androidx.test.runner.AndroidJUnitRunner
 import dagger.hilt.android.testing.HiltTestApplication
 
 /**
- * A custom [AndroidJUnitRunner] used to replace the application [Application]
- * with a [HiltTestApplication].
+ * Um [AndroidJUnitRunner] personalizado usado para substituir a [Application] padrão
+ * pela [HiltTestApplication].
+ *
+ * Isso é necessário para que os testes instrumentados (androidTest) que utilizam o Hilt
+ * possam funcionar corretamente, fornecendo um ambiente onde a injeção de dependência
+ * está disponível durante a execução dos testes no dispositivo.
  */
 class CustomTestRunner : AndroidJUnitRunner() {
 

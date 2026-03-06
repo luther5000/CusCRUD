@@ -35,7 +35,7 @@ class OfflineTipoRepository @Inject constructor(
     override suspend fun editTipo(id: Long, tipo: Tipo): Tipo? {
         val existingEntity = tipoDao.getById(id) ?: return null
         
-        // Update fields if they are not empty/default
+        // Atualiza os campos se eles não estiverem vazios/padrão
         val updatedEntity = existingEntity.copy(
             nome = tipo.nome.ifEmpty { existingEntity.nome },
             imagem = if (tipo.imagem.isNotEmpty()) tipo.imagem else existingEntity.imagem
