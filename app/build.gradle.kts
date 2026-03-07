@@ -58,6 +58,16 @@ android {
         }
     }
 
+    sourceSets {
+        val sharedTestDir = "src/sharedTest/java"
+        getByName("test") {
+            java.srcDirs(sharedTestDir)
+        }
+        getByName("androidTest") {
+            java.srcDirs(sharedTestDir)
+        }
+    }
+
     // Always show the result of every unit test, even if it passes.
     testOptions.unitTests {
         isIncludeAndroidResources = true
