@@ -12,7 +12,8 @@ class MainActivity{
     +onStop()
 }
 
-class InventarioTela{
+namespace CusCRUD_front{
+  class InventarioTela{
     <<Composable>>
     -viewModel: InventarioViewModel
     +onViewCreated()
@@ -22,7 +23,6 @@ class InventarioViewModel{
     -estadoEstoque: StateFlow~List~Produto~~
     +buscarProdutos()
 }
-InventarioTela --> InventarioViewModel : observa
 
 class AdicionaProdutoTela{
     <<Composable>>
@@ -34,7 +34,6 @@ class AdicionaProdutoViewModel{
     -estadoCadastro: StateFlow~StatusCadastro~
     +salvarProduto(Produto)
 }
-AdicionaProdutoTela --> AdicionaProdutoViewModel : "observa"
 
 class ProdutosTela{
     <<Composable>>
@@ -46,7 +45,6 @@ class ProdutosViewModel{
     -estadoProdutos: StateFlow~List~Produto~~
     +carregarProdutos()
 }
-ProdutosTela --> ProdutosViewModel : observa
 
 class DetalhesProdutoTela{
     <<Composable>>
@@ -58,7 +56,6 @@ class DetalhesProdutoViewModel{
     -produtoAtual: StateFlow~Produto~
     +carregarDetalhes(Produto)
 }
-DetalhesProdutoTela --> DetalhesProdutoViewModel : "observa"
 
 class EdicaoProdutoTela{
     <<Composable>>
@@ -71,7 +68,6 @@ class EdicaoProdutoViewModel{
     +carregarDadosDoProduto(Produto)
     +salvarAlteracoes(Produto)
 }
-EdicaoProdutoTela --> EdicaoProdutoViewModel : observa
 
 class CancelarDialogoTela{
     <<Composable>>
@@ -83,7 +79,6 @@ class CancelarDialogoViewModel{
     -eventoCancelado: StateFlow~Boolean~
     +confirmarCancelamento()
 }
-CancelarDialogoTela --> CancelarDialogoViewModel : observa
 
 class RemoverDialogoTela{
     <<Composable>>
@@ -95,69 +90,21 @@ class RemoverDialogoViewModel{
     -estadoRemocao: StateFlow~StatusRemocao~
     +confirmarRemocao(Produto)
 }
-RemoverDialogoTela --> RemoverDialogoViewModel : observa
-
-
-class ProdutoRepository{
-    -produtoDatabase: ProdutoDatabase
-    +editaProduto(Produto)
-    +adicionaProduto(Produto)
-    +getProduto(Produto)
-    +removeProduto(Produto)
-    +getProdutosDoTipo(Tipo)
 }
 
-class ProdutoDatabase{
-    +editaProduto(Produto)
-    +adicionaProduto(Produto)
-    +getProduto(Produto)
-    +removeProduto(Produto)
-    +getTodosProdutosDoTipo(Tipo)
-}
+AdicionaProdutoTela --> AdicionaProdutoViewModel : "observa"
+ProdutosTela --> ProdutosViewModel : "observa"
+EdicaoProdutoTela --> EdicaoProdutoViewModel : "observa"
+DetalhesProdutoTela --> DetalhesProdutoViewModel : "observa"
+CancelarDialogoTela --> CancelarDialogoViewModel : "observa"
+InventarioTela --> InventarioViewModel : "observa"
+RemoverDialogoTela --> RemoverDialogoViewModel : "observa"
 
-ProdutoRepository --> ProdutoDatabase
 EdicaoProdutoViewModel --> ProdutoRepository
 DetalhesProdutoViewModel --> ProdutoRepository
 ProdutosViewModel --> ProdutoRepository
 AdicionaProdutoViewModel--> ProdutoRepository
 InventarioViewModel --> ProdutoRepository
-
-class BuscaTodosProdutos{
-    -produtoRepository: ProdutoRepository
-    -tipoRepository: TipoRepository
-    +getTodosProdutosETipos()
-}
-
-class TipoRepository{
-    -tipoDatabase: TipoDatabase
-    +getTodosTipos()
-}
-
-class TipoDatabase{
-    +getTodosTipos()
-}
-
-BuscaTodosProdutos --> TipoRepository
-BuscaTodosProdutos --> ProdutoRepository
-InventarioViewModel --> BuscaTodosProdutos
-TipoRepository --> TipoDatabase
-
-class Produto {
-    -id: Long
-    -tipo: String
-    -marca: String
-    -data_validade: Date
-    -unidade: Long
-    -unidade_medida: String
-    -quantidade: Long
-}
-
-class Tipo{
-    -id: Long
-    -nome: String
-    -imagem: Imagem
-}
-
 ProdutoRepository ..> Produto
 EdicaoProdutoViewModel ..> Produto
 DetalhesProdutoViewModel ..> Produto
@@ -170,5 +117,127 @@ DetalhesProdutoViewModel ..> Tipo
 ProdutosViewModel ..> Tipo
 AdicionaProdutoViewModel ..> Tipo
 InventarioViewModel ..> Tipo
+
+  namespace CusCRUD_data {
+    class DatabaseModule {
+      + provideDatabase() AppDatabase
+      + provideProdutoDao() ProdutoDao
+      + provideTipoDao() TipoDao
+    }
+    class RepositoryModule {
+      + bindProdutoRepository() ProdutoRepository
+      + bindTipoRepository() TipoRepository
+    }
+    class TipoDao {
+      <<interface>>
+      + getAll() List~TipoEntity~
+      + getAllFlow() Flow~List~TipoEntity~~
+      + getById() Object?
+      + insert() Object
+      + update() Object
+      + delete() Object
+    }
+    class ProdutoDao {
+      <<interface>>
+      + getAll() Object
+      + getAllFlow() Flow~List~ProdutoEntity~~
+      + getById() Object?
+      + getByTipo() Flow~List~ProdutoEntity~~
+      + insert() Object
+      + update() Object
+      + delete() Object
+    }
+    class TipoEntity {
+      - id : long
+      - nome : String
+      - imagem : byte[]
+    }
+    class ProdutoEntity {
+      - id : int
+      - tipo : long
+      - marca : String
+      - dataValidade : long
+      - unidade : long
+      - unidadeMedida : String
+      - quantidade : long
+    }
+    class Converters {
+      + fromTimestamp() Date?
+      + dateToTimestamp() Long?
+    }
+    class AppDatabase_Companion["AppDatabase.Companion"] {
+      <<inner>>
+    }
+    class AppDatabase {
+      + Companion : Companion
+      + produtoDao() ProdutoDao
+      + tipoDao() TipoDao
+    }
+    class MappersKt {
+      + toDomain() Tipo
+      + toEntity() TipoEntity
+      + toDomain() Produto
+      + toEntity() ProdutoEntity
+    }
+    class OfflineTipoRepository {
+      - tipoDao : TipoDao
+      + getAllTipos() Flow~List~Tipo~~
+      + insertTipo() Object
+      + removeTipo() Object?
+      + editTipo() Object?
+    }
+    class OfflineProdutoRepository {
+      - produtoDao : ProdutoDao
+      - tipoDao : TipoDao
+      + getAllProdutos() Flow~List~Produto~~
+      + insertProduto() Object
+      + removeProduto() Object?
+      + getProdutosByTipo() Flow~List~Produto~~
+      + editProduto() Object?
+    }
+  
+    class TipoRepository {
+      <<interface>>
+      + getAllTipos() Flow~List~Tipo~~
+      + insertTipo() Object
+      + removeTipo() Object?
+      + editTipo() Object?
+    }
+    class ProdutoRepository {
+      <<interface>>
+      + getAllProdutos() Flow~List~Produto~~
+      + insertProduto() Object
+      + removeProduto() Object?
+      + getProdutosByTipo() Flow~List~Produto~~
+      + editProduto() Object?
+    }
+    
+  }
+
+  namespace CusCRUD_entities{
+    class Tipo {
+      - id : long
+      - nome : String
+      - imagem : byte[]
+    }
+    class Produto {
+      - id : int
+      - tipo : Tipo
+      - marca : String
+      - dataValidade : Date
+      - unidade : long
+      - unidadeMedida : String
+      - quantidade : long
+    }
+  }
+    
+AppDatabase .. AppDatabase_Companion
+TipoRepository <|.. OfflineTipoRepository
+OfflineTipoRepository --> TipoDao
+ProdutoRepository <|.. OfflineProdutoRepository
+OfflineProdutoRepository --> ProdutoDao
+OfflineProdutoRepository --> TipoDao
+Produto --> Tipo
+
 
 ```
