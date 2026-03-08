@@ -36,4 +36,11 @@ interface ProdutoRepository {
      * @return O [Produto] atualizado ou null se não houver produto com o id especificado.
      */
     suspend fun editProduto(id: Int, produto: Produto): Produto?
+
+    /**
+     * Retorna um produto especifico pelo seu [id].
+     * @param id O identificador único do produto.
+     * @return O [Produto] encontrado ou null caso não exista.
+     */
+    suspend fun getProdutoById(id: Int): Produto?
 }

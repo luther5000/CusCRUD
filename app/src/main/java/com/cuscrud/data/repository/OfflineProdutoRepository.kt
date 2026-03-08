@@ -68,4 +68,10 @@ class OfflineProdutoRepository @Inject constructor(
         val typeEntity = types.find { it.id == updatedEntity.tipo } ?: return null
         return updatedEntity.toDomain(typeEntity)
     }
+
+    override suspend fun getProdutoById(id: Int): Produto? {
+        val entity = produtoDao.getById(id) ?: return null
+        val typeEntity = tipoDao.getById(entity.tipo) ?: return null
+        return entity.toDomain(typeEntity)
+    }
 }
