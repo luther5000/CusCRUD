@@ -1,11 +1,11 @@
 package com.cuscrud.presentation.inventario
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -13,7 +13,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,7 +23,8 @@ import com.cuscrud.domain.model.Tipo
 @Composable
 fun InventarioScreen(
     viewModel: InventarioViewModel,
-    onTipoSelected: (Long) -> Unit
+    onTipoSelected: (Long) -> Unit,
+    onAddSampleData: () -> Unit // Callback para o botão de teste
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -37,6 +37,14 @@ fun InventarioScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddSampleData,
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Teste")
+            }
         }
     ) { padding ->
         Box(
@@ -54,10 +62,6 @@ fun InventarioScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(onClick = { /* Implementar reload se necessário */ }) {
-                            Text("Tentar Novamente")
-                        }
                     }
                 }
                 is InventarioUiState.Success -> {
@@ -78,7 +82,7 @@ fun InventarioList(
 ) {
     if (inventario.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Nenhum produto no inventário.")
+            Text("Nenhum produto. Use o botão + para testar.")
         }
     } else {
         LazyColumn(

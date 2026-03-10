@@ -7,8 +7,10 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.cuscrud.MainActivity
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesScreen
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesViewModel
+import com.cuscrud.presentation.home.HomeScreen
 import com.cuscrud.presentation.inventario.InventarioScreen
 import com.cuscrud.presentation.inventario.InventarioViewModel
 import com.cuscrud.presentation.produtos.ProdutosPorTipoScreen
@@ -16,20 +18,22 @@ import com.cuscrud.presentation.produtos.ProdutosPorTipoViewModel
 
 @Composable
 fun CusCrudNavGraph(
-    navController: NavHostController
+    navController: NavHostController,
+    mainActivity: MainActivity
 ) {
     NavHost(
         navController = navController,
         startDestination = "inventario"
     ) {
-        // Cenário 1: Inventário Geral
+        // Cenário 1: Inventário Geral (Agora a Tela Inicial)
         composable("inventario") {
             val viewModel = hiltViewModel<InventarioViewModel>()
             InventarioScreen(
                 viewModel = viewModel,
                 onTipoSelected = { tipoId ->
                     navController.navigate("produtos/$tipoId")
-                }
+                },
+                onAddSampleData = { mainActivity.viewModel.addSampleProduct() }
             )
         }
 
@@ -57,6 +61,14 @@ fun CusCrudNavGraph(
             ProdutoDetalhesScreen(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+        
+        // Mantida para referência de teste se necessário
+        composable("home") {
+            HomeScreen(
+                onNavigateToInventario = { navController.navigate("inventario") },
+                onAddSampleData = { mainActivity.viewModel.addSampleProduct() }
             )
         }
     }
