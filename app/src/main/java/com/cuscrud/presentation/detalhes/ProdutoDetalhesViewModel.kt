@@ -24,7 +24,7 @@ class ProdutoDetalhesViewModel @Inject constructor(
         .map { result ->
             when (result) {
                 is Result.Success -> ProdutoDetalhesUiState.Success(result.data)
-                is Result.Error -> ProdutoDetalhesUiState.Error(result.exception.message ?: "Erro desconhecido")
+                is Result.Error -> ProdutoDetalhesUiState.Error(result.exception.message ?: "Erro: Não foi possivel recuperar os dados desse produto, tente novamente mais tarde.")
                 is Result.Loading -> ProdutoDetalhesUiState.Loading
             }
         }

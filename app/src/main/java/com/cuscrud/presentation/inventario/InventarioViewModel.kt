@@ -24,7 +24,7 @@ class InventarioViewModel @Inject constructor(
         .map { result ->
             when (result) {
                 is Result.Success -> InventarioUiState.Success(result.data)
-                is Result.Error -> InventarioUiState.Error(result.exception.message ?: "Erro desconhecido")
+                is Result.Error -> InventarioUiState.Error(result.exception.message ?: "Erro: Não foi possivel carregar os dados do inventário, tente novamente mais tarde.")
                 is Result.Loading -> InventarioUiState.Loading
             }
         }

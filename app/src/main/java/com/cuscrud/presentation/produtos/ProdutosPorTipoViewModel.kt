@@ -26,7 +26,7 @@ class ProdutosPorTipoViewModel @Inject constructor(
         .map { result ->
             when (result) {
                 is Result.Success -> ProdutosPorTipoUiState.Success(result.data)
-                is Result.Error -> ProdutosPorTipoUiState.Error(result.exception.message ?: "Erro desconhecido")
+                is Result.Error -> ProdutosPorTipoUiState.Error(result.exception.message ?: "Erro: Não foi possivel carregar os dados dos produtos desse tipo, tente novamente mais tarde.")
                 is Result.Loading -> ProdutosPorTipoUiState.Loading
             }
         }
