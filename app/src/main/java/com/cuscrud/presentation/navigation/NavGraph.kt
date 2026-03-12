@@ -10,7 +10,6 @@ import androidx.navigation.navArgument
 import com.cuscrud.MainActivity
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesScreen
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesViewModel
-import com.cuscrud.presentation.home.HomeScreen
 import com.cuscrud.presentation.inventario.InventarioScreen
 import com.cuscrud.presentation.inventario.InventarioViewModel
 import com.cuscrud.presentation.produtos.ProdutosPorTipoScreen
@@ -25,7 +24,7 @@ fun CusCrudNavGraph(
         navController = navController,
         startDestination = "inventario"
     ) {
-        // Cenário 1: Inventário Geral (Agora a Tela Inicial)
+        // Cenário 1: Inventário Geral
         composable("inventario") {
             val viewModel = hiltViewModel<InventarioViewModel>()
             InventarioScreen(
@@ -61,14 +60,6 @@ fun CusCrudNavGraph(
             ProdutoDetalhesScreen(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStack() }
-            )
-        }
-        
-        // Mantida para referência de teste se necessário
-        composable("home") {
-            HomeScreen(
-                onNavigateToInventario = { navController.navigate("inventario") },
-                onAddSampleData = { mainActivity.viewModel.addSampleProduct() }
             )
         }
     }
