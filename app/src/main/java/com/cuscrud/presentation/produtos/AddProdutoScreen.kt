@@ -22,7 +22,7 @@ import java.util.*
 @Composable
 fun AddProdutoScreen(
     viewModel: AddProdutoViewModel,
-    onBackClick: () -> Unit
+    onBackClick: (Boolean) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -38,14 +38,19 @@ fun AddProdutoScreen(
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.snackbarMessageShown()
+            // Só exibe o snackbar se NÃO for sucesso (erros ou validações)
+            // A mensagem de sucesso será exibida na tela anterior.
+            if (!uiState.isProductAdded) {
+                snackbarHostState.showSnackbar(it)
+                viewModel.snackbarMessageShown()
+            }
         }
     }
 
     LaunchedEffect(uiState.isProductAdded) {
         if (uiState.isProductAdded) {
-            onBackClick()
+            // Navega de volta indicando sucesso
+            onBackClick(true)
         }
     }
 
@@ -57,7 +62,7 @@ fun AddProdutoScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showExitConfirmation = false
-                    onBackClick()
+                    onBackClick(false)
                 }) {
                     Text("Confirmar")
                 }
@@ -127,7 +132,7 @@ fun AddProdutoScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Data de Validade - Clique em qualquer lugar do campo
+            // Data de Validade
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -151,7 +156,7 @@ fun AddProdutoScreen(
                     value = dateFormatter.format(uiState.dataValidade),
                     onValueChange = {},
                     readOnly = true,
-                    enabled = false, // Desabilitado para que o clique seja capturado pelo Box
+                    enabled = false,
                     label = { Text("Data de Validade") },
                     trailingIcon = {
                         Icon(Icons.Default.CalendarToday, contentDescription = "Selecionar Data")

@@ -31,6 +31,7 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<InventarioViewModel>()
             InventarioScreen(
                 viewModel = viewModel,
+                navController = navController,
                 onTipoSelected = { tipoId ->
                     navController.navigate("produtos/$tipoId")
                 },
@@ -50,6 +51,7 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<ProdutosPorTipoViewModel>()
             ProdutosPorTipoScreen(
                 viewModel = viewModel,
+                navController = navController,
                 onBackClick = { navController.popBackStack() },
                 onProdutoClick = { produtoId ->
                     navController.navigate("detalhes/$produtoId")
@@ -71,7 +73,14 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<AddProdutoViewModel>()
             AddProdutoScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { success ->
+                    if (success) {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("product_added_success", true)
+                    }
+                    navController.popBackStack() 
+                }
             )
         }
 
