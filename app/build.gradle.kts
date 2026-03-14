@@ -33,6 +33,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // Corrigido para sintaxe KTS e Runner correto
         testInstrumentationRunner = "com.cuscrud.CustomTestRunner"
 
         javaCompileOptions {
@@ -65,6 +66,7 @@ android {
         }
         getByName("androidTest") {
             java.srcDirs(sharedTestDir)
+            assets.srcDirs("src/androidTest/assets")
         }
     }
 

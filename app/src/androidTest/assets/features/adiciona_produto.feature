@@ -1,3 +1,5 @@
+# language: pt
+
 Funcionalidade: Adicionar novos produtos ao inventário
 	Como usuário do sistema
 	Quero adicionar um novo produto ao meu inventário
@@ -11,7 +13,7 @@ Funcionalidade: Adicionar novos produtos ao inventário
 		E clica no botão de adicionar
 		Então o sistema informa o usuário que o produto foi adicionado com sucesso
 		E o usuário retorna para a tela inicial do seu inventário
-		E o novo produto passa a ser contabilizado na listagem
+		E o novo produto passa a ser listado na sua categoria
 
 	Cenário: Cancelar a ação
 		Quando o usuário insere as informações relacionadas ao novo produto

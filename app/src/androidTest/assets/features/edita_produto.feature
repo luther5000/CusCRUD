@@ -1,3 +1,5 @@
+# language: pt
+
 Funcionalidade: Editar um produto
 	Como usuário do sistema
 	Quero alterar as informações de um produto

@@ -1,3 +1,5 @@
+# language: pt
+
 Funcionalidade: Alterar quantidade de ítens um produto
 	Como usuário do sistema
 	Quero alterar a quantidade de ítens de um produto
