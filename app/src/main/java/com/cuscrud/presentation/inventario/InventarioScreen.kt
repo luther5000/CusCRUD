@@ -23,6 +23,7 @@ import com.cuscrud.domain.model.Tipo
 fun InventarioScreen(
     viewModel: InventarioViewModel,
     onTipoSelected: (Long) -> Unit,
+    onAddProdutoClick: () -> Unit,
     onAddSampleData: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -38,11 +39,12 @@ fun InventarioScreen(
             )
         },
         floatingActionButton = {
+            // O botão principal agora navega para a tela de adicionar produto
             FloatingActionButton(
-                onClick = onAddSampleData,
+                onClick = onAddProdutoClick,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Teste")
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
             }
         }
     ) { padding ->
@@ -97,12 +99,10 @@ fun InventarioList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             inventario.forEach { (tipo, produtos) ->
-                // 1. Cálculo consolidado por Tipo (Requisito da Review)
                 val totalQuantidade = produtos.sumOf { it.quantidade }
                 val unidadeMedida = produtos.firstOrNull()?.unidadeMedida ?: ""
 
                 item {
-                    // 2. Exibição de apenas um item por tipo com o total acumulado
                     TipoSummaryItem(
                         tipo = tipo,
                         totalQuantidade = totalQuantidade,
@@ -144,7 +144,6 @@ fun TipoSummaryItem(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                // Destaque para o estoque total consolidado
                 Text(
                     text = "Total em estoque: $totalQuantidade $unidadeMedida",
                     style = MaterialTheme.typography.bodyLarge,

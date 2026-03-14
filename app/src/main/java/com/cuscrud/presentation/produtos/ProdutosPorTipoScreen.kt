@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,7 +24,8 @@ import java.util.*
 fun ProdutosPorTipoScreen(
     viewModel: ProdutosPorTipoViewModel,
     onBackClick: () -> Unit,
-    onProdutoClick: (Int) -> Unit
+    onProdutoClick: (Int) -> Unit,
+    onAddProdutoClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -37,6 +39,11 @@ fun ProdutosPorTipoScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddProdutoClick) {
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+            }
         }
     ) { padding ->
         Box(
@@ -101,7 +108,7 @@ fun ProdutoListItem(produto: Produto, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Qtd: ${produto.quantidade} ${produto.unidadeMedida}")
+                Text(text = "Qtd: ${produto.quantidade} (${produto.unidade} ${produto.unidadeMedida})")
                 Text(
                     text = "Validade: ${dateFormatter.format(produto.dataValidade)}",
                     style = MaterialTheme.typography.bodySmall
