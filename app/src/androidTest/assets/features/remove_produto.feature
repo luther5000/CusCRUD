@@ -1,3 +1,5 @@
+# language: pt
+
 Funcionalidade: Remoção de produtos
 	Como usuário do sistema
 	Quero remover um produto do meu inventário

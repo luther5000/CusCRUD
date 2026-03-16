@@ -7,14 +7,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
 
@@ -22,10 +22,27 @@ import com.cuscrud.domain.model.Tipo
 @Composable
 fun InventarioScreen(
     viewModel: InventarioViewModel,
+    navController: NavController,
     onTipoSelected: (Long) -> Unit,
+    onAddProdutoClick: () -> Unit,
     onAddSampleData: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Escuta o sinal de sucesso usando StateFlow do savedStateHandle ( abordagem moderna )
+    val successAdded by navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow("product_added_success", false)
+        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+
+    LaunchedEffect(successAdded) {
+        if (successAdded) {
+            snackbarHostState.showSnackbar("Produto adicionado com sucesso")
+            // Limpa o sinal para evitar repetição
+            navController.currentBackStackEntry?.savedStateHandle?.set("product_added_success", false)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -37,12 +54,13 @@ fun InventarioScreen(
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onAddSampleData,
+                onClick = onAddProdutoClick,
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Teste")
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
             }
         }
     ) { padding ->
@@ -97,12 +115,10 @@ fun InventarioList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             inventario.forEach { (tipo, produtos) ->
-                // 1. Cálculo consolidado por Tipo (Requisito da Review)
                 val totalQuantidade = produtos.sumOf { it.quantidade }
                 val unidadeMedida = produtos.firstOrNull()?.unidadeMedida ?: ""
 
                 item {
-                    // 2. Exibição de apenas um item por tipo com o total acumulado
                     TipoSummaryItem(
                         tipo = tipo,
                         totalQuantidade = totalQuantidade,
@@ -144,7 +160,6 @@ fun TipoSummaryItem(
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                // Destaque para o estoque total consolidado
                 Text(
                     text = "Total em estoque: $totalQuantidade $unidadeMedida",
                     style = MaterialTheme.typography.bodyLarge,

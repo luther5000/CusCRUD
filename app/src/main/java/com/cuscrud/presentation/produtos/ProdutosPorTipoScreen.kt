@@ -6,14 +6,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import java.text.SimpleDateFormat
 import java.util.*
@@ -22,10 +23,27 @@ import java.util.*
 @Composable
 fun ProdutosPorTipoScreen(
     viewModel: ProdutosPorTipoViewModel,
+    navController: NavController,
     onBackClick: () -> Unit,
-    onProdutoClick: (Int) -> Unit
+    onProdutoClick: (Int) -> Unit,
+    onAddProdutoClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Escuta o sinal de sucesso usando StateFlow (Abordagem sem LiveData)
+    val successAdded by navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow("product_added_success", false)
+        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+
+    LaunchedEffect(successAdded) {
+        if (successAdded) {
+            snackbarHostState.showSnackbar("Produto adicionado com sucesso")
+            // Limpa o sinal
+            navController.currentBackStackEntry?.savedStateHandle?.set("product_added_success", false)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -37,6 +55,12 @@ fun ProdutosPorTipoScreen(
                     }
                 }
             )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(onClick = onAddProdutoClick) {
+                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+            }
         }
     ) { padding ->
         Box(
@@ -101,7 +125,7 @@ fun ProdutoListItem(produto: Produto, onClick: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = "Qtd: ${produto.quantidade} ${produto.unidadeMedida}")
+                Text(text = "Qtd: ${produto.quantidade} (${produto.unidade} ${produto.unidadeMedida})")
                 Text(
                     text = "Validade: ${dateFormatter.format(produto.dataValidade)}",
                     style = MaterialTheme.typography.bodySmall

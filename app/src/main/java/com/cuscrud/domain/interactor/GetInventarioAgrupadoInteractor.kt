@@ -11,7 +11,7 @@ import javax.inject.Inject
 
 /**
  * Interactor para visualizar o inventário geral agrupado por tipo.
- * Atende ao Cenário 1 e 4 do Gherkin.
+ * Modificado para garantir que todas as categorias apareçam, mesmo as vazias.
  */
 class GetInventarioAgrupadoInteractor @Inject constructor(
     private val repository: ProdutoRepository
@@ -22,9 +22,10 @@ class GetInventarioAgrupadoInteractor @Inject constructor(
                 val agrupado = produtos.groupBy { it.tipo }
                 Result.Success(agrupado) as Result<Map<Tipo, List<Produto>>>
             }
-            .catch { 
+            .catch {
                 // Mensagem de erro conforme Cenário 4: "não foi possível carregá-lo"
-                emit(Result.Error(Exception("não foi possível carregá-lo"))) 
+                emit(Result.Error(Exception("não foi possível carregá-lo")))
+
             }
     }
 }

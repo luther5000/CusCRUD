@@ -12,6 +12,8 @@ import com.cuscrud.presentation.detalhes.ProdutoDetalhesScreen
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesViewModel
 import com.cuscrud.presentation.inventario.InventarioScreen
 import com.cuscrud.presentation.inventario.InventarioViewModel
+import com.cuscrud.presentation.produtos.AddProdutoScreen
+import com.cuscrud.presentation.produtos.AddProdutoViewModel
 import com.cuscrud.presentation.produtos.ProdutosPorTipoScreen
 import com.cuscrud.presentation.produtos.ProdutosPorTipoViewModel
 
@@ -29,8 +31,12 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<InventarioViewModel>()
             InventarioScreen(
                 viewModel = viewModel,
+                navController = navController,
                 onTipoSelected = { tipoId ->
                     navController.navigate("produtos/$tipoId")
+                },
+                onAddProdutoClick = {
+                    navController.navigate("add_produto")
                 },
                 onAddSampleData = { mainActivity.viewModel.addSampleProduct() }
             )
@@ -41,12 +47,39 @@ fun CusCrudNavGraph(
             route = "produtos/{tipoId}",
             arguments = listOf(navArgument("tipoId") { type = NavType.LongType })
         ) {
+            val tipoId = it.arguments?.getLong("tipoId") ?: 0L
             val viewModel = hiltViewModel<ProdutosPorTipoViewModel>()
             ProdutosPorTipoScreen(
                 viewModel = viewModel,
+                navController = navController,
                 onBackClick = { navController.popBackStack() },
                 onProdutoClick = { produtoId ->
                     navController.navigate("detalhes/$produtoId")
+                },
+                onAddProdutoClick = { navController.navigate("add_produto?tipoId=$tipoId") }
+            )
+        }
+
+        // Cenário para Adicionar Produto (com tipoId opcional)
+        composable(
+            route = "add_produto?tipoId={tipoId}",
+            arguments = listOf(
+                navArgument("tipoId") { 
+                    type = NavType.LongType
+                    defaultValue = -1L
+                }
+            )
+        ) {
+            val viewModel = hiltViewModel<AddProdutoViewModel>()
+            AddProdutoScreen(
+                viewModel = viewModel,
+                onBackClick = { success ->
+                    if (success) {
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("product_added_success", true)
+                    }
+                    navController.popBackStack() 
                 }
             )
         }

@@ -1,3 +1,5 @@
+# language: pt
+
 Funcionalidade: Visualização de inventário e produtos
 	Como usuário do sistema
 	Quero visualizar os produtos de meu inventário
