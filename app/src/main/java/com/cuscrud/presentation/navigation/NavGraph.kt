@@ -60,13 +60,17 @@ fun CusCrudNavGraph(
             )
         }
 
-        // Cenário para Adicionar Produto (com tipoId opcional)
+        // Cenário para Adicionar ou Editar Produto
         composable(
-            route = "add_produto?tipoId={tipoId}",
+            route = "add_produto?tipoId={tipoId}&produtoId={produtoId}",
             arguments = listOf(
                 navArgument("tipoId") { 
                     type = NavType.LongType
                     defaultValue = -1L
+                },
+                navArgument("produtoId") {
+                    type = NavType.IntType
+                    defaultValue = -1
                 }
             )
         ) {
@@ -75,11 +79,11 @@ fun CusCrudNavGraph(
                 viewModel = viewModel,
                 onBackClick = { success ->
                     if (success) {
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("product_added_success", true)
+                        // Se foi editado, volta para a tela inicial do inventário conforme Gherkin
+                        navController.popBackStack("inventario", inclusive = false)
+                    } else {
+                        navController.popBackStack()
                     }
-                    navController.popBackStack() 
                 }
             )
         }
@@ -92,7 +96,10 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<ProdutoDetalhesViewModel>()
             ProdutoDetalhesScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onEditClick = { produtoId ->
+                    navController.navigate("add_produto?produtoId=$produtoId")
+                }
             )
         }
     }

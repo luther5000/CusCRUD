@@ -4,7 +4,7 @@ import com.cuscrud.domain.model.Tipo
 import java.util.Date
 
 /**
- * Estado da UI para a tela de adicionar produto.
+ * Estado da UI para a tela de adicionar/editar produto.
  */
 data class AddProdutoUiState(
     val marca: String = "",
@@ -17,5 +17,6 @@ data class AddProdutoUiState(
     val unidadesMedida: List<String> = listOf("kg", "g", "l", "ml", "un", "pacote", "lata", "caixa"),
     val isLoading: Boolean = false,
     val userMessage: String? = null,
-    val isProductAdded: Boolean = false
+    val isProductSaved: Boolean = false,
+    val isEditMode: Boolean = false
 )

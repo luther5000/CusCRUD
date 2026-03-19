@@ -39,16 +39,15 @@ fun AddProdutoScreen(
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
             // Só exibe o snackbar se NÃO for sucesso (erros ou validações)
-            // A mensagem de sucesso será exibida na tela anterior.
-            if (!uiState.isProductAdded) {
+            if (!uiState.isProductSaved) {
                 snackbarHostState.showSnackbar(it)
                 viewModel.snackbarMessageShown()
             }
         }
     }
 
-    LaunchedEffect(uiState.isProductAdded) {
-        if (uiState.isProductAdded) {
+    LaunchedEffect(uiState.isProductSaved) {
+        if (uiState.isProductSaved) {
             // Navega de volta indicando sucesso
             onBackClick(true)
         }
@@ -57,7 +56,7 @@ fun AddProdutoScreen(
     if (showExitConfirmation) {
         AlertDialog(
             onDismissRequest = { showExitConfirmation = false },
-            title = { Text("Descartar alterações?") },
+            title = { Text(if (uiState.isEditMode) "Descartar alterações?" else "Descartar adição?") },
             text = { Text("Se você sair agora, todas as informações inseridas serão perdidas.") },
             confirmButton = {
                 TextButton(onClick = {
@@ -78,7 +77,7 @@ fun AddProdutoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Adicionar Produto") },
+                title = { Text(if (uiState.isEditMode) "Editar Produto" else "Adicionar Produto") },
                 navigationIcon = {
                     IconButton(onClick = { showExitConfirmation = true }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
@@ -234,14 +233,14 @@ fun AddProdutoScreen(
                     Text("Cancelar")
                 }
                 Button(
-                    onClick = { viewModel.onAddProduto() },
+                    onClick = { viewModel.onSaveProduto() },
                     modifier = Modifier.weight(1f),
                     enabled = !uiState.isLoading
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     } else {
-                        Text("Adicionar")
+                        Text(if (uiState.isEditMode) "Confirmar" else "Adicionar")
                     }
                 }
             }

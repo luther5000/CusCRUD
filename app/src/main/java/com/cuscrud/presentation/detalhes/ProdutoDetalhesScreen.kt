@@ -5,6 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Numbers
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.*
@@ -24,7 +25,8 @@ import java.util.*
 @Composable
 fun ProdutoDetalhesScreen(
     viewModel: ProdutoDetalhesViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onEditClick: (Int) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -38,6 +40,15 @@ fun ProdutoDetalhesScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            if (uiState is ProdutoDetalhesUiState.Success) {
+                (uiState as ProdutoDetalhesUiState.Success).produto?.let { produto ->
+                    FloatingActionButton(onClick = { onEditClick(produto.id) }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar Produto")
+                    }
+                }
+            }
         }
     ) { padding ->
         Box(
