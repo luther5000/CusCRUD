@@ -28,15 +28,18 @@ class AddProdutoViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val tipoId: Long? = savedStateHandle["tipoId"]
-    private val produtoId: Int? = savedStateHandle["produtoId"]
+    private val tipoId: Long? = savedStateHandle.get<Long>("tipoId")
+    private val produtoId: Int? = savedStateHandle.get<Int>("produtoId")
 
     private val _uiState = MutableStateFlow(AddProdutoUiState())
     val uiState: StateFlow<AddProdutoUiState> = _uiState.asStateFlow()
 
     init {
         loadTipos()
-        if (produtoId != null && produtoId != -1) {
+
+        // No Room, IDs auto-gerados costumam começar em 1. 
+        // Se produtoId for > 0, entramos em modo de edição.
+        if (produtoId != null && produtoId > 0) {
             _uiState.update { it.copy(isEditMode = true) }
             loadProduto(produtoId)
         }
@@ -51,7 +54,8 @@ class AddProdutoViewModel @Inject constructor(
                         _uiState.update { it.copy(tipos = tipos) }
                         
                         // Se houver um tipoId passado pela navegação, seleciona ele
-                        if (tipoId != null && tipoId != -1L && !uiState.value.isEditMode) {
+                        // apenas se não estivermos editando um produto existente
+                        if (tipoId != null && tipoId > 0L && !uiState.value.isEditMode) {
                             val tipoPreSelecionado = tipos.find { it.id == tipoId }
                             if (tipoPreSelecionado != null) {
                                 _uiState.update { it.copy(tipoSelecionado = tipoPreSelecionado) }
@@ -144,7 +148,7 @@ class AddProdutoViewModel @Inject constructor(
         }
 
         val produto = Produto(
-            id = produtoId ?: 0,
+            id = if (currentState.isEditMode) (produtoId ?: 0) else 0,
             tipo = tipo,
             marca = currentState.marca,
             dataValidade = currentState.dataValidade,
