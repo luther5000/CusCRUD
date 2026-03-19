@@ -22,7 +22,8 @@ import java.util.*
 @Composable
 fun AddProdutoScreen(
     viewModel: AddProdutoViewModel,
-    onBackClick: (Boolean) -> Unit
+    // Alterado para receber a mensagem de sucesso ou null
+    onBackClick: (String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -38,7 +39,7 @@ fun AddProdutoScreen(
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
-            // Só exibe o snackbar se NÃO for sucesso (erros ou validações)
+            // Só exibe o snackbar localmente se NÃO for sucesso (evita que a mensagem suma rápido)
             if (!uiState.isProductSaved) {
                 snackbarHostState.showSnackbar(it)
                 viewModel.snackbarMessageShown()
@@ -48,8 +49,8 @@ fun AddProdutoScreen(
 
     LaunchedEffect(uiState.isProductSaved) {
         if (uiState.isProductSaved) {
-            // Navega de volta indicando sucesso
-            onBackClick(true)
+            // Navega de volta enviando a mensagem para a tela anterior
+            onBackClick(uiState.userMessage)
         }
     }
 
@@ -61,7 +62,7 @@ fun AddProdutoScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showExitConfirmation = false
-                    onBackClick(false)
+                    onBackClick(null)
                 }) {
                     Text("Confirmar")
                 }

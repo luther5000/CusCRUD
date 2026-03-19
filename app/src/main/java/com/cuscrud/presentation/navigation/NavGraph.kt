@@ -77,10 +77,22 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<AddProdutoViewModel>()
             AddProdutoScreen(
                 viewModel = viewModel,
-                onBackClick = { success ->
-                    if (success) {
-                        // Se foi editado, volta para a tela inicial do inventário conforme Gherkin
-                        navController.popBackStack("inventario", inclusive = false)
+                onBackClick = { message ->
+                    if (message != null) {
+                        // Se a mensagem contém "editado", voltamos para o inventário
+                        if (message.contains("editado", ignoreCase = true)) {
+                            // Entrega a mensagem especificamente para a entrada do Inventário
+                            navController.getBackStackEntry("inventario")
+                                .savedStateHandle
+                                .set("success_message", message)
+                            navController.popBackStack("inventario", inclusive = false)
+                        } else {
+                            // Se for adição, volta para a tela anterior imediata (Categorias ou Inventário)
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("success_message", message)
+                            navController.popBackStack()
+                        }
                     } else {
                         navController.popBackStack()
                     }
