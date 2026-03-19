@@ -104,8 +104,11 @@ android {
     }
 
     packaging {
-        excludes += "META-INF/AL2.0"
-        excludes += "META-INF/LGPL2.1"
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/LICENSE.md"
+            excludes += "/META-INF/LICENSE-notice.md"
+        }
     }
 
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
@@ -173,6 +176,7 @@ dependencies {
     testImplementation(libs.androidx.test.espresso.intents)
     testImplementation(libs.google.truth)
     testImplementation(libs.androidx.compose.ui.test.junit)
+    testImplementation("io.mockk:mockk:1.13.12")
 
     // JVM tests - Hilt
     testImplementation(libs.hilt.android.testing)
@@ -202,6 +206,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.espresso.intents)
     androidTestImplementation(libs.androidx.test.espresso.idling.resources)
     androidTestImplementation(libs.androidx.test.espresso.idling.concurrent)
+    androidTestImplementation("io.mockk:mockk-android:1.13.12")
     androidTestImplementation(project(":shared-test"))
 
     // AndroidX Test - Hilt testing
