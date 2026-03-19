@@ -1,6 +1,7 @@
 package com.cuscrud.domain.repository
 
 import com.cuscrud.domain.model.Produto
+import com.cuscrud.domain.util.Result
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -22,8 +23,7 @@ interface ProdutoRepository {
      * Remove um produto por meio do seu [id].
      * @return O [Produto] removido ou null se não houver produto com o id especificado.
      */
-    suspend fun removeProduto(id: Int): Produto?
-
+    suspend fun removeProduto(id: Int): Result<Unit>
     /**
      * Retorna todos os produtos que pertencem a um [tipoId] especifico
      * como um [Flow] de uma [List] de [Produto].

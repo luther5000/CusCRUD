@@ -6,6 +6,7 @@ import com.cuscrud.data.mapper.toDomain
 import com.cuscrud.data.mapper.toEntity
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.ProdutoRepository
+import com.cuscrud.domain.util.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import javax.inject.Inject
@@ -30,13 +31,19 @@ class OfflineProdutoRepository @Inject constructor(
         produtoDao.insert(produto.toEntity())
     }
 
-    override suspend fun removeProduto(id: Int): Produto? {
-        val entity = produtoDao.getById(id) ?: return null
-        val types = tipoDao.getAll()
-        val typeEntity = types.find { it.id == entity.tipo } ?: return null
-        val removedProduto = entity.toDomain(typeEntity)
-        produtoDao.delete(entity)
-        return removedProduto
+    override suspend fun removeProduto(id: Int): Result<Unit> {
+        return try {
+            // Buscamos apenas para confirmar existência se necessário,
+            // ou deletamos direto pelo ID se o DAO permitir.
+            val entity = produtoDao.getById(id)
+                ?: return Result.Error(Exception("Produto não encontrado"))
+
+            produtoDao.delete(entity)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            // Captura erros de banco de dados (ex: exclusão impedida por chave estrangeira)
+            Result.Error(e)
+        }
     }
 
     override fun getProdutosByTipo(tipoId: Long): Flow<List<Produto>> =
