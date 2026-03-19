@@ -25,7 +25,6 @@ fun InventarioScreen(
     navController: NavController,
     onTipoSelected: (Long) -> Unit,
     onAddProdutoClick: () -> Unit,
-    onAddSampleData: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -34,12 +33,6 @@ fun InventarioScreen(
     val successAdded by navController.currentBackStackEntry
         ?.savedStateHandle
         ?.getStateFlow("product_added_success", false)
-        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
-
-    // Observa sucesso na remoção
-    val successDeleted by navController.currentBackStackEntry
-        ?.savedStateHandle
-        ?.getStateFlow("product_deleted_success", false)
         ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
 
     LaunchedEffect(successAdded) {
