@@ -115,7 +115,7 @@ fun InventarioList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             inventario.forEach { (tipo, produtos) ->
-                // Correção do cálculo: Soma de (unidade * quantidade) para obter o peso/volume total
+                //Soma de (unidade * quantidade) para obter o peso/volume total
                 val totalEstoque = produtos.sumOf { it.unidade * it.quantidade }
                 val unidadeMedida = produtos.firstOrNull()?.unidadeMedida ?: ""
 
