@@ -7,7 +7,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.cuscrud.data.local.AppDatabase
 import com.cuscrud.data.local.entities.TipoEntity
 import com.cuscrud.testutil.TestDataGenerator
-import com.cuscrud.domain.util.Result
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -101,27 +100,28 @@ class OfflineProdutoRepositoryTest {
     }
 
     /**
-     * Verifica se a remoção de um produto existente funciona e retorna Sucesso.
+     * Verifica se a remoção de um produto existente funciona e retorna o objeto removido.
      */
     @Test
-    fun removeProduto_withValidId_returnsSuccess() = runBlocking {
+    fun removeProduto_withValidId_returnsDeletedProduto() = runBlocking {
         val tipo = TestDataGenerator.createTipo(id = 1L)
         database.tipoDao().insert(TipoEntity(tipo.id, tipo.nome, tipo.imagem))
         repository.insertProduto(TestDataGenerator.createProduto(id = 10, tipo = tipo))
 
-        val result = repository.removeProduto(10)
+        val removed = repository.removeProduto(10)
 
-        assertTrue("Esperava-se Result.Success", result is Result.Success)
-        assertTrue("O banco de dados deve estar vazio após a remoção", repository.getAllProdutos().first().isEmpty())
+        assertNotNull(removed)
+        assertEquals(10, removed?.id)
+        assertTrue(repository.getAllProdutos().first().isEmpty())
     }
 
     /**
-     * Garante que a tentativa de remover um ID inexistente retorne erro.
+     * Garante que a tentativa de remover um ID inexistente retorne null sem causar erros.
      */
     @Test
-    fun removeProduto_withInvalidId_returnsError() = runBlocking {
-        val result = repository.removeProduto(999)
-        assertTrue("Esperava-se Result.Error ao remover um produto inexistente", result is Result.Error)
+    fun removeProduto_withInvalidId_returnsNull() = runBlocking {
+        val removed = repository.removeProduto(999)
+        assertNull("Esperava-se null ao remover um produto inexistente", removed)
     }
 
     /**

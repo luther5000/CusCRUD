@@ -65,52 +65,87 @@ class RemoverProdutoTest {
 
     @Test
     fun solicitarRemocao_deveAtualizarProdutoParaRemoverNoState() {
-        // Ação
-        viewModel.solicitarRemocao(sampleProduto)
-
-        // Validação
-        assertEquals(sampleProduto, viewModel.uiState.value.produtoParaRemover)
+        solicitarRemocaoDoProduto()
+        verificarProdutoNoEstadoParaRemocao()
     }
 
     @Test
     fun cancelarRemocao_deveLimparProdutoParaRemoverNoState() {
-        // Setup
-        viewModel.solicitarRemocao(sampleProduto)
-        
-        // Ação
-        viewModel.cancelarRemocao()
-
-        // Validação
-        assertNull(viewModel.uiState.value.produtoParaRemover)
+        solicitarRemocaoDoProduto()
+        cancelarRemocaoDoProduto()
+        verificarProdutoParaRemocaoLimpado()
     }
 
     @Test
     fun confirmarRemocao_comSucesso_deveChamarInteractorEAtualizarEstado() = runTest {
-        // Setup
-        viewModel.solicitarRemocao(sampleProduto)
-        coEvery { removeProdutoInteractor.invoke(sampleProduto) } returns Result.Success(Unit)
+        solicitarRemocaoDoProduto()
+        simularSucessoNaRemocao()
+        confirmarRemocao()
 
-        // Ação
-        viewModel.confirmarRemocao()
-
-        // Validações
-        coVerify(exactly = 1) { removeProdutoInteractor.invoke(sampleProduto) }
-        assertNull(viewModel.uiState.value.produtoParaRemover)
-        assertEquals("Produto removido com sucesso", viewModel.uiState.value.mensagemSucesso)
+        verificarInteracaoComRepositorioParaRemover()
+        verificarProdutoParaRemocaoLimpado()
+        verificarMensagemDeSucesso()
     }
 
     @Test
     fun confirmarRemocao_comErro_deveFecharODialogoEMostrarErro() = runTest {
-        // Setup
+        solicitarRemocaoDoProduto()
+        simularErroNaRemocao()
+        confirmarRemocao()
+
+        verificarInteracaoComRepositorioParaRemover()
+        verificarProdutoParaRemocaoLimpado()
+        verificarMensagemDeErro()
+    }
+
+    // =========================================================
+    // Métodos de Ação (DSL de Teste)
+    // =========================================================
+
+    private fun solicitarRemocaoDoProduto() {
         viewModel.solicitarRemocao(sampleProduto)
-        coEvery { removeProdutoInteractor.invoke(sampleProduto) } returns Result.Error(Exception("Falha na rede"))
+    }
 
-        // Ação
+    private fun cancelarRemocaoDoProduto() {
+        viewModel.cancelarRemocao()
+    }
+
+    private fun confirmarRemocao() {
         viewModel.confirmarRemocao()
+    }
 
-        // Validações
-        coVerify(exactly = 1) { removeProdutoInteractor.invoke(sampleProduto) }
+    private fun simularSucessoNaRemocao() {
+        coEvery { removeProdutoInteractor.invoke(sampleProduto) } returns sampleProduto
+    }
+
+    private fun simularErroNaRemocao() {
+        coEvery { removeProdutoInteractor.invoke(sampleProduto) } returns null
+    }
+
+    // =========================================================
+    // Métodos de Verificação
+    // =========================================================
+
+    private fun verificarProdutoNoEstadoParaRemocao() {
+        assertEquals(sampleProduto, viewModel.uiState.value.produtoParaRemover)
+    }
+
+    private fun verificarProdutoParaRemocaoLimpado() {
         assertNull(viewModel.uiState.value.produtoParaRemover)
-        assertEquals("Não foi possível realizar a remoção: Falha na rede", viewModel.uiState.value.errorMessage)
+    }
+
+    private fun verificarInteracaoComRepositorioParaRemover() {
+        coVerify(exactly = 1) { removeProdutoInteractor.invoke(sampleProduto) }
+    }
+
+    private fun verificarMensagemDeSucesso() {
+        assertEquals("${sampleProduto.marca} removido com sucesso", viewModel.uiState.value.mensagemSucesso)
+    }
+
+    private fun verificarMensagemDeErro() {
+        assertEquals(
+            "Não foi possível realizar a remoção: Produto não encontrado ou erro no banco.",
+            viewModel.uiState.value.errorMessage
+        )
     }
 }
