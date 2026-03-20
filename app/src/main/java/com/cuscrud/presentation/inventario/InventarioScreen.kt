@@ -25,6 +25,7 @@ fun InventarioScreen(
     navController: NavController,
     onTipoSelected: (Long) -> Unit,
     onAddProdutoClick: () -> Unit,
+    onAddSampleData: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
