@@ -2,7 +2,6 @@ package com.cuscrud.domain.interactor
 
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.ProdutoRepository
-import com.cuscrud.domain.util.Result
 import javax.inject.Inject
 
 /**
@@ -11,7 +10,11 @@ import javax.inject.Inject
 class RemoveProdutoInteractor @Inject constructor(
     private val repository: ProdutoRepository
 ) {
-    suspend operator fun invoke(produto: Produto): Result<Unit> {
+    /**
+     * Remove um produto.
+     * @return O [Produto] removido ou null em caso de erro.
+     */
+    suspend operator fun invoke(produto: Produto): Produto? {
         return repository.removeProduto(produto.id)
     }
 }

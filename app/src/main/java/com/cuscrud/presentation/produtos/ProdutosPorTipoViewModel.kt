@@ -60,30 +60,25 @@ class ProdutosPorTipoViewModel @Inject constructor(
     }
 
     fun confirmarRemocao() {
-        val produto = _uiState.value.produtoParaRemover ?: return
+        val produtoParaRemover = _uiState.value.produtoParaRemover ?: return
         
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, produtoParaRemover = null) }
-            val result = removeProdutoInteractor(produto)
-            when (result) {
-                is Result.Success -> {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false, 
-                            mensagemSucesso = "Produto removido com sucesso"
-                        ) 
-                    }
+            val produtoDeletado = removeProdutoInteractor(produtoParaRemover)
+            
+            if (produtoDeletado != null) {
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        mensagemSucesso = "${produtoDeletado.marca} removido com sucesso"
+                    ) 
                 }
-                is Result.Error -> {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false, 
-                            errorMessage = "Não foi possível realizar a remoção: ${result.exception.message}" 
-                        ) 
-                    }
-                }
-                else -> {
-                    _uiState.update { it.copy(isLoading = false) }
+            } else {
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false, 
+                        errorMessage = "Não foi possível realizar a remoção: Produto não encontrado ou erro no banco." 
+                    )
                 }
             }
         }
