@@ -6,8 +6,10 @@ import com.cuscrud.data.mapper.toDomain
 import com.cuscrud.data.mapper.toEntity
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.ProdutoRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -36,13 +38,21 @@ class OfflineProdutoRepository @Inject constructor(
         produtoDao.insert(entityToInsert)
     }
 
-    override suspend fun removeProduto(id: Int): Produto? {
-        val entity = produtoDao.getById(id) ?: return null
+    /**
+     * Remove um produto por meio do seu [id].
+     *
+     * O uso do [withContext(Dispatchers.IO)] é necessário porque esta função realiza 
+     * chamadas síncronas ao DAO (como [tipoDao.getAll()]). O Room proíbe operações 
+     * de banco de dados na Main Thread para evitar travamentos na UI. 
+     * Ao usar este dispatcher, garantimos que a função seja "Main-safe".
+     */
+    override suspend fun removeProduto(id: Int): Produto? = withContext(Dispatchers.IO) {
+        val entity = produtoDao.getById(id) ?: return@withContext null
         val types = tipoDao.getAll()
-        val typeEntity = types.find { it.id == entity.tipo } ?: return null
+        val typeEntity = types.find { it.id == entity.tipo } ?: return@withContext null
         val removedProduto = entity.toDomain(typeEntity)
         produtoDao.delete(entity)
-        return removedProduto
+        removedProduto
     }
 
     override fun getProdutosByTipo(tipoId: Long): Flow<List<Produto>> =
