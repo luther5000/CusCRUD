@@ -125,21 +125,23 @@ class OfflineProdutoRepositoryTest {
     }
 
     /**
-     * Testa a edição parcial de um produto, verificando se apenas os campos
-     * fornecidos (não vazios) são atualizados.
+     * Testa a edição de um produto, verificando se todos os campos são atualizados corretamente.
      */
     @Test
-    fun editProduto_withValidId_updatesFields() = runBlocking {
+    fun editProduto_withValidId_updatesAllFields() = runBlocking {
+        // Dado um tipo e um produto inicial
         val tipo = TestDataGenerator.createTipo(id = 1L)
         database.tipoDao().insert(TipoEntity(tipo.id, tipo.nome, tipo.imagem))
         repository.insertProduto(TestDataGenerator.createProduto(id = 1, marca = "Original", quantidade = 5, tipo = tipo))
 
-        val updateInfo = TestDataGenerator.createProduto(marca = "Updated", quantidade = 0)
+        // Quando editamos o produto com novos dados (incluindo o tipo)
+        val updateInfo = TestDataGenerator.createProduto(id = 1, marca = "Updated", quantidade = 10, tipo = tipo)
         val updated = repository.editProduto(1, updateInfo)
 
+        // Então os campos devem refletir a nova informação
         assertNotNull(updated)
         assertEquals("Updated", updated?.marca)
-        assertEquals(5L, updated?.quantidade) // 0 foi ignorado conforme a implementação
+        assertEquals(10L, updated?.quantidade)
     }
 
     /**
@@ -147,7 +149,8 @@ class OfflineProdutoRepositoryTest {
      */
     @Test
     fun editProduto_withInvalidId_returnsNull() = runBlocking {
-        val updateInfo = TestDataGenerator.createProduto(marca = "Fantasma")
+        val tipo = TestDataGenerator.createTipo(id = 1L)
+        val updateInfo = TestDataGenerator.createProduto(marca = "Fantasma", tipo = tipo)
         val result = repository.editProduto(404, updateInfo)
         assertNull("Esperava-se null ao editar um produto inexistente", result)
     }

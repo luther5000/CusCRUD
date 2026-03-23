@@ -29,7 +29,13 @@ class OfflineProdutoRepository @Inject constructor(
         }
 
     override suspend fun insertProduto(produto: Produto) {
-        produtoDao.insert(produto.toEntity())
+        // Garante que o ID seja 0 para o Room auto-gerar, caso venha um valor inválido
+        val entityToInsert = if (produto.id <= 0) {
+            produto.toEntity().copy(id = 0)
+        } else {
+            produto.toEntity()
+        }
+        produtoDao.insert(entityToInsert)
     }
 
     /**
@@ -62,20 +68,16 @@ class OfflineProdutoRepository @Inject constructor(
     override suspend fun editProduto(id: Int, produto: Produto): Produto? {
         val existingEntity = produtoDao.getById(id) ?: return null
 
-        // Update existing fields only if the new fields are not empty/default
-        val updatedEntity = existingEntity.copy(
-            marca = produto.marca.ifEmpty { existingEntity.marca },
-            quantidade = if (produto.quantidade > 0) produto.quantidade else existingEntity.quantidade,
-            unidade = if (produto.unidade > 0) produto.unidade else existingEntity.unidade,
-            unidadeMedida = produto.unidadeMedida.ifEmpty { existingEntity.unidadeMedida },
-            tipo = if (produto.tipo.id > 0L) produto.tipo.id else existingEntity.tipo,
-            dataValidade = if (produto.dataValidade.time > 0) produto.dataValidade.time else existingEntity.dataValidade
-        )
+        // Busca o TipoEntity diretamente pelo ID do tipo do produto que está sendo editado
+        val typeEntity = tipoDao.getById(produto.tipo.id) ?: return null
+
+        // Cria a entidade atualizada usando os dados do produto de domínio recebido,
+        // mas mantendo o ID original do produto existente no banco de dados.
+        val updatedEntity = produto.toEntity().copy(id = existingEntity.id)
 
         produtoDao.update(updatedEntity)
         
-        val types = tipoDao.getAll()
-        val typeEntity = types.find { it.id == updatedEntity.tipo } ?: return null
+        // Retorna o produto atualizado, convertendo-o da entidade usando o typeEntity verificado.
         return updatedEntity.toDomain(typeEntity)
     }
 

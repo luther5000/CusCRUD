@@ -30,17 +30,17 @@ fun InventarioScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Observa sucesso na adição
-    val successAdded by navController.currentBackStackEntry
+    // Observa mensagens de sucesso vindas de outras telas através do savedStateHandle
+    val successMessage by navController.currentBackStackEntry
         ?.savedStateHandle
-        ?.getStateFlow("product_added_success", false)
-        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(false) }
+        ?.getStateFlow<String?>("success_message", null)
+        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
 
-    LaunchedEffect(successAdded) {
-        if (successAdded) {
-            snackbarHostState.showSnackbar("Produto adicionado com sucesso")
-            // Limpa o sinal para evitar repetição
-            navController.currentBackStackEntry?.savedStateHandle?.set("product_added_success", false)
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            // Limpa a mensagem para evitar que ela apareça novamente ao recompor ou voltar
+            navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
         }
     }
 
@@ -115,13 +115,14 @@ fun InventarioList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             inventario.forEach { (tipo, produtos) ->
-                val totalQuantidade = produtos.sumOf { it.quantidade }
+                //Soma de (unidade * quantidade) para obter o peso/volume total
+                val totalEstoque = produtos.sumOf { it.unidade * it.quantidade }
                 val unidadeMedida = produtos.firstOrNull()?.unidadeMedida ?: ""
 
                 item {
                     TipoSummaryItem(
                         tipo = tipo,
-                        totalQuantidade = totalQuantidade,
+                        totalEstoque = totalEstoque,
                         unidadeMedida = unidadeMedida,
                         quantidadeLotes = produtos.size
                     ) {
@@ -136,7 +137,7 @@ fun InventarioList(
 @Composable
 fun TipoSummaryItem(
     tipo: Tipo,
-    totalQuantidade: Long,
+    totalEstoque: Long,
     unidadeMedida: String,
     quantidadeLotes: Int,
     onClick: () -> Unit
@@ -161,12 +162,12 @@ fun TipoSummaryItem(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Total em estoque: $totalQuantidade $unidadeMedida",
+                    text = "Total em estoque: $totalEstoque $unidadeMedida",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "$quantidadeLotes produtos(s) cadastrado(s)",
+                    text = "$quantidadeLotes lote(s) cadastrado(s)",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
