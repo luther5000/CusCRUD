@@ -60,26 +60,42 @@ fun CusCrudNavGraph(
             )
         }
 
-        // Cenário para Adicionar Produto (com tipoId opcional)
+        // Cenário para Adicionar ou Editar Produto
         composable(
-            route = "add_produto?tipoId={tipoId}",
+            route = "add_produto?tipoId={tipoId}&produtoId={produtoId}",
             arguments = listOf(
                 navArgument("tipoId") { 
                     type = NavType.LongType
                     defaultValue = -1L
+                },
+                navArgument("produtoId") {
+                    type = NavType.IntType
+                    defaultValue = -1
                 }
             )
         ) {
             val viewModel = hiltViewModel<AddProdutoViewModel>()
             AddProdutoScreen(
                 viewModel = viewModel,
-                onBackClick = { success ->
-                    if (success) {
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("product_added_success", true)
+                onBackClick = { message ->
+                    if (message != null) {
+                        // Se a mensagem contém "editado", voltamos para o inventário
+                        if (message.contains("editado", ignoreCase = true)) {
+                            // Entrega a mensagem especificamente para a entrada do Inventário
+                            navController.getBackStackEntry("inventario")
+                                .savedStateHandle
+                                .set("success_message", message)
+                            navController.popBackStack("inventario", inclusive = false)
+                        } else {
+                            // Se for adição, volta para a tela anterior imediata (Categorias ou Inventário)
+                            navController.previousBackStackEntry
+                                ?.savedStateHandle
+                                ?.set("success_message", message)
+                            navController.popBackStack()
+                        }
+                    } else {
+                        navController.popBackStack()
                     }
-                    navController.popBackStack() 
                 }
             )
         }
@@ -92,7 +108,10 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<ProdutoDetalhesViewModel>()
             ProdutoDetalhesScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onEditClick = { produtoId ->
+                    navController.navigate("add_produto?produtoId=$produtoId")
+                }
             )
         }
     }
