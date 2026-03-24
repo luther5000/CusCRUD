@@ -9,6 +9,7 @@ Esta é uma especificação técnica estruturada para que qualquer LLM (ou desen
 - [3. Regras de Negócio & Segurança (MVP)](#sec-3)
 - [4. Arquitetura de Dados (Schema SQL)](#sec-4)
 - [5. Especificação da API REST](#sec-5)
+- [5.0. Saúde Operacional](#sec-5-0)
 - [5.1. Autenticação](#sec-5-1)
 - [5.2. Inventários (Gerenciamento)](#sec-5-2)
 - [5.3. Inventários (Gerenciamento de Acesso)](#sec-5-3)
@@ -177,6 +178,42 @@ A API utiliza o cabeçalho `Authorization: Bearer <token>` para identificar o us
   - 409: `CONFLICT`
 - Endpoints que retornam 204 **não** enviam corpo.
 - As tabelas de erros listam apenas o HTTP status; o corpo sempre segue o formato acima.
+
+<a id="sec-5-0"></a>
+### 5.0. Saúde Operacional
+
+|  ID   | Método  | Endpoint           | Descrição                                                                                   |
+|:-----:|:--------|:-------------------|:--------------------------------------------------------------------------------------------|
+| 5.0.1 | **GET** | `/api/v1/health`   | Checagem operacional do backend. Não requer autenticação e não acessa o banco de dados.    |
+
+#### 5.0.1 GET /health
+
+**Headers:**
+Nenhum.
+
+**Payload:**
+Nenhum.
+
+**Status Codes:**
+
+| Código | Descrição                                                         |
+|:------:|:------------------------------------------------------------------|
+|  200   | Aplicação em execução e apta a responder requisições HTTP.        |
+
+**Resposta (200):**
+```json
+{
+  "status": "ok",
+  "time": "2026-03-24T14:05:00-03:00"
+}
+```
+
+**Exemplo de requisição:**
+```bash
+curl -X GET https://api.exemplo.com/api/v1/health
+```
+
+**Permissões:** Endpoint público. Não requer token JWT. Não consulta banco de dados nem outros serviços externos para responder.
 
 <a id="sec-5-1"></a>
 ### 5.1. Autenticação
@@ -1735,12 +1772,12 @@ volumes:
 - Respeite as Convenções de código da seção 7, cumprindo-as à risca, em especial o fluxo de TDD descrito em 7.3.
 - Sempre que apropriado, recomende ao usuário criar um novo commit para registrar o progresso.
 - Toda alteração em arquivos deve ser feita usando `apply_patch`, permitindo revisar diffs com clareza.
-- Exemplo de fluxo TDD (Java, rota simples `GET /health`):
+- Exemplo de fluxo TDD (Java, rota simples `GET /api/v1/health`):
 
   - **Doc da função (controller)**  
   ```java
   /**
-   * GET /health
+   * GET /api/v1/health
    * Retorna status 200 e payload simples para checagem de vida.
    * Efeitos colaterais: nenhum. Não acessa banco.
    * @return DTO com status e timestamp.
@@ -1751,9 +1788,9 @@ volumes:
   - **Doc do teste**  
   ```java
   /**
-   * Verifica que GET /health retorna 200 com body esperado.
+   * Verifica que GET /api/v1/health retorna 200 com body esperado.
    * Entrada: requisição sem auth.
-   * Esperado: status 200, body {"status":"ok"}.
+   * Esperado: status 200, body com status "ok" e timestamp.
    */
   @Test
   void shouldReturnOkOnHealth() { }
