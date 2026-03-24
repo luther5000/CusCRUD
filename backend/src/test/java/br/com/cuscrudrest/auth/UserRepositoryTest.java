@@ -29,7 +29,7 @@ class UserRepositoryTest {
         jdbcClient.sql("DROP TABLE IF EXISTS users").update();
         jdbcClient.sql("""
                 CREATE TABLE users (
-                    user_id UUID PRIMARY KEY DEFAULT random_uuid(),
+                    user_id UUID DEFAULT random_uuid() PRIMARY KEY,
                     name VARCHAR(255) NOT NULL,
                     login VARCHAR(255) UNIQUE NOT NULL,
                     passwd TEXT NOT NULL,
