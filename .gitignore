@@ -1,0 +1,12 @@
+.env
+.idea/
+.vscode/
+*.iml
+
+backend/target/
+backend/.mvn/
+
+db/data/
+
+*.log
+*.out
