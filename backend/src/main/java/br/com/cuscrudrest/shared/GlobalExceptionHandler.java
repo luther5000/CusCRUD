@@ -74,6 +74,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Converte falhas de autenticacao em erro HTTP 401.
+     *
+     * @param exception excecao de autenticacao lancada pela camada de servico ou seguranca.
+     * @return resposta 401 no formato padrao de erro da API.
+     */
+    @ExceptionHandler(UnauthenticatedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUnauthenticated(UnauthenticatedException exception) {
+        return buildErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                "UNAUTHENTICATED",
+                exception.getMessage(),
+                exception.getCampo(),
+                exception.getInfo()
+        );
+    }
+
+    /**
      * Monta a resposta padrao de erro da API.
      *
      * @param status status HTTP a ser retornado.
