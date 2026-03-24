@@ -7,27 +7,27 @@ package br.com.cuscrudrest.shared;
  */
 public class ValidationException extends RuntimeException {
 
-    private final String field;
+    private final String campo;
     private final String info;
 
     /**
      * Cria uma excecao de validacao com mensagem e metadados do campo afetado.
      *
      * @param message descricao curta e acionavel da falha de validacao.
-     * @param field nome do campo relacionado a falha.
+     * @param campo nome do campo relacionado a falha.
      * @param info detalhe resumido do motivo da invalidacao.
      */
-    public ValidationException(String message, String field, String info) {
+    public ValidationException(String message, String campo, String info) {
         super(message);
-        this.field = field;
+        this.campo = campo;
         this.info = info;
     }
 
     /**
      * @return campo associado a falha de validacao.
      */
-    public String getField() {
-        return field;
+    public String getCampo() {
+        return campo;
     }
 
     /**

@@ -68,13 +68,20 @@ Antes do schema principal, deve existir um arquivo `00_configure.sql` executado 
 **Arquivo `00_configure.sql`:**
 
 ```sql
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cuscrud_app') THEN
-        CREATE ROLE cuscrud_app LOGIN PASSWORD 'materializar_com_o_mesmo_valor_de_CUSCRUD_APP_PASSWORD';
-    END IF;
-END
-$$;
+\set ON_ERROR_STOP on
+\getenv cuscrud_app_password CUSCRUD_APP_PASSWORD
+
+SELECT format(
+    'CREATE ROLE cuscrud_app LOGIN PASSWORD %L',
+    :'cuscrud_app_password'
+)
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cuscrud_app') \gexec
+
+SELECT format(
+    'ALTER ROLE cuscrud_app WITH LOGIN PASSWORD %L',
+    :'cuscrud_app_password'
+)
+WHERE EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'cuscrud_app') \gexec
 
 SELECT 'CREATE DATABASE cuscrud OWNER cuscrud_app'
 WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = 'cuscrud') \gexec
@@ -83,7 +90,7 @@ ALTER DATABASE cuscrud OWNER TO cuscrud_app;
 ALTER DATABASE cuscrud SET timezone TO 'America/Recife';
 ```
 
-Esse arquivo deve ser executado antes do arquivo que cria tabelas, índices e constraints, garantindo que o banco da aplicação exista, tenha um owner dedicado e fique com a timezone padrão alinhada com a regra global da aplicação. No fluxo com Docker Compose, o valor usado no `PASSWORD` desse script deve ser materializado previamente com o mesmo valor definido em `CUSCRUD_APP_PASSWORD` no `.env`.
+Esse arquivo deve ser executado antes do arquivo que cria tabelas, índices e constraints, garantindo que o banco da aplicação exista, tenha um owner dedicado e fique com a timezone padrão alinhada com a regra global da aplicação. No fluxo com Docker Compose, o script lê `CUSCRUD_APP_PASSWORD` diretamente do ambiente do container PostgreSQL via `\getenv`, sem exigir edição manual do arquivo SQL para materializar a senha.
 
 ```sql
 -- Conectar explicitamente ao banco da aplicação antes de criar extensões e objetos
@@ -1667,7 +1674,7 @@ curl -X DELETE https://api.exemplo.com/api/v1/inventories/123e4567-e89b-12d3-a45
 
 O Nginx deve ser configurado para gerenciar o tráfego e proteger o servidor de aplicação.
 
-* **Encaminhamento:** `location /api/ { proxy_pass http://backend_app:53919; }`
+* **Encaminhamento:** `location /api/ { proxy_pass http://backend:53919; }`
 * **CORS:** Configurado para permitir apenas a origem da aplicação mobile.
 * **Uploads:** `client_max_body_size 5M;` (necessário para payloads que enviam o campo `imagem` nos endpoints de tipos).
 * **Banco via Docker:** PostgreSQL em container com volume persistente montado (dados fora do container).
@@ -1682,7 +1689,7 @@ server {
     client_max_body_size 5M;
 
     location /api/ {
-        proxy_pass http://backend_app:53919;
+        proxy_pass http://backend:53919;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

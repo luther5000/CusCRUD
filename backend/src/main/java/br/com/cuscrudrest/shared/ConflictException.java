@@ -7,27 +7,27 @@ package br.com.cuscrudrest.shared;
  */
 public class ConflictException extends RuntimeException {
 
-    private final String field;
+    private final String campo;
     private final String info;
 
     /**
      * Cria uma excecao de conflito com mensagem e metadados do campo afetado.
      *
      * @param message descricao curta e acionavel do conflito.
-     * @param field nome do campo relacionado ao conflito.
+     * @param campo nome do campo relacionado ao conflito.
      * @param info detalhe resumido do motivo do conflito.
      */
-    public ConflictException(String message, String field, String info) {
+    public ConflictException(String message, String campo, String info) {
         super(message);
-        this.field = field;
+        this.campo = campo;
         this.info = info;
     }
 
     /**
      * @return campo associado ao conflito.
      */
-    public String getField() {
-        return field;
+    public String getCampo() {
+        return campo;
     }
 
     /**

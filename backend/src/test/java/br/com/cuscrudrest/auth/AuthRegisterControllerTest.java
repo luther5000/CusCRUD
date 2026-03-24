@@ -98,7 +98,7 @@ class AuthRegisterControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.error.details.field").value("login"));
+                .andExpect(jsonPath("$.error.details.campo").value("login"));
     }
 
     /**
@@ -122,7 +122,7 @@ class AuthRegisterControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.error.details.field").value("name"));
+                .andExpect(jsonPath("$.error.details.campo").value("name"));
     }
 
     /**
@@ -152,6 +152,6 @@ class AuthRegisterControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.error.code").value("CONFLICT"))
-                .andExpect(jsonPath("$.error.details.field").value("login"));
+                .andExpect(jsonPath("$.error.details.campo").value("login"));
     }
 }

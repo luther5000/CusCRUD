@@ -5,8 +5,8 @@ package br.com.cuscrudrest.shared;
  * Permite identificar o campo afetado e uma informacao curta para depuracao do cliente.
  * Efeitos colaterais: nenhum.
  *
- * @param field nome do campo relacionado ao erro, quando aplicavel.
+ * @param campo nome do campo relacionado ao erro, quando aplicavel.
  * @param info informacao curta adicional sobre a falha.
  */
-public record ApiErrorDetails(String field, String info) {
+public record ApiErrorDetails(String campo, String info) {
 }

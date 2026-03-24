@@ -78,7 +78,7 @@ class AuthServiceTest {
                 () -> authService.register(new RegisterRequest("Joao Novo", "joao.novoexample.com", "senhaforte456"))
         );
 
-        assertEquals("login", exception.getField());
+        assertEquals("login", exception.getCampo());
     }
 
     /**
@@ -95,7 +95,7 @@ class AuthServiceTest {
                 () -> authService.register(new RegisterRequest("Outro Nome", "joao.novo@example.com", "outrasenha789"))
         );
 
-        assertEquals("login", exception.getField());
+        assertEquals("login", exception.getCampo());
     }
 
     /**
