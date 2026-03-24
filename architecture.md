@@ -32,7 +32,11 @@ Sistema de backend para suporte a uma aplicação mobile, permitindo a gestão d
 <a id="sec-2"></a>
 ## 2. Stack Tecnológica
 * **Banco de Dados:** PostgreSQL 17
-* **Backend:** API REST Java. Se necessário, usar Spring Boot.
+* **Backend:** API REST Java com Spring Boot.
+* **Acesso a Dados:** Spring JDBC para consultas e comandos SQL contra o PostgreSQL.
+* **Segurança:** Spring Security para autenticação, autorização HTTP e processamento do header `Authorization: Bearer <token>`.
+* **Hash de Senha:** `BCryptPasswordEncoder` para geração e verificação do hash de `passwd`.
+* **JWT:** Token assinado com `HS256`, usando segredo lido da variável de ambiente `JWT_SECRET` e TTL fixo de `3600` segundos.
 * **Proxy Reverso:** Nginx
 * **Containerização:** Docker & Docker Compose com backend e PostgreSQL. A porta exposta vai ser redirecionada pelo Nginx. O banco roda em container com volume fixo para dados.
 
@@ -170,11 +174,11 @@ A API utiliza o cabeçalho `Authorization: Bearer <token>` para identificar o us
   }
 }
 ```
-- Exemplos de `code` por status:  
-  - 400: `VALIDATION_ERROR`  
-  - 401: `UNAUTHENTICATED`  
-  - 403: `FORBIDDEN`  
-  - 404: `NOT_FOUND`  
+- Exemplos de `code` por status:
+  - 400: `VALIDATION_ERROR`
+  - 401: `UNAUTHENTICATED`
+  - 403: `FORBIDDEN`
+  - 404: `NOT_FOUND`
   - 409: `CONFLICT`
 - Endpoints que retornam 204 **não** enviam corpo.
 - As tabelas de erros listam apenas o HTTP status; o corpo sempre segue o formato acima.
@@ -182,9 +186,9 @@ A API utiliza o cabeçalho `Authorization: Bearer <token>` para identificar o us
 <a id="sec-5-0"></a>
 ### 5.0. Saúde Operacional
 
-|  ID   | Método  | Endpoint           | Descrição                                                                                   |
-|:-----:|:--------|:-------------------|:--------------------------------------------------------------------------------------------|
-| 5.0.1 | **GET** | `/api/v1/health`   | Checagem operacional do backend. Não requer autenticação e não acessa o banco de dados.    |
+|  ID   | Método  | Endpoint         | Descrição                                                                               |
+|:-----:|:--------|:-----------------|:----------------------------------------------------------------------------------------|
+| 5.0.1 | **GET** | `/api/v1/health` | Checagem operacional do backend. Não requer autenticação e não acessa o banco de dados. |
 
 #### 5.0.1 GET /health
 
@@ -223,6 +227,13 @@ curl -X GET https://api.exemplo.com/api/v1/health
 | 5.1.1 | **POST** | `/api/v1/auth/login`    | Gera o token JWT para acesso geral do usuário. O token concede acesso a todos os inventários que o usuário pode visualizar. |
 | 5.1.2 | **POST** | `/api/v1/auth/register` | Cria um novo usuário com nome, email (`login`) e senha fornecidos.                                                          |
 | 5.1.3 | **GET**  | `/api/v1/auth/validate` | Valida o token JWT da requisição. Retorna informações do usuário se válido.                                                 |
+
+**Notas técnicas de implementação:**
+- A camada HTTP de autenticação e autorização deve usar Spring Security.
+- O acesso à tabela `users` deve usar Spring JDBC.
+- O campo `passwd` deve ser armazenado e validado com `BCryptPasswordEncoder`.
+- A assinatura e validação do JWT devem usar `HS256` com segredo vindo de `JWT_SECRET`.
+- O TTL do token é fixo em `3600` segundos para `login` e para o cálculo de `expires_in` retornado pela API.
 
 #### 5.1.1 POST /auth/login
 
@@ -271,7 +282,7 @@ Content-Type: application/json
 **Algoritmo de geração do JWT:**
 1. Header: `{ "alg": "HS256", "typ": "JWT" }`.
 2. Payload: incluir claims acima; `exp = iat + 3600s`.
-3. Assinatura: `HMAC-SHA256(base64url(header) + "." + base64url(payload), secret_compartilhado)`.
+3. Assinatura: `HMAC-SHA256(base64url(header) + "." + base64url(payload), secret_compartilhado)`, onde `secret_compartilhado` é lido de `JWT_SECRET`.
 4. Retornar o token `header.payload.signature` e `expires_in = 3600`.
 
 **Exemplo de Requisição:**
@@ -1034,7 +1045,7 @@ Authorization: Bearer <token>
 {
   "type_id": 1,
   "nome": "Bebidas",
-  "imagem": "data:image/png;base64,iVBORw0KGgoAAA...", 
+  "imagem": "data:image/png;base64,iVBORw0KGgoAAA...",
   "inv_id": "123e4567-e89b-12d3-a456-426614174000"
 }
 ```
@@ -1774,7 +1785,7 @@ volumes:
 - Toda alteração em arquivos deve ser feita usando `apply_patch`, permitindo revisar diffs com clareza.
 - Exemplo de fluxo TDD (Java, rota simples `GET /api/v1/health`):
 
-  - **Doc da função (controller)**  
+  - **Doc da função (controller)**
   ```java
   /**
    * GET /api/v1/health
@@ -1784,8 +1795,8 @@ volumes:
    */
   public HealthDto getHealth() { }
   ```
-  
-  - **Doc do teste**  
+
+  - **Doc do teste**
   ```java
   /**
    * Verifica que GET /api/v1/health retorna 200 com body esperado.
