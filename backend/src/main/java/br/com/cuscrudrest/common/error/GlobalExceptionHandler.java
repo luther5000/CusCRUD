@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.shared;
+package br.com.cuscrudrest.common.error;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

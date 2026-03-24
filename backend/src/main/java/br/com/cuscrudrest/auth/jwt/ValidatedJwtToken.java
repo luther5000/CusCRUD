@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.jwt;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.shared;
+package br.com.cuscrudrest.common.error;
 
 /**
  * Corpo interno do objeto `error` retornado pela API.

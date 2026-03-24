@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.user;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

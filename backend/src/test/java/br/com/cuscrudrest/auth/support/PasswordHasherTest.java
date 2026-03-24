@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.support;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;

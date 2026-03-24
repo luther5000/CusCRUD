@@ -1,6 +1,9 @@
 package br.com.cuscrudrest.auth;
 
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
+import br.com.cuscrudrest.auth.register.RegisterRequest;
+import br.com.cuscrudrest.auth.register.RegisterResponse;
+import br.com.cuscrudrest.auth.register.RegisterService;
 import jakarta.validation.Valid;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpStatus;
@@ -18,15 +21,15 @@ import org.springframework.web.bind.annotation.RestController;
 @Conditional(DatabaseConfiguredCondition.class)
 public class AuthController {
 
-    private final AuthService authService;
+    private final RegisterService registerService;
 
     /**
      * Cria o controller de autenticacao.
      *
-     * @param authService servico de negocio que coordena cadastro e autenticacao.
+     * @param registerService servico de negocio responsavel pelo cadastro de usuario.
      */
-    public AuthController(AuthService authService) {
-        this.authService = authService;
+    public AuthController(RegisterService registerService) {
+        this.registerService = registerService;
     }
 
     /**
@@ -41,6 +44,6 @@ public class AuthController {
     @PostMapping("/auth/register")
     @ResponseStatus(HttpStatus.CREATED)
     public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+        return registerService.register(request);
     }
 }

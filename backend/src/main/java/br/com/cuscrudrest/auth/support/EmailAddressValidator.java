@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.support;
 
 import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.stereotype.Component;

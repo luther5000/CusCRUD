@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.register;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

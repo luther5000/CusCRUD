@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.shared;
+package br.com.cuscrudrest.common.error;
 
 /**
  * Excecao de autenticacao para respostas HTTP 401.

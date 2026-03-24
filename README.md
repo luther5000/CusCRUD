@@ -2,7 +2,7 @@
 
 Servidor de API REST para o projeto CusCRUD.
 
-## Estrutura inicial
+## Estrutura do repositório
 
 ```text
 .
@@ -13,9 +13,23 @@ Servidor de API REST para o projeto CusCRUD.
 |   `-- src
 |       |-- main
 |       |   |-- java/br/com/cuscrudrest
+|       |   |   |-- auth
+|       |   |   |   |-- jwt
+|       |   |   |   |-- register
+|       |   |   |   |-- support
+|       |   |   |   `-- user
+|       |   |   |-- common
+|       |   |   |   `-- error
+|       |   |   `-- health
 |       |   `-- resources
 |       `-- test
 |           `-- java/br/com/cuscrudrest
+|               |-- auth
+|               |   |-- jwt
+|               |   |-- register
+|               |   |-- support
+|               |   `-- user
+|               `-- health
 |-- docker-compose.yaml
 |-- db
 |   `-- init
@@ -32,6 +46,7 @@ Servidor de API REST para o projeto CusCRUD.
 - Acesso a dados com Spring JDBC.
 - Segurança HTTP com Spring Security.
 - Hash de senha com `BCryptPasswordEncoder`.
+- Organização do backend por responsabilidade: borda HTTP em `auth`, casos de uso em subpacotes específicos, persistência em `auth/user`, utilitários em `auth/support` e erros compartilhados em `common/error`.
 - Porta HTTP da aplicação: `53919`.
 - Prefixo global da API: `/api/v1`.
 - Banco PostgreSQL 17 com bootstrap via `docker-entrypoint-initdb.d`.

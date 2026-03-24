@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.user;
 
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import org.springframework.context.annotation.Conditional;

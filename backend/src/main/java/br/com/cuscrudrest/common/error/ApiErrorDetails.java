@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.shared;
+package br.com.cuscrudrest.common.error;
 
 /**
  * Detalhes adicionais de erro retornados pela API.

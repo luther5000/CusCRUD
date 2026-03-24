@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.shared;
+package br.com.cuscrudrest.common.error;
 
 /**
  * Excecao de conflito de negocio para respostas HTTP 409.

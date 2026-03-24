@@ -1,8 +1,12 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.register;
 
+import br.com.cuscrudrest.auth.support.EmailAddressValidator;
+import br.com.cuscrudrest.auth.support.PasswordHasher;
+import br.com.cuscrudrest.auth.user.UserAccount;
+import br.com.cuscrudrest.auth.user.UserRepository;
+import br.com.cuscrudrest.common.error.ConflictException;
+import br.com.cuscrudrest.common.error.ValidationException;
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
-import br.com.cuscrudrest.shared.ConflictException;
-import br.com.cuscrudrest.shared.ValidationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
@@ -14,7 +18,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @Conditional(DatabaseConfiguredCondition.class)
-public class AuthService {
+public class RegisterService {
 
     private final EmailAddressValidator emailAddressValidator;
     private final PasswordHasher passwordHasher;
@@ -27,7 +31,7 @@ public class AuthService {
      * @param passwordHasher componente responsavel pelo hash das senhas.
      * @param userRepository repositorio JDBC dos usuarios.
      */
-    public AuthService(
+    public RegisterService(
             EmailAddressValidator emailAddressValidator,
             PasswordHasher passwordHasher,
             UserRepository userRepository

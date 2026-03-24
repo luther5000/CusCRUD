@@ -1,4 +1,4 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.register;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

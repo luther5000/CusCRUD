@@ -1,7 +1,10 @@
-package br.com.cuscrudrest.auth;
+package br.com.cuscrudrest.auth.register;
 
-import br.com.cuscrudrest.shared.ConflictException;
-import br.com.cuscrudrest.shared.ValidationException;
+import br.com.cuscrudrest.auth.support.EmailAddressValidator;
+import br.com.cuscrudrest.auth.support.PasswordHasher;
+import br.com.cuscrudrest.auth.user.UserRepository;
+import br.com.cuscrudrest.common.error.ConflictException;
+import br.com.cuscrudrest.common.error.ValidationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -15,10 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class AuthServiceTest {
+class RegisterServiceTest {
 
     private JdbcClient jdbcClient;
-    private AuthService authService;
+    private RegisterService registerService;
 
     /**
      * Prepara o schema minimo e as dependencias reais do servico de cadastro.
@@ -42,7 +45,7 @@ class AuthServiceTest {
                 .update();
 
         UserRepository userRepository = new UserRepository(jdbcClient);
-        authService = new AuthService(
+        registerService = new RegisterService(
                 new EmailAddressValidator(),
                 new PasswordHasher(new BCryptPasswordEncoder()),
                 userRepository
@@ -56,7 +59,7 @@ class AuthServiceTest {
      */
     @Test
     void shouldRegisterUserWhenRequestIsValid() {
-        RegisterResponse response = authService.register(
+        RegisterResponse response = registerService.register(
                 new RegisterRequest("Joao Novo", "joao.novo@example.com", "senhaforte456")
         );
 
@@ -75,7 +78,7 @@ class AuthServiceTest {
     void shouldRejectMalformedEmail() {
         ValidationException exception = assertThrows(
                 ValidationException.class,
-                () -> authService.register(new RegisterRequest("Joao Novo", "joao.novoexample.com", "senhaforte456"))
+                () -> registerService.register(new RegisterRequest("Joao Novo", "joao.novoexample.com", "senhaforte456"))
         );
 
         assertEquals("login", exception.getCampo());
@@ -88,11 +91,11 @@ class AuthServiceTest {
      */
     @Test
     void shouldRejectDuplicateLogin() {
-        authService.register(new RegisterRequest("Joao Novo", "joao.novo@example.com", "senhaforte456"));
+        registerService.register(new RegisterRequest("Joao Novo", "joao.novo@example.com", "senhaforte456"));
 
         ConflictException exception = assertThrows(
                 ConflictException.class,
-                () -> authService.register(new RegisterRequest("Outro Nome", "joao.novo@example.com", "outrasenha789"))
+                () -> registerService.register(new RegisterRequest("Outro Nome", "joao.novo@example.com", "outrasenha789"))
         );
 
         assertEquals("login", exception.getCampo());
@@ -105,7 +108,7 @@ class AuthServiceTest {
      */
     @Test
     void shouldPersistHashedPasswordInsteadOfPlaintext() {
-        authService.register(new RegisterRequest("Joao Novo", "joao.novo@example.com", "senhaforte456"));
+        registerService.register(new RegisterRequest("Joao Novo", "joao.novo@example.com", "senhaforte456"));
 
         String storedPassword = jdbcClient.sql("SELECT passwd FROM users WHERE login = :login")
                 .param("login", "joao.novo@example.com")
