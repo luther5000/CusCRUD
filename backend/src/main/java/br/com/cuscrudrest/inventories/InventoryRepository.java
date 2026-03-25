@@ -136,4 +136,20 @@ public class InventoryRepository {
                 .param("inventoryName", inventoryName)
                 .update();
     }
+
+    /**
+     * Remove um inventario existente.
+     * Estrategia: executa delete direto na tabela `inventories` filtrando por `inv_id`.
+     * Efeitos colaterais: remove o inventario persistido da base.
+     *
+     * @param inventoryId identificador do inventario a ser removido.
+     */
+    public void deleteInventory(UUID inventoryId) {
+        jdbcClient.sql("""
+                DELETE FROM inventories
+                WHERE inv_id = :inventoryId
+                """)
+                .param("inventoryId", inventoryId)
+                .update();
+    }
 }

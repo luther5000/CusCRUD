@@ -5,11 +5,13 @@ import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import br.com.cuscrudrest.inventories.create.CreateInventoryRequest;
 import br.com.cuscrudrest.inventories.create.CreateInventoryResponse;
 import br.com.cuscrudrest.inventories.create.CreateInventoryService;
+import br.com.cuscrudrest.inventories.delete.DeleteInventoryService;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryRequest;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryResponse;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryService;
 import jakarta.validation.Valid;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -31,19 +33,23 @@ import java.util.UUID;
 public class InventoriesController {
 
     private final CreateInventoryService createInventoryService;
+    private final DeleteInventoryService deleteInventoryService;
     private final RenameInventoryService renameInventoryService;
 
     /**
      * Cria o controller de inventarios.
      *
      * @param createInventoryService servico responsavel pela criacao de inventarios.
+     * @param deleteInventoryService servico responsavel pela remocao de inventarios.
      * @param renameInventoryService servico responsavel pela renomeacao de inventarios.
      */
     public InventoriesController(
             CreateInventoryService createInventoryService,
+            DeleteInventoryService deleteInventoryService,
             RenameInventoryService renameInventoryService
     ) {
         this.createInventoryService = createInventoryService;
+        this.deleteInventoryService = deleteInventoryService;
         this.renameInventoryService = renameInventoryService;
     }
 
@@ -84,5 +90,23 @@ public class InventoriesController {
             @Valid @RequestBody RenameInventoryRequest request
     ) {
         return renameInventoryService.renameInventory(authenticatedUser, inventoryId, request);
+    }
+
+    /**
+     * DELETE /api/v1/inventories/{inv_id}
+     * Remove um inventario existente quando o usuario autenticado possui role owner no recurso.
+     * Estrategia: resolve o UUID do path e delega a exclusao ao servico de negocio.
+     * Efeitos colaterais: remove o inventario persistido informado.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario a ser removido.
+     */
+    @DeleteMapping("/inventories/{inv_id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteInventory(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId
+    ) {
+        deleteInventoryService.deleteInventory(authenticatedUser, inventoryId);
     }
 }
