@@ -1713,8 +1713,12 @@ services:
       - DB_USER=cuscrud_app
       - DB_PASSWORD=${CUSCRUD_APP_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
+      - LOG_DIR=logs
+      - LOG_LEVEL=INFO
     depends_on:
       - db
+    volumes:
+      - ./backend/logs:/app/logs
   db:
     image: postgres:17
     container_name: cuscrud-db
@@ -1736,15 +1740,28 @@ volumes:
 - `POSTGRES_SUPERUSER_PASSWORD`
 - `CUSCRUD_APP_PASSWORD`
 - `JWT_SECRET`
+- `LOG_DIR`
+- `LOG_LEVEL`
 
 **Logging**
 - Logar todos os erros 4xx/5xx.
 - Nível `warning`: logar também todos os requests de autenticação e de alteração de dados (POST, PATCH, DELETE).
 - Nível `debug`: logar todos os requests.
-- Cada entrada de log deve incluir um ID que contenha o IP do cliente.
+- Cada entrada de log deve incluir `request_id` e `client_ip`.
+- O `request_id` deve conter o IP do cliente e um sufixo aleatório para rastreio.
+- O backend deve escrever dois arquivos de log:
+  1. log geral: `cuscrud-backend.log`
+  2. log dedicado da aplicação: `cuscrud-backend-application.log`
+- O arquivo dedicado da aplicação deve receber apenas logs do namespace `br.com.cuscrudrest`.
+- O logger root deve permanecer em `warning`.
+- O nível configurável via `LOG_LEVEL` deve se aplicar ao namespace `br.com.cuscrudrest`.
 - Rotação de logs: arquivos de até 10 MB; manter no máximo 10 arquivos; arquivos `.2` a `.10` compactados em `.gz`.
+- Quando `logrotate` for usado, a rotação deve cobrir tanto o log geral quanto o log dedicado da aplicação.
 - Pode usar o sistema de logging do Linux (ex.: `logrotate` ou journald) se for a opção mais simples.
 - IO/Blocking: escrita síncrona em arquivo (append); rotação pode bloquear brevemente na troca de arquivo, mas requests não devem ser bloqueados esperando compressão (executar compressão em tarefa separada/assíncrona).
+- Em ambiente com Docker Compose, o backend deve persistir os logs fora do container montando `./backend/logs` no caminho `/app/logs`.
+- O valor padrão de `LOG_DIR` para este projeto é `logs`.
+- O valor padrão de `LOG_LEVEL` para este projeto é `INFO`, aplicado ao logger `br.com.cuscrudrest`.
 
 ---
 

@@ -1,15 +1,15 @@
 \set ON_ERROR_STOP on
 
--- Conectar explicitamente ao banco da aplicacao antes de criar extensoes e objetos
+-- Conectar explicitamente ao banco da aplicação antes de criar extensões e objetos
 \connect cuscrud
 
--- Habilitar a extensao necessaria no banco da aplicacao
+-- Habilitar a extensão necessaria no banco da aplicação
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Garantir que tabelas, indices e constraints pertencam ao usuario da aplicacao
+-- Garantir que tabelas, indices e constraints pertençam ao usuário da aplicação
 SET ROLE cuscrud_app;
 
--- 1. Tabela de Usuarios
+-- 1. Tabela de usuários
 CREATE TABLE users (
     user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
@@ -19,7 +19,7 @@ CREATE TABLE users (
 );
 CREATE INDEX idx_users_login ON users (login);
 
--- 2. Tabela de Inventarios
+-- 2. Tabela de inventários
 CREATE TABLE inventories (
     inv_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     inv_name VARCHAR(255) NOT NULL

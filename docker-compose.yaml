@@ -12,9 +12,12 @@ services:
       DB_USER: cuscrud_app
       DB_PASSWORD: ${CUSCRUD_APP_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      LOG_DIR: ${LOG_DIR}
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./backend/logs:/app/logs
 
   db:
     image: postgres:17

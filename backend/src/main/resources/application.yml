@@ -12,6 +12,11 @@ spring:
   jackson:
     time-zone: America/Recife
 
+logging:
+  level:
+    root: WARN
+    br.com.cuscrudrest: ${LOG_LEVEL:INFO}
+
 cuscrud:
   auth:
     jwt-secret: ${JWT_SECRET:local-dev-secret-for-cuscrud-backend}

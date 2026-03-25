@@ -5,6 +5,7 @@
 
 backend/target/
 backend/.mvn/
+backend/logs/
 
 db/data/
 
