@@ -74,6 +74,40 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Converte falhas de autorizacao em erro HTTP 403.
+     *
+     * @param exception excecao de autorizacao lancada pela camada de servico.
+     * @return resposta 403 no formato padrao de erro da API.
+     */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbidden(ForbiddenException exception) {
+        return buildErrorResponse(
+                HttpStatus.FORBIDDEN,
+                "FORBIDDEN",
+                exception.getMessage(),
+                exception.getCampo(),
+                exception.getInfo()
+        );
+    }
+
+    /**
+     * Converte recursos ausentes em erro HTTP 404.
+     *
+     * @param exception excecao de nao encontrado lancada pela camada de servico.
+     * @return resposta 404 no formato padrao de erro da API.
+     */
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(NotFoundException exception) {
+        return buildErrorResponse(
+                HttpStatus.NOT_FOUND,
+                "NOT_FOUND",
+                exception.getMessage(),
+                exception.getCampo(),
+                exception.getInfo()
+        );
+    }
+
+    /**
      * Converte falhas de autenticacao em erro HTTP 401.
      *
      * @param exception excecao de autenticacao lancada pela camada de servico ou seguranca.
