@@ -48,6 +48,8 @@ class ProtectedRouteSecurityTest {
     @BeforeEach
     void setUp() {
         jdbcClient.sql("DROP TABLE IF EXISTS users").update();
+        jdbcClient.sql("DROP TABLE IF EXISTS inventory_access").update();
+        jdbcClient.sql("DROP TABLE IF EXISTS inventories").update();
         jdbcClient.sql("""
                 CREATE TABLE users (
                     user_id UUID DEFAULT random_uuid() PRIMARY KEY,
@@ -55,6 +57,22 @@ class ProtectedRouteSecurityTest {
                     login VARCHAR(255) UNIQUE NOT NULL,
                     passwd TEXT NOT NULL,
                     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """)
+                .update();
+        jdbcClient.sql("""
+                CREATE TABLE inventories (
+                    inv_id UUID PRIMARY KEY,
+                    inv_name VARCHAR(255) NOT NULL
+                )
+                """)
+                .update();
+        jdbcClient.sql("""
+                CREATE TABLE inventory_access (
+                    user_id UUID NOT NULL,
+                    inv_id UUID NOT NULL,
+                    role INT NOT NULL,
+                    PRIMARY KEY (user_id, inv_id)
                 )
                 """)
                 .update();
@@ -78,8 +96,8 @@ class ProtectedRouteSecurityTest {
 
     /**
      * Verifica que uma rota protegida deixa de falhar por autenticacao quando o JWT e valido.
-     * Entrada: Bearer token assinado para usuario existente e rota protegida sem handler para GET.
-     * Esperado: a camada de seguranca aceita a autenticacao e o resultado passa a ser 405.
+     * Entrada: Bearer token assinado para usuario existente e rota protegida implementada.
+     * Esperado: a camada de seguranca aceita a autenticacao e o resultado passa a ser 200.
      *
      * @throws Exception quando a execucao do request de teste falha.
      */
@@ -90,7 +108,9 @@ class ProtectedRouteSecurityTest {
 
         mockMvc.perform(get("/inventories")
                         .header("Authorization", "Bearer " + issuedJwtToken.token()))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.inventories").isArray());
     }
 
     /**

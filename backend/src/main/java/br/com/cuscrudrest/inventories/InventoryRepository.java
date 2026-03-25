@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -46,6 +47,56 @@ public class InventoryRepository {
                 .query(Integer.class)
                 .single();
         return count != null ? count : 0;
+    }
+
+    /**
+     * Conta quantos inventarios o usuario informado pode acessar.
+     * Estrategia: consulta `inventory_access` filtrando por `user_id`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param userId identificador do usuario autenticado.
+     * @return quantidade total de inventarios acessiveis pelo usuario.
+     */
+    public int countAccessibleInventories(UUID userId) {
+        Integer count = jdbcClient.sql("""
+                SELECT COUNT(*)
+                FROM inventory_access
+                WHERE user_id = :userId
+                """)
+                .param("userId", userId)
+                .query(Integer.class)
+                .single();
+        return count != null ? count : 0;
+    }
+
+    /**
+     * Lista os inventarios acessiveis ao usuario com paginacao por offset.
+     * Estrategia: faz join entre `inventory_access` e `inventories`, ordenando por `inv_id ASC`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param userId identificador do usuario autenticado.
+     * @param limit limite da pagina.
+     * @param offset deslocamento da pagina.
+     * @return inventarios acessiveis ao usuario na pagina solicitada.
+     */
+    public List<UserInventorySummary> listAccessibleInventories(UUID userId, int limit, int offset) {
+        return jdbcClient.sql("""
+                SELECT i.inv_id, i.inv_name, ia.role
+                FROM inventory_access ia
+                INNER JOIN inventories i ON i.inv_id = ia.inv_id
+                WHERE ia.user_id = :userId
+                ORDER BY i.inv_id ASC
+                LIMIT :limit OFFSET :offset
+                """)
+                .param("userId", userId)
+                .param("limit", limit)
+                .param("offset", offset)
+                .query((resultSet, rowNum) -> new UserInventorySummary(
+                        resultSet.getObject("inv_id", UUID.class),
+                        resultSet.getString("inv_name"),
+                        resultSet.getInt("role")
+                ))
+                .list();
     }
 
     /**
