@@ -7,11 +7,15 @@ import br.com.cuscrudrest.auth.login.LoginService;
 import br.com.cuscrudrest.auth.register.RegisterRequest;
 import br.com.cuscrudrest.auth.register.RegisterResponse;
 import br.com.cuscrudrest.auth.register.RegisterService;
+import br.com.cuscrudrest.auth.validate.ValidateResponse;
+import br.com.cuscrudrest.auth.validate.ValidateService;
 import jakarta.validation.Valid;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,16 +30,19 @@ public class AuthController {
 
     private final LoginService loginService;
     private final RegisterService registerService;
+    private final ValidateService validateService;
 
     /**
      * Cria o controller de autenticacao.
      *
      * @param loginService servico de negocio responsavel pelo login e emissao de token.
      * @param registerService servico de negocio responsavel pelo cadastro de usuario.
+     * @param validateService servico de negocio responsavel pela validacao do JWT.
      */
-    public AuthController(LoginService loginService, RegisterService registerService) {
+    public AuthController(LoginService loginService, RegisterService registerService, ValidateService validateService) {
         this.loginService = loginService;
         this.registerService = registerService;
+        this.validateService = validateService;
     }
 
     /**
@@ -50,6 +57,22 @@ public class AuthController {
     @PostMapping("/auth/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return loginService.login(request);
+    }
+
+    /**
+     * GET /api/v1/auth/validate
+     * Valida o token Bearer enviado na requisicao e retorna os dados do usuario autenticado.
+     * Estrategia: delega a extração e validacao do JWT ao servico especifico e recarrega o usuario referenciado no token.
+     * Efeitos colaterais: nenhum alem da leitura do usuario na base.
+     *
+     * @param authorizationHeader valor bruto do header Authorization recebido na requisicao.
+     * @return dados publicos do usuario autenticado e metadados do token.
+     */
+    @GetMapping("/auth/validate")
+    public ValidateResponse validate(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        return validateService.validate(authorizationHeader);
     }
 
     /**
