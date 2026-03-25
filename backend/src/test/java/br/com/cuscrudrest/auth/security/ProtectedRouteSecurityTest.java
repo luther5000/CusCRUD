@@ -78,8 +78,8 @@ class ProtectedRouteSecurityTest {
 
     /**
      * Verifica que uma rota protegida deixa de falhar por autenticacao quando o JWT e valido.
-     * Entrada: Bearer token assinado para usuario existente e rota ainda sem handler MVC.
-     * Esperado: a camada de seguranca aceita a autenticacao e o resultado passa a ser 404.
+     * Entrada: Bearer token assinado para usuario existente e rota protegida sem handler para GET.
+     * Esperado: a camada de seguranca aceita a autenticacao e o resultado passa a ser 405.
      *
      * @throws Exception quando a execucao do request de teste falha.
      */
@@ -90,7 +90,7 @@ class ProtectedRouteSecurityTest {
 
         mockMvc.perform(get("/inventories")
                         .header("Authorization", "Bearer " + issuedJwtToken.token()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isMethodNotAllowed());
     }
 
     /**
