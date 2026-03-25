@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -79,6 +80,37 @@ class UserRepositoryTest {
     @Test
     void shouldReportMissingLogin() {
         assertFalse(userRepository.existsByLogin("inexistente@example.com"));
+    }
+
+    /**
+     * Verifica que o repositorio encontra um usuario pelo `user_id`.
+     * Entrada: identificador retornado pelo insert do proprio repositorio.
+     * Esperado: usuario encontrado com os mesmos dados publicos persistidos.
+     */
+    @Test
+    void shouldFindUserByUserId() {
+        UserAccount insertedUser = userRepository.insertUser(
+                "Joao Novo",
+                "joao.novo@example.com",
+                "$2a$10$abcdefghijklmnopqrstuv"
+        );
+
+        UserAccount foundUser = userRepository.findByUserId(insertedUser.userId()).orElseThrow();
+
+        assertEquals(insertedUser.userId(), foundUser.userId());
+        assertEquals("Joao Novo", foundUser.name());
+        assertEquals("joao.novo@example.com", foundUser.login());
+        assertNotNull(foundUser.createdAt());
+    }
+
+    /**
+     * Verifica que o repositorio retorna vazio ao buscar um `user_id` inexistente.
+     * Entrada: UUID nao persistido na tabela `users`.
+     * Esperado: Optional vazio.
+     */
+    @Test
+    void shouldReturnEmptyWhenUserIdDoesNotExist() {
+        assertTrue(userRepository.findByUserId(UUID.randomUUID()).isEmpty());
     }
 
     /**

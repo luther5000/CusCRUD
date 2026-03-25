@@ -96,6 +96,25 @@ public class UserRepository {
     }
 
     /**
+     * Busca um usuario pelo identificador unico.
+     * Estrategia: usa query por `user_id` e converte a linha retornada para o record `UserAccount`.
+     * Efeitos colaterais: nenhum alem da leitura da tabela `users`.
+     *
+     * @param userId identificador unico do usuario a ser localizado.
+     * @return usuario encontrado, ou vazio quando nao existir registro para o identificador informado.
+     */
+    public Optional<UserAccount> findByUserId(UUID userId) {
+        return jdbcClient.sql("""
+                SELECT user_id, name, login, created_at
+                FROM users
+                WHERE user_id = :userId
+                """)
+                .param("userId", userId)
+                .query(USER_ACCOUNT_ROW_MAPPER)
+                .optional();
+    }
+
+    /**
      * Busca um usuario pelo login incluindo o hash persistido da senha.
      * Estrategia: consulta a tabela `users` por `login` para atender o fluxo de autenticacao.
      * Efeitos colaterais: nenhum alem da leitura da tabela `users`.
