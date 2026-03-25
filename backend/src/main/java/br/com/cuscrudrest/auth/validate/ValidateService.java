@@ -1,67 +1,35 @@
 package br.com.cuscrudrest.auth.validate;
 
-import br.com.cuscrudrest.auth.jwt.JwtService;
-import br.com.cuscrudrest.auth.jwt.ValidatedJwtToken;
-import br.com.cuscrudrest.auth.user.UserAccount;
-import br.com.cuscrudrest.auth.user.UserRepository;
-import br.com.cuscrudrest.common.error.UnauthenticatedException;
-import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
-import org.springframework.context.annotation.Conditional;
+import br.com.cuscrudrest.auth.security.AuthenticatedUserPrincipal;
 import org.springframework.stereotype.Service;
 
 /**
  * Servico de validacao do token JWT da aplicacao.
- * Coordena a extração do header Authorization, a validacao do token e a carga do usuario autenticado.
- * Efeitos colaterais: nenhum. Opera apenas com leitura de banco e dados do token recebido.
+ * Converte o principal autenticado do Spring Security no payload do endpoint de validacao.
+ * Efeitos colaterais: nenhum. Opera apenas sobre os dados ja autenticados da request atual.
  */
 @Service
-@Conditional(DatabaseConfiguredCondition.class)
 public class ValidateService {
 
-    private final JwtService jwtService;
-    private final UserRepository userRepository;
-
     /**
-     * Cria o servico de validacao de token.
+     * Monta a resposta do endpoint de validacao a partir do principal autenticado.
+     * Estrategia: reaproveita os dados de usuario e metadados do token resolvidos pelo filtro JWT.
+     * Efeitos colaterais: nenhum.
      *
-     * @param jwtService servico responsavel por extrair e validar o JWT.
-     * @param userRepository repositorio JDBC dos usuarios.
-     */
-    public ValidateService(JwtService jwtService, UserRepository userRepository) {
-        this.jwtService = jwtService;
-        this.userRepository = userRepository;
-    }
-
-    /**
-     * Valida o token Bearer recebido no header Authorization e retorna o usuario autenticado.
-     * Estrategia: extrai o token do header, valida assinatura/claims e recarrega o usuario a partir da claim `sub`.
-     * Efeitos colaterais: nenhum alem da leitura da tabela `users`.
-     *
-     * @param authorizationHeader valor bruto do header `Authorization`.
+     * @param authenticatedUser principal autenticado da request atual.
      * @return usuario autenticado e metadados do token validado.
-     * @throws UnauthenticatedException quando o header ou o token forem invalidos, expirados ou referenciarem usuario inexistente.
      */
-    public ValidateResponse validate(String authorizationHeader) {
-        String token = jwtService.extractBearerToken(authorizationHeader);
-        ValidatedJwtToken validatedJwtToken = jwtService.validateToken(token);
-
-        UserAccount userAccount = userRepository.findByUserId(validatedJwtToken.userId())
-                .orElseThrow(() -> new UnauthenticatedException(
-                        "Token ausente, invalido ou expirado.",
-                        "Authorization",
-                        "jwt subject user not found"
-                ));
-
+    public ValidateResponse validate(AuthenticatedUserPrincipal authenticatedUser) {
         return new ValidateResponse(
                 new ValidateUserResponse(
-                        userAccount.userId(),
-                        userAccount.name(),
-                        userAccount.login(),
-                        userAccount.createdAt()
+                        authenticatedUser.userId(),
+                        authenticatedUser.name(),
+                        authenticatedUser.login(),
+                        authenticatedUser.createdAt()
                 ),
                 new ValidateTokenResponse(
-                        validatedJwtToken.expiresIn(),
-                        validatedJwtToken.issuedAt()
+                        authenticatedUser.expiresIn(),
+                        authenticatedUser.issuedAt()
                 )
         );
     }

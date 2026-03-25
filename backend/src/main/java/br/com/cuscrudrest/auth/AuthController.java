@@ -7,6 +7,7 @@ import br.com.cuscrudrest.auth.login.LoginService;
 import br.com.cuscrudrest.auth.register.RegisterRequest;
 import br.com.cuscrudrest.auth.register.RegisterResponse;
 import br.com.cuscrudrest.auth.register.RegisterService;
+import br.com.cuscrudrest.auth.security.AuthenticatedUserPrincipal;
 import br.com.cuscrudrest.auth.validate.ValidateResponse;
 import br.com.cuscrudrest.auth.validate.ValidateService;
 import jakarta.validation.Valid;
@@ -14,8 +15,8 @@ import org.springframework.context.annotation.Conditional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -61,18 +62,16 @@ public class AuthController {
 
     /**
      * GET /api/v1/auth/validate
-     * Valida o token Bearer enviado na requisicao e retorna os dados do usuario autenticado.
-     * Estrategia: delega a extração e validacao do JWT ao servico especifico e recarrega o usuario referenciado no token.
-     * Efeitos colaterais: nenhum alem da leitura do usuario na base.
+     * Retorna os dados do usuario autenticado a partir do principal carregado pelo filtro JWT.
+     * Estrategia: consome o principal da request atual ja autenticada pelo Spring Security.
+     * Efeitos colaterais: nenhum.
      *
-     * @param authorizationHeader valor bruto do header Authorization recebido na requisicao.
+     * @param authenticatedUser principal autenticado resolvido pelo Spring Security.
      * @return dados publicos do usuario autenticado e metadados do token.
      */
     @GetMapping("/auth/validate")
-    public ValidateResponse validate(
-            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
-    ) {
-        return validateService.validate(authorizationHeader);
+    public ValidateResponse validate(@AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser) {
+        return validateService.validate(authenticatedUser);
     }
 
     /**
