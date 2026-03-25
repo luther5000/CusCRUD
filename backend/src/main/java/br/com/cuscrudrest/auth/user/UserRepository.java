@@ -22,6 +22,7 @@ import java.util.UUID;
 public class UserRepository {
 
     private static final RowMapper<UserAccount> USER_ACCOUNT_ROW_MAPPER = UserRepository::mapUserAccount;
+    private static final RowMapper<UserCredentials> USER_CREDENTIALS_ROW_MAPPER = UserRepository::mapUserCredentials;
 
     private final JdbcClient jdbcClient;
 
@@ -95,6 +96,25 @@ public class UserRepository {
     }
 
     /**
+     * Busca um usuario pelo login incluindo o hash persistido da senha.
+     * Estrategia: consulta a tabela `users` por `login` para atender o fluxo de autenticacao.
+     * Efeitos colaterais: nenhum alem da leitura da tabela `users`.
+     *
+     * @param login email unico do usuario a ser autenticado.
+     * @return usuario com credenciais persistidas, ou vazio quando nao existir registro para o login informado.
+     */
+    public Optional<UserCredentials> findCredentialsByLogin(String login) {
+        return jdbcClient.sql("""
+                SELECT user_id, name, login, passwd, created_at
+                FROM users
+                WHERE login = :login
+                """)
+                .param("login", login)
+                .query(USER_CREDENTIALS_ROW_MAPPER)
+                .optional();
+    }
+
+    /**
      * Converte a linha JDBC em um `UserAccount`.
      *
      * @param resultSet linha atual retornada pela consulta JDBC.
@@ -108,5 +128,22 @@ public class UserRepository {
         String login = resultSet.getString("login");
         OffsetDateTime createdAt = resultSet.getObject("created_at", OffsetDateTime.class);
         return new UserAccount(userId, name, login, createdAt);
+    }
+
+    /**
+     * Converte a linha JDBC em um `UserCredentials`.
+     *
+     * @param resultSet linha atual retornada pela consulta JDBC.
+     * @param rowNum indice da linha no cursor da consulta.
+     * @return representacao imutavel do usuario com hash persistido.
+     * @throws SQLException quando a leitura das colunas falha.
+     */
+    private static UserCredentials mapUserCredentials(ResultSet resultSet, int rowNum) throws SQLException {
+        UUID userId = resultSet.getObject("user_id", UUID.class);
+        String name = resultSet.getString("name");
+        String login = resultSet.getString("login");
+        String encodedPassword = resultSet.getString("passwd");
+        OffsetDateTime createdAt = resultSet.getObject("created_at", OffsetDateTime.class);
+        return new UserCredentials(userId, name, login, encodedPassword, createdAt);
     }
 }

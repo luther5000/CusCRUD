@@ -1,6 +1,9 @@
 package br.com.cuscrudrest.auth;
 
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
+import br.com.cuscrudrest.auth.login.LoginRequest;
+import br.com.cuscrudrest.auth.login.LoginResponse;
+import br.com.cuscrudrest.auth.login.LoginService;
 import br.com.cuscrudrest.auth.register.RegisterRequest;
 import br.com.cuscrudrest.auth.register.RegisterResponse;
 import br.com.cuscrudrest.auth.register.RegisterService;
@@ -21,15 +24,32 @@ import org.springframework.web.bind.annotation.RestController;
 @Conditional(DatabaseConfiguredCondition.class)
 public class AuthController {
 
+    private final LoginService loginService;
     private final RegisterService registerService;
 
     /**
      * Cria o controller de autenticacao.
      *
+     * @param loginService servico de negocio responsavel pelo login e emissao de token.
      * @param registerService servico de negocio responsavel pelo cadastro de usuario.
      */
-    public AuthController(RegisterService registerService) {
+    public AuthController(LoginService loginService, RegisterService registerService) {
+        this.loginService = loginService;
         this.registerService = registerService;
+    }
+
+    /**
+     * POST /api/v1/auth/login
+     * Autentica o usuario a partir de login e senha validos e retorna um token JWT com TTL fixo.
+     * Estrategia: valida o corpo via Bean Validation e delega a verificacao de credenciais ao servico de login.
+     * Efeitos colaterais: nenhum alem da emissao do token em memoria.
+     *
+     * @param request payload HTTP com as credenciais do usuario.
+     * @return token JWT e dados publicos do usuario autenticado.
+     */
+    @PostMapping("/auth/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+        return loginService.login(request);
     }
 
     /**
