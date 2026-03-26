@@ -18,6 +18,7 @@ import java.util.UUID;
 public class InventoryAccessService {
 
     private static final int OWNER_ROLE = 0;
+    private static final int EDITOR_ROLE = 1;
 
     private final InventoryRepository inventoryRepository;
 
@@ -78,6 +79,32 @@ public class InventoryAccessService {
                     "Usuario autenticado nao possui role owner para o inventario.",
                     "inv_id",
                     "owner role required"
+            );
+        }
+
+        return accessContext;
+    }
+
+    /**
+     * Garante que o usuario autenticado possui acesso de escrita ao inventario informado.
+     * Estrategia: valida a existencia do inventario, verifica se o usuario pertence a ele e exige `role = 0` ou `role = 1`.
+     * Efeitos colaterais: nenhum alem de leituras na base.
+     *
+     * @param inventoryId identificador do inventario protegido.
+     * @param userId identificador do usuario autenticado.
+     * @return contexto de acesso do inventario resolvido para reutilizacao pelo caso de uso.
+     * @throws NotFoundException quando o inventario nao existe ou o usuario nao possui acesso a ele.
+     * @throws ForbiddenException quando o usuario possui acesso, mas nao com role de escrita.
+     */
+    public InventoryAccessContext requireWriteAccess(UUID inventoryId, UUID userId) {
+        InventoryAccessContext accessContext = requireAnyAccess(inventoryId, userId);
+        Integer role = accessContext.role();
+
+        if (role != OWNER_ROLE && role != EDITOR_ROLE) {
+            throw new ForbiddenException(
+                    "Usuario autenticado nao possui permissao de escrita no inventario.",
+                    "inv_id",
+                    "write role required"
             );
         }
 

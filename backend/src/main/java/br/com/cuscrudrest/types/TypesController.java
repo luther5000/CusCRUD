@@ -2,17 +2,25 @@ package br.com.cuscrudrest.types;
 
 import br.com.cuscrudrest.auth.security.AuthenticatedUserPrincipal;
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
+import br.com.cuscrudrest.types.create.CreateTypeRequest;
+import br.com.cuscrudrest.types.create.CreateTypeResponse;
+import br.com.cuscrudrest.types.create.CreateTypeService;
 import br.com.cuscrudrest.types.get.GetTypeResponse;
 import br.com.cuscrudrest.types.get.GetTypeService;
 import br.com.cuscrudrest.types.list.ListTypesPage;
 import br.com.cuscrudrest.types.list.ListTypesResponse;
 import br.com.cuscrudrest.types.list.ListTypesService;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -27,21 +35,46 @@ import java.util.UUID;
 @Conditional(DatabaseConfiguredCondition.class)
 public class TypesController {
 
+    private final CreateTypeService createTypeService;
     private final GetTypeService getTypeService;
     private final ListTypesService listTypesService;
 
     /**
      * Cria o controller de tipos.
      *
+     * @param createTypeService servico responsavel pela criacao de tipos.
      * @param getTypeService servico responsavel pela leitura unitaria de tipos.
      * @param listTypesService servico responsavel pela listagem paginada de tipos.
      */
     public TypesController(
+            CreateTypeService createTypeService,
             GetTypeService getTypeService,
             ListTypesService listTypesService
     ) {
+        this.createTypeService = createTypeService;
         this.getTypeService = getTypeService;
         this.listTypesService = listTypesService;
+    }
+
+    /**
+     * POST /api/v1/inventories/{inv_id}/types
+     * Cria um novo tipo no inventario quando o usuario autenticado possui permissao de escrita no recurso.
+     * Estrategia: valida o payload via Bean Validation, resolve o UUID do path e delega a criacao ao servico de negocio.
+     * Efeitos colaterais: persiste um novo tipo associado ao inventario informado.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param request payload HTTP com nome e imagem opcional do tipo.
+     * @return tipo criado com `type_id` gerado.
+     */
+    @PostMapping("/inventories/{inv_id}/types")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CreateTypeResponse createType(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @Valid @RequestBody CreateTypeRequest request
+    ) {
+        return createTypeService.createType(authenticatedUser, inventoryId, request);
     }
 
     /**

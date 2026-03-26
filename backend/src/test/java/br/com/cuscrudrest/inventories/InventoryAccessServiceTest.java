@@ -123,6 +123,46 @@ class InventoryAccessServiceTest {
     }
 
     /**
+     * Verifica que o servico aceita acesso de escrita quando o usuario e editor.
+     * Entrada: inventario existente com vinculo `role = 1` para o usuario.
+     * Esperado: contexto com `inv_id`, `inv_name` e `role = 1`.
+     */
+    @Test
+    void shouldReturnInventoryContextWhenUserCanWrite() {
+        UUID inventoryId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        insertInventory(inventoryId, "Estoque da Loja");
+        insertInventoryAccess(userId, inventoryId, 1);
+
+        InventoryAccessContext accessContext = inventoryAccessService.requireWriteAccess(inventoryId, userId);
+
+        assertEquals(inventoryId, accessContext.inventoryId());
+        assertEquals("Estoque da Loja", accessContext.inventoryName());
+        assertEquals(1, accessContext.role());
+    }
+
+    /**
+     * Verifica que o servico rejeita acesso de escrita quando o usuario e apenas reader.
+     * Entrada: inventario existente com vinculo `role = 2` para o usuario.
+     * Esperado: ForbiddenException associada ao campo `inv_id`.
+     */
+    @Test
+    void shouldRejectWhenUserCannotWrite() {
+        UUID inventoryId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        insertInventory(inventoryId, "Estoque da Loja");
+        insertInventoryAccess(userId, inventoryId, 2);
+
+        ForbiddenException exception = assertThrows(
+                ForbiddenException.class,
+                () -> inventoryAccessService.requireWriteAccess(inventoryId, userId)
+        );
+
+        assertEquals("inv_id", exception.getCampo());
+        assertEquals("write role required", exception.getInfo());
+    }
+
+    /**
      * Persiste um inventario de teste.
      *
      * @param inventoryId identificador do inventario.
