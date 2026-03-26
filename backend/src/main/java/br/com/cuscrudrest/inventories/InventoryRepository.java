@@ -235,6 +235,24 @@ public class InventoryRepository {
     }
 
     /**
+     * Remove o vinculo de acesso de um usuario a um inventario.
+     * Estrategia: executa delete direto na tabela `inventory_access` filtrando por `inv_id` e `user_id`.
+     * Efeitos colaterais: remove o acesso persistido do usuario ao inventario.
+     *
+     * @param inventoryId identificador do inventario.
+     * @param userId identificador do usuario alvo.
+     */
+    public void deleteUserAccess(UUID inventoryId, UUID userId) {
+        jdbcClient.sql("""
+                DELETE FROM inventory_access
+                WHERE inv_id = :inventoryId AND user_id = :userId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("userId", userId)
+                .update();
+    }
+
+    /**
      * Cria um inventario e o vinculo de owner para o usuario informado.
      * Estrategia: insere o inventario na tabela `inventories` e depois cria o acesso correspondente em `inventory_access`.
      * Efeitos colaterais: cria um inventario persistido e o papel owner na base.

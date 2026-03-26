@@ -15,6 +15,7 @@ import br.com.cuscrudrest.inventories.rename.RenameInventoryService;
 import br.com.cuscrudrest.inventories.users.create.AddInventoryUserRequest;
 import br.com.cuscrudrest.inventories.users.create.AddInventoryUserResponse;
 import br.com.cuscrudrest.inventories.users.create.AddInventoryUserService;
+import br.com.cuscrudrest.inventories.users.delete.DeleteInventoryUserService;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersPage;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersResponse;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersService;
@@ -51,6 +52,7 @@ public class InventoriesController {
     private final AddInventoryUserService addInventoryUserService;
     private final CreateInventoryService createInventoryService;
     private final DeleteInventoryService deleteInventoryService;
+    private final DeleteInventoryUserService deleteInventoryUserService;
     private final ListInventoriesService listInventoriesService;
     private final ListInventoryUsersService listInventoryUsersService;
     private final RenameInventoryService renameInventoryService;
@@ -62,6 +64,7 @@ public class InventoriesController {
      * @param addInventoryUserService servico responsavel pela concessao de acesso a usuarios no inventario.
      * @param createInventoryService servico responsavel pela criacao de inventarios.
      * @param deleteInventoryService servico responsavel pela remocao de inventarios.
+     * @param deleteInventoryUserService servico responsavel pela remocao de usuarios do inventario.
      * @param listInventoriesService servico responsavel pela listagem paginada de inventarios.
      * @param listInventoryUsersService servico responsavel pela listagem paginada de usuarios do inventario.
      * @param renameInventoryService servico responsavel pela renomeacao de inventarios.
@@ -71,6 +74,7 @@ public class InventoriesController {
             AddInventoryUserService addInventoryUserService,
             CreateInventoryService createInventoryService,
             DeleteInventoryService deleteInventoryService,
+            DeleteInventoryUserService deleteInventoryUserService,
             ListInventoriesService listInventoriesService,
             ListInventoryUsersService listInventoryUsersService,
             RenameInventoryService renameInventoryService,
@@ -79,6 +83,7 @@ public class InventoriesController {
         this.addInventoryUserService = addInventoryUserService;
         this.createInventoryService = createInventoryService;
         this.deleteInventoryService = deleteInventoryService;
+        this.deleteInventoryUserService = deleteInventoryUserService;
         this.listInventoriesService = listInventoriesService;
         this.listInventoryUsersService = listInventoryUsersService;
         this.renameInventoryService = renameInventoryService;
@@ -243,6 +248,26 @@ public class InventoriesController {
             @Valid @RequestBody UpdateInventoryUserRequest request
     ) {
         return updateInventoryUserService.updateInventoryUser(authenticatedUser, inventoryId, userId, request);
+    }
+
+    /**
+     * DELETE /api/v1/inventories/{inv_id}/users/{user_id}
+     * Remove o acesso de um usuario existente ao inventario quando o usuario autenticado possui role owner no recurso.
+     * Estrategia: resolve os UUIDs do path e delega a remocao ao servico de negocio.
+     * Efeitos colaterais: remove o vinculo de acesso do usuario ao inventario.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param userId identificador do usuario cujo acesso sera removido.
+     */
+    @DeleteMapping("/inventories/{inv_id}/users/{user_id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteInventoryUser(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("user_id") UUID userId
+    ) {
+        deleteInventoryUserService.deleteInventoryUser(authenticatedUser, inventoryId, userId);
     }
 
     /**
