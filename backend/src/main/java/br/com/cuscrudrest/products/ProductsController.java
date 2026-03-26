@@ -7,6 +7,7 @@ import br.com.cuscrudrest.products.get.GetProductService;
 import br.com.cuscrudrest.products.list.ListProductsPage;
 import br.com.cuscrudrest.products.list.ListProductsResponse;
 import br.com.cuscrudrest.products.list.ListProductsService;
+import br.com.cuscrudrest.products.listbytype.ListProductsByTypeService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,19 +29,23 @@ import java.util.UUID;
 public class ProductsController {
 
     private final GetProductService getProductService;
+    private final ListProductsByTypeService listProductsByTypeService;
     private final ListProductsService listProductsService;
 
     /**
      * Cria o controller de produtos.
      *
      * @param getProductService servico responsavel pela leitura unitaria de produtos.
+     * @param listProductsByTypeService servico responsavel pela listagem paginada de produtos filtrados por tipo.
      * @param listProductsService servico responsavel pela listagem paginada de produtos.
      */
     public ProductsController(
             GetProductService getProductService,
+            ListProductsByTypeService listProductsByTypeService,
             ListProductsService listProductsService
     ) {
         this.getProductService = getProductService;
+        this.listProductsByTypeService = listProductsByTypeService;
         this.listProductsService = listProductsService;
     }
 
@@ -90,6 +95,42 @@ public class ProductsController {
             @PathVariable("product_id") long productId
     ) {
         return getProductService.getProduct(authenticatedUser, inventoryId, productId);
+    }
+
+    /**
+     * GET /api/v1/inventories/{inv_id}/types/{type_id}/products
+     * Lista os produtos de um tipo especifico quando o usuario autenticado possui algum acesso ao inventario.
+     * Estrategia: delega validacao do inventario, do tipo e a consulta paginada ao servico de negocio, montando `next_page`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario consultado.
+     * @param typeId identificador do tipo pelo qual os produtos serao filtrados.
+     * @param limit limite opcional da pagina.
+     * @param offset offset opcional da pagina.
+     * @param request request HTTP atual usada para montar `next_page`.
+     * @return lista paginada de produtos do tipo informado.
+     */
+    @GetMapping("/inventories/{inv_id}/types/{type_id}/products")
+    public ListProductsResponse listProductsByType(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("type_id") long typeId,
+            @RequestParam(value = "limit", required = false) Integer limit,
+            @RequestParam(value = "offset", required = false) Integer offset,
+            HttpServletRequest request
+    ) {
+        ListProductsPage page = listProductsByTypeService.listProductsByType(
+                authenticatedUser,
+                inventoryId,
+                typeId,
+                limit,
+                offset
+        );
+        return new ListProductsResponse(
+                page.products(),
+                buildNextPageUrl(request, page.nextOffset(), page.limit())
+        );
     }
 
     /**

@@ -50,6 +50,28 @@ public class ProductRepository {
     }
 
     /**
+     * Conta quantos produtos pertencem ao inventario informado para um tipo especifico.
+     * Estrategia: consulta a tabela `products` filtrando por `inv_id` e `type_id`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param inventoryId identificador do inventario consultado.
+     * @param typeId identificador do tipo pelo qual a listagem sera filtrada.
+     * @return quantidade total de produtos do tipo no inventario.
+     */
+    public int countProductsByType(UUID inventoryId, long typeId) {
+        Integer count = jdbcClient.sql("""
+                SELECT COUNT(*)
+                FROM products
+                WHERE inv_id = :inventoryId AND type_id = :typeId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("typeId", typeId)
+                .query(Integer.class)
+                .single();
+        return count != null ? count : 0;
+    }
+
+    /**
      * Lista os produtos do inventario com paginacao por offset.
      * Estrategia: consulta a tabela `products` ordenando por `product_id ASC`.
      * Efeitos colaterais: nenhum alem da leitura da base.
@@ -68,6 +90,43 @@ public class ProductRepository {
                 LIMIT :limit OFFSET :offset
                 """)
                 .param("inventoryId", inventoryId)
+                .param("limit", limit)
+                .param("offset", offset)
+                .query((resultSet, rowNum) -> new ProductSummary(
+                        resultSet.getLong("product_id"),
+                        resultSet.getLong("type_id"),
+                        resultSet.getString("marca"),
+                        resultSet.getObject("dataValidade", java.time.OffsetDateTime.class),
+                        resultSet.getObject("unidade", Long.class),
+                        resultSet.getString("unidadeMedida"),
+                        resultSet.getLong("quantidade"),
+                        resultSet.getObject("inv_id", UUID.class)
+                ))
+                .list();
+    }
+
+    /**
+     * Lista os produtos do inventario filtrados por tipo com paginacao por offset.
+     * Estrategia: consulta a tabela `products` filtrando por `inv_id` e `type_id`, ordenando por `product_id ASC`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param inventoryId identificador do inventario consultado.
+     * @param typeId identificador do tipo pelo qual a listagem sera filtrada.
+     * @param limit limite da pagina.
+     * @param offset deslocamento da pagina.
+     * @return produtos da pagina solicitada para o tipo informado.
+     */
+    public List<ProductSummary> listProductsByType(UUID inventoryId, long typeId, int limit, int offset) {
+        return jdbcClient.sql("""
+                SELECT product_id, type_id, marca, dataValidade, unidade, unidadeMedida, quantidade, inv_id
+                FROM products
+                WHERE inv_id = :inventoryId
+                  AND type_id = :typeId
+                ORDER BY product_id ASC
+                LIMIT :limit OFFSET :offset
+                """)
+                .param("inventoryId", inventoryId)
+                .param("typeId", typeId)
                 .param("limit", limit)
                 .param("offset", offset)
                 .query((resultSet, rowNum) -> new ProductSummary(
