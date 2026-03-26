@@ -287,4 +287,24 @@ public class ProductRepository {
                         "Produto atualizado mas nao encontrado ao reler o registro."
                 ));
     }
+
+    /**
+     * Remove um produto existente do inventario informado.
+     * Estrategia: executa delete direto em `products` por `inv_id` e `product_id`.
+     * Efeitos colaterais: remove um registro persistido da tabela `products`.
+     *
+     * @param inventoryId identificador do inventario alvo.
+     * @param productId identificador do produto a ser removido.
+     * @return quantidade de linhas removidas.
+     */
+    public int deleteProduct(UUID inventoryId, long productId) {
+        return jdbcClient.sql("""
+                DELETE FROM products
+                WHERE inv_id = :inventoryId
+                  AND product_id = :productId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("productId", productId)
+                .update();
+    }
 }

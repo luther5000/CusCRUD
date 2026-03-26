@@ -5,6 +5,7 @@ import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import br.com.cuscrudrest.products.create.CreateProductRequest;
 import br.com.cuscrudrest.products.create.CreateProductResponse;
 import br.com.cuscrudrest.products.create.CreateProductService;
+import br.com.cuscrudrest.products.delete.DeleteProductService;
 import br.com.cuscrudrest.products.get.GetProductResponse;
 import br.com.cuscrudrest.products.get.GetProductService;
 import br.com.cuscrudrest.products.list.ListProductsPage;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -41,6 +43,7 @@ import java.util.UUID;
 public class ProductsController {
 
     private final CreateProductService createProductService;
+    private final DeleteProductService deleteProductService;
     private final GetProductService getProductService;
     private final ListProductsByTypeService listProductsByTypeService;
     private final ListProductsService listProductsService;
@@ -50,6 +53,7 @@ public class ProductsController {
      * Cria o controller de produtos.
      *
      * @param createProductService servico responsavel pela criacao de produtos.
+     * @param deleteProductService servico responsavel pela remocao de produtos.
      * @param getProductService servico responsavel pela leitura unitaria de produtos.
      * @param listProductsByTypeService servico responsavel pela listagem paginada de produtos filtrados por tipo.
      * @param listProductsService servico responsavel pela listagem paginada de produtos.
@@ -57,12 +61,14 @@ public class ProductsController {
      */
     public ProductsController(
             CreateProductService createProductService,
+            DeleteProductService deleteProductService,
             GetProductService getProductService,
             ListProductsByTypeService listProductsByTypeService,
             ListProductsService listProductsService,
             UpdateProductService updateProductService
     ) {
         this.createProductService = createProductService;
+        this.deleteProductService = deleteProductService;
         this.getProductService = getProductService;
         this.listProductsByTypeService = listProductsByTypeService;
         this.listProductsService = listProductsService;
@@ -158,6 +164,26 @@ public class ProductsController {
             @RequestBody UpdateProductRequest request
     ) {
         return updateProductService.updateProduct(authenticatedUser, inventoryId, productId, request);
+    }
+
+    /**
+     * DELETE /api/v1/inventories/{inv_id}/products/{product_id}
+     * Remove um produto do inventario quando o usuario autenticado possui permissao de escrita no recurso.
+     * Estrategia: resolve os identificadores do path e delega a remocao ao servico de negocio.
+     * Efeitos colaterais: remove o produto persistido correspondente.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param productId identificador do produto a ser removido.
+     */
+    @DeleteMapping("/inventories/{inv_id}/products/{product_id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProduct(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("product_id") long productId
+    ) {
+        deleteProductService.deleteProduct(authenticatedUser, inventoryId, productId);
     }
 
     /**
