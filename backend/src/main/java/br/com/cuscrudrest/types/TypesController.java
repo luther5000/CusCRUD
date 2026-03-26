@@ -2,6 +2,8 @@ package br.com.cuscrudrest.types;
 
 import br.com.cuscrudrest.auth.security.AuthenticatedUserPrincipal;
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
+import br.com.cuscrudrest.types.get.GetTypeResponse;
+import br.com.cuscrudrest.types.get.GetTypeService;
 import br.com.cuscrudrest.types.list.ListTypesPage;
 import br.com.cuscrudrest.types.list.ListTypesResponse;
 import br.com.cuscrudrest.types.list.ListTypesService;
@@ -25,14 +27,20 @@ import java.util.UUID;
 @Conditional(DatabaseConfiguredCondition.class)
 public class TypesController {
 
+    private final GetTypeService getTypeService;
     private final ListTypesService listTypesService;
 
     /**
      * Cria o controller de tipos.
      *
+     * @param getTypeService servico responsavel pela leitura unitaria de tipos.
      * @param listTypesService servico responsavel pela listagem paginada de tipos.
      */
-    public TypesController(ListTypesService listTypesService) {
+    public TypesController(
+            GetTypeService getTypeService,
+            ListTypesService listTypesService
+    ) {
+        this.getTypeService = getTypeService;
         this.listTypesService = listTypesService;
     }
 
@@ -62,6 +70,26 @@ public class TypesController {
                 page.types(),
                 buildNextPageUrl(request, page.nextOffset(), page.limit())
         );
+    }
+
+    /**
+     * GET /api/v1/inventories/{inv_id}/types/{type_id}
+     * Retorna um tipo especifico do inventario quando o usuario autenticado possui algum acesso ao recurso.
+     * Estrategia: resolve os identificadores do path e delega a leitura unitaria ao servico de negocio.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario consultado.
+     * @param typeId identificador do tipo a ser retornado.
+     * @return tipo encontrado no inventario informado.
+     */
+    @GetMapping("/inventories/{inv_id}/types/{type_id}")
+    public GetTypeResponse getType(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("type_id") long typeId
+    ) {
+        return getTypeService.getType(authenticatedUser, inventoryId, typeId);
     }
 
     /**

@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -75,5 +76,31 @@ public class TypeRepository {
                         resultSet.getBoolean("has_image")
                 ))
                 .list();
+    }
+
+    /**
+     * Busca um tipo especifico do inventario informado.
+     * Estrategia: consulta a tabela `types` filtrando por `inv_id` e `type_id`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param inventoryId identificador do inventario consultado.
+     * @param typeId identificador do tipo a ser localizado.
+     * @return tipo encontrado, quando existir para o inventario informado.
+     */
+    public Optional<TypeDetails> findTypeById(UUID inventoryId, long typeId) {
+        return jdbcClient.sql("""
+                SELECT type_id, nome, imagem, inv_id
+                FROM types
+                WHERE inv_id = :inventoryId AND type_id = :typeId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("typeId", typeId)
+                .query((resultSet, rowNum) -> new TypeDetails(
+                        resultSet.getLong("type_id"),
+                        resultSet.getString("nome"),
+                        resultSet.getBytes("imagem"),
+                        resultSet.getObject("inv_id", UUID.class)
+                ))
+                .optional();
     }
 }
