@@ -16,8 +16,8 @@ import java.util.UUID;
 
 /**
  * Repositorio JDBC dos produtos.
- * Executa leituras na tabela `products` associadas a um inventario.
- * Efeitos colaterais: nenhum alem de consultas ao banco.
+ * Executa leituras e escritas na tabela `products` associadas a um inventario.
+ * Efeitos colaterais: consulta, cria e atualiza registros persistidos no banco.
  */
 @Repository
 @Conditional(DatabaseConfiguredCondition.class)
@@ -232,6 +232,59 @@ public class ProductRepository {
         return findProductById(inventoryId, generatedId.longValue())
                 .orElseThrow(() -> new IllegalStateException(
                         "Produto criado mas nao encontrado ao reler o registro."
+                ));
+    }
+
+    /**
+     * Atualiza os dados de um produto existente no inventario informado.
+     * Estrategia: executa update por `inv_id` e `product_id` e relocaliza o registro para retornar o estado persistido.
+     * Efeitos colaterais: persiste novas colunas em um registro da tabela `products`.
+     *
+     * @param inventoryId identificador do inventario alvo.
+     * @param productId identificador do produto a ser atualizado.
+     * @param typeId tipo persistido do produto apos a atualizacao.
+     * @param marca marca persistida, quando houver.
+     * @param dataValidade data de validade persistida, quando houver.
+     * @param unidade unidade base persistida, quando houver.
+     * @param unidadeMedida texto da unidade de medida persistido, quando houver.
+     * @param quantidade quantidade persistida do produto.
+     * @return produto atualizado com o estado persistido.
+     * @throws IllegalStateException quando o registro e atualizado, mas nao pode ser relido da base.
+     */
+    public ProductSummary updateProduct(
+            UUID inventoryId,
+            long productId,
+            long typeId,
+            String marca,
+            OffsetDateTime dataValidade,
+            Long unidade,
+            String unidadeMedida,
+            long quantidade
+    ) {
+        jdbcClient.sql("""
+                UPDATE products
+                SET type_id = :typeId,
+                    marca = :marca,
+                    dataValidade = :dataValidade,
+                    unidade = :unidade,
+                    unidadeMedida = :unidadeMedida,
+                    quantidade = :quantidade
+                WHERE inv_id = :inventoryId
+                  AND product_id = :productId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("productId", productId)
+                .param("typeId", typeId)
+                .param("marca", marca)
+                .param("dataValidade", dataValidade)
+                .param("unidade", unidade)
+                .param("unidadeMedida", unidadeMedida)
+                .param("quantidade", quantidade)
+                .update();
+
+        return findProductById(inventoryId, productId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Produto atualizado mas nao encontrado ao reler o registro."
                 ));
     }
 }

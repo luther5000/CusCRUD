@@ -11,6 +11,9 @@ import br.com.cuscrudrest.products.list.ListProductsPage;
 import br.com.cuscrudrest.products.list.ListProductsResponse;
 import br.com.cuscrudrest.products.list.ListProductsService;
 import br.com.cuscrudrest.products.listbytype.ListProductsByTypeService;
+import br.com.cuscrudrest.products.update.UpdateProductRequest;
+import br.com.cuscrudrest.products.update.UpdateProductResponse;
+import br.com.cuscrudrest.products.update.UpdateProductService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
@@ -19,6 +22,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -29,8 +33,8 @@ import java.util.UUID;
 
 /**
  * Controller HTTP dos endpoints de produtos.
- * Expoe operacoes de leitura de produtos associados a inventarios.
- * Efeitos colaterais: nenhum alem dos efeitos dos casos de uso delegados.
+ * Expoe operacoes de leitura e escrita de produtos associados a inventarios.
+ * Efeitos colaterais: delega aos casos de uso a consulta e persistencia dos recursos.
  */
 @RestController
 @Conditional(DatabaseConfiguredCondition.class)
@@ -40,6 +44,7 @@ public class ProductsController {
     private final GetProductService getProductService;
     private final ListProductsByTypeService listProductsByTypeService;
     private final ListProductsService listProductsService;
+    private final UpdateProductService updateProductService;
 
     /**
      * Cria o controller de produtos.
@@ -48,17 +53,20 @@ public class ProductsController {
      * @param getProductService servico responsavel pela leitura unitaria de produtos.
      * @param listProductsByTypeService servico responsavel pela listagem paginada de produtos filtrados por tipo.
      * @param listProductsService servico responsavel pela listagem paginada de produtos.
+     * @param updateProductService servico responsavel pela atualizacao parcial de produtos.
      */
     public ProductsController(
             CreateProductService createProductService,
             GetProductService getProductService,
             ListProductsByTypeService listProductsByTypeService,
-            ListProductsService listProductsService
+            ListProductsService listProductsService,
+            UpdateProductService updateProductService
     ) {
         this.createProductService = createProductService;
         this.getProductService = getProductService;
         this.listProductsByTypeService = listProductsByTypeService;
         this.listProductsService = listProductsService;
+        this.updateProductService = updateProductService;
     }
 
     /**
@@ -128,6 +136,28 @@ public class ProductsController {
             @PathVariable("product_id") long productId
     ) {
         return getProductService.getProduct(authenticatedUser, inventoryId, productId);
+    }
+
+    /**
+     * PATCH /api/v1/inventories/{inv_id}/products/{product_id}
+     * Atualiza parcialmente um produto do inventario quando o usuario autenticado possui permissao de escrita no recurso.
+     * Estrategia: resolve os identificadores do path e delega o merge do patch ao servico de negocio.
+     * Efeitos colaterais: persiste alteracoes no produto informado.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param productId identificador do produto a ser atualizado.
+     * @param request payload parcial do patch.
+     * @return produto atualizado com o estado persistido.
+     */
+    @PatchMapping("/inventories/{inv_id}/products/{product_id}")
+    public UpdateProductResponse updateProduct(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("product_id") long productId,
+            @RequestBody UpdateProductRequest request
+    ) {
+        return updateProductService.updateProduct(authenticatedUser, inventoryId, productId, request);
     }
 
     /**
