@@ -36,6 +36,12 @@ Servidor de API REST para o projeto CusCRUD.
 |       |   |           |-- delete
 |       |   |           |-- list
 |       |   |           `-- update
+|       |   |   `-- types
+|       |   |       |-- create
+|       |   |       |-- delete
+|       |   |       |-- get
+|       |   |       |-- list
+|       |   |       `-- update
 |       |   `-- resources
 |       `-- test
 |           `-- java/br/com/cuscrudrest
@@ -60,6 +66,12 @@ Servidor de API REST para o projeto CusCRUD.
 |                       |-- delete
 |                       |-- list
 |                       `-- update
+|               `-- types
+|                   |-- create
+|                   |-- delete
+|                   |-- get
+|                   |-- list
+|                   `-- update
 |-- docker-compose.yaml
 |-- db
 |   `-- init
@@ -79,7 +91,7 @@ Servidor de API REST para o projeto CusCRUD.
 - Segurança HTTP com Spring Security.
 - Hash de senha com `BCryptPasswordEncoder`.
 - JWT HS256 com segredo em `JWT_SECRET` e TTL fixo de 3600 segundos.
-- Organização do backend por responsabilidade: borda HTTP nos pacotes raiz de domínio, casos de uso em subpacotes específicos como `auth/login`, `auth/register`, `auth/validate`, `inventories/create`, `inventories/rename`, `inventories/delete`, `inventories/list` e `inventories/users/{create,list,update,delete}`, persistência em `auth/user` e `inventories`, utilitários em `auth/support`, segurança em `auth/security`, configuração compartilhada em `config`, erros em `common/error` e logging em `common/logging`.
+- Organização do backend por responsabilidade: borda HTTP nos pacotes raiz de domínio, casos de uso em subpacotes específicos como `auth/login`, `auth/register`, `auth/validate`, `inventories/create`, `inventories/rename`, `inventories/delete`, `inventories/list`, `inventories/users/{create,list,update,delete}` e `types/{create,delete,get,list,update}`, persistência em `auth/user`, `inventories` e `types`, utilitários em `auth/support`, segurança em `auth/security`, configuração compartilhada em `config`, erros em `common/error` e logging em `common/logging`.
 - Porta HTTP da aplicação: `53919`.
 - Prefixo global da API: `/api/v1`.
 - Banco PostgreSQL 17 com bootstrap via `docker-entrypoint-initdb.d`.
@@ -102,12 +114,17 @@ Servidor de API REST para o projeto CusCRUD.
 - `POST /api/v1/inventories/{inv_id}/users` implementado e testado.
 - `PATCH /api/v1/inventories/{inv_id}/users/{user_id}` implementado e testado.
 - `DELETE /api/v1/inventories/{inv_id}/users/{user_id}` implementado e testado.
+- `GET /api/v1/inventories/{inv_id}/types` implementado e testado.
+- `GET /api/v1/inventories/{inv_id}/types/{type_id}` implementado e testado.
+- `POST /api/v1/inventories/{inv_id}/types` implementado e testado.
+- `PATCH /api/v1/inventories/{inv_id}/types/{type_id}` implementado e testado.
+- `DELETE /api/v1/inventories/{inv_id}/types/{type_id}` implementado e testado.
 - JWT integrado ao Spring Security para autenticar rotas protegidas.
 - Formato padronizado de erro HTTP implementado para validação, conflito e autenticação.
 - Formato padronizado de erro HTTP implementado para autorização (`403`) e recurso inexistente (`404`).
 - Regras compartilhadas de acesso a inventário centralizadas no backend para reaproveitamento entre rotas de inventário e gerenciamento de acesso.
 - Logging HTTP com `request_id` e `client_ip` implementado.
-- Suíte Maven passando com `128` testes.
+- Suíte Maven passando com `186` testes.
 
 ## Como validar localmente
 
@@ -217,14 +234,58 @@ curl -i -X DELETE http://localhost:53919/api/v1/inventories/<inv_id-retornado-na
   -H "Authorization: Bearer <token-retornado-no-login>"
 ```
 
-16. Valide a remoção do inventário (`5.2.3`):
+16. Valide a listagem de tipos do inventário (`5.4.1`):
+
+```bash
+curl -i "http://localhost:53919/api/v1/inventories/<inv_id-retornado-na-criacao>/types?limit=200&offset=0" \
+  -H "Authorization: Bearer <token-retornado-no-login>"
+```
+
+17. Valide a criação de um tipo (`5.4.3`):
+
+```bash
+curl -i -X POST http://localhost:53919/api/v1/inventories/<inv_id-retornado-na-criacao>/types \
+  -H "Authorization: Bearer <token-retornado-no-login>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "Bebidas",
+    "imagem": null
+  }'
+```
+
+18. Valide a leitura do tipo criado (`5.4.2`):
+
+```bash
+curl -i http://localhost:53919/api/v1/inventories/<inv_id-retornado-na-criacao>/types/<type_id-retornado-na-criacao> \
+  -H "Authorization: Bearer <token-retornado-no-login>"
+```
+
+19. Valide a atualização do tipo (`5.4.4`):
+
+```bash
+curl -i -X PATCH http://localhost:53919/api/v1/inventories/<inv_id-retornado-na-criacao>/types/<type_id-retornado-na-criacao> \
+  -H "Authorization: Bearer <token-retornado-no-login>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nome": "Bebidas Geladas"
+  }'
+```
+
+20. Valide a remoção do tipo (`5.4.5`):
+
+```bash
+curl -i -X DELETE http://localhost:53919/api/v1/inventories/<inv_id-retornado-na-criacao>/types/<type_id-retornado-na-criacao> \
+  -H "Authorization: Bearer <token-retornado-no-login>"
+```
+
+21. Valide a remoção do inventário (`5.2.3`):
 
 ```bash
 curl -i -X DELETE http://localhost:53919/api/v1/inventories/<inv_id-retornado-na-criacao> \
   -H "Authorization: Bearer <token-retornado-no-login>"
 ```
 
-17. Se quiser inspecionar os logs gerados pela aplicação:
+22. Se quiser inspecionar os logs gerados pela aplicação:
 
 ```bash
 tail -f backend/logs/cuscrud-backend-application.log
@@ -232,7 +293,6 @@ tail -f backend/logs/cuscrud-backend-application.log
 
 ## Planejamento para próximos passos
 
-- Iniciar o conjunto de endpoints de `types`, começando por `GET /api/v1/inventories/{inv_id}/types`.
-- Em seguida, implementar `GET /api/v1/inventories/{inv_id}/types/{type_id}` e `POST /api/v1/inventories/{inv_id}/types`.
-- Depois, fechar `PATCH` e `DELETE` de `types`, incluindo a regra de conflito quando houver produtos vinculados.
-- Na sequência, iniciar o conjunto de endpoints de `products`.
+- Iniciar o conjunto de endpoints de `products`, começando por `GET /api/v1/inventories/{inv_id}/products`.
+- Em seguida, implementar `GET /api/v1/inventories/{inv_id}/products/{product_id}` e `GET /api/v1/inventories/{inv_id}/types/{type_id}/products`.
+- Depois, fechar `POST`, `PATCH` e `DELETE` de `products`, incluindo as validações de `type_id`, datas com timezone e conflito de integridade.
