@@ -194,6 +194,26 @@ public class InventoryRepository {
     }
 
     /**
+     * Cria um novo vinculo de acesso de usuario em um inventario existente.
+     * Estrategia: executa insert direto na tabela `inventory_access` com a role ja validada pela camada de servico.
+     * Efeitos colaterais: persiste um novo acesso de usuario ao inventario na base.
+     *
+     * @param inventoryId identificador do inventario.
+     * @param userId identificador do usuario que recebera acesso.
+     * @param role role a ser atribuida ao usuario no inventario.
+     */
+    public void addUserAccess(UUID inventoryId, UUID userId, int role) {
+        jdbcClient.sql("""
+                INSERT INTO inventory_access (user_id, inv_id, role)
+                VALUES (:userId, :inventoryId, :role)
+                """)
+                .param("userId", userId)
+                .param("inventoryId", inventoryId)
+                .param("role", role)
+                .update();
+    }
+
+    /**
      * Cria um inventario e o vinculo de owner para o usuario informado.
      * Estrategia: insere o inventario na tabela `inventories` e depois cria o acesso correspondente em `inventory_access`.
      * Efeitos colaterais: cria um inventario persistido e o papel owner na base.

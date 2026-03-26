@@ -12,6 +12,9 @@ import br.com.cuscrudrest.inventories.list.ListInventoriesService;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryRequest;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryResponse;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryService;
+import br.com.cuscrudrest.inventories.users.create.AddInventoryUserRequest;
+import br.com.cuscrudrest.inventories.users.create.AddInventoryUserResponse;
+import br.com.cuscrudrest.inventories.users.create.AddInventoryUserService;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersPage;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersResponse;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersService;
@@ -42,6 +45,7 @@ import java.util.UUID;
 @Conditional(DatabaseConfiguredCondition.class)
 public class InventoriesController {
 
+    private final AddInventoryUserService addInventoryUserService;
     private final CreateInventoryService createInventoryService;
     private final DeleteInventoryService deleteInventoryService;
     private final ListInventoriesService listInventoriesService;
@@ -51,6 +55,7 @@ public class InventoriesController {
     /**
      * Cria o controller de inventarios.
      *
+     * @param addInventoryUserService servico responsavel pela concessao de acesso a usuarios no inventario.
      * @param createInventoryService servico responsavel pela criacao de inventarios.
      * @param deleteInventoryService servico responsavel pela remocao de inventarios.
      * @param listInventoriesService servico responsavel pela listagem paginada de inventarios.
@@ -58,12 +63,14 @@ public class InventoriesController {
      * @param renameInventoryService servico responsavel pela renomeacao de inventarios.
      */
     public InventoriesController(
+            AddInventoryUserService addInventoryUserService,
             CreateInventoryService createInventoryService,
             DeleteInventoryService deleteInventoryService,
             ListInventoriesService listInventoriesService,
             ListInventoryUsersService listInventoryUsersService,
             RenameInventoryService renameInventoryService
     ) {
+        this.addInventoryUserService = addInventoryUserService;
         this.createInventoryService = createInventoryService;
         this.deleteInventoryService = deleteInventoryService;
         this.listInventoriesService = listInventoriesService;
@@ -186,6 +193,27 @@ public class InventoriesController {
                 page.users(),
                 buildNextPageUrl(request, page.nextOffset(), page.limit())
         );
+    }
+
+    /**
+     * POST /api/v1/inventories/{inv_id}/users
+     * Adiciona um usuario existente ao inventario quando o usuario autenticado possui role owner no recurso.
+     * Estrategia: valida o payload via Bean Validation, resolve o UUID do path e delega a concessao de acesso ao servico de negocio.
+     * Efeitos colaterais: persiste um novo vinculo de acesso do usuario ao inventario.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param request payload HTTP com login do usuario e role a ser atribuida.
+     * @return inventario e usuario vinculados com a role informada.
+     */
+    @PostMapping("/inventories/{inv_id}/users")
+    @ResponseStatus(HttpStatus.CREATED)
+    public AddInventoryUserResponse addInventoryUser(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @Valid @RequestBody AddInventoryUserRequest request
+    ) {
+        return addInventoryUserService.addInventoryUser(authenticatedUser, inventoryId, request);
     }
 
     /**
