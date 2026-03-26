@@ -214,6 +214,27 @@ public class InventoryRepository {
     }
 
     /**
+     * Atualiza a role de um usuario ja vinculado a um inventario.
+     * Estrategia: executa update direto na tabela `inventory_access` filtrando por `inv_id` e `user_id`.
+     * Efeitos colaterais: persiste a nova role do usuario no inventario.
+     *
+     * @param inventoryId identificador do inventario.
+     * @param userId identificador do usuario alvo.
+     * @param role nova role a ser persistida.
+     */
+    public void updateUserAccessRole(UUID inventoryId, UUID userId, int role) {
+        jdbcClient.sql("""
+                UPDATE inventory_access
+                SET role = :role
+                WHERE inv_id = :inventoryId AND user_id = :userId
+                """)
+                .param("role", role)
+                .param("inventoryId", inventoryId)
+                .param("userId", userId)
+                .update();
+    }
+
+    /**
      * Cria um inventario e o vinculo de owner para o usuario informado.
      * Estrategia: insere o inventario na tabela `inventories` e depois cria o acesso correspondente em `inventory_access`.
      * Efeitos colaterais: cria um inventario persistido e o papel owner na base.

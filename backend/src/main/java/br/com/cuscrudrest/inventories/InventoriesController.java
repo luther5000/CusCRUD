@@ -18,6 +18,9 @@ import br.com.cuscrudrest.inventories.users.create.AddInventoryUserService;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersPage;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersResponse;
 import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersService;
+import br.com.cuscrudrest.inventories.users.update.UpdateInventoryUserRequest;
+import br.com.cuscrudrest.inventories.users.update.UpdateInventoryUserResponse;
+import br.com.cuscrudrest.inventories.users.update.UpdateInventoryUserService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
@@ -51,6 +54,7 @@ public class InventoriesController {
     private final ListInventoriesService listInventoriesService;
     private final ListInventoryUsersService listInventoryUsersService;
     private final RenameInventoryService renameInventoryService;
+    private final UpdateInventoryUserService updateInventoryUserService;
 
     /**
      * Cria o controller de inventarios.
@@ -61,6 +65,7 @@ public class InventoriesController {
      * @param listInventoriesService servico responsavel pela listagem paginada de inventarios.
      * @param listInventoryUsersService servico responsavel pela listagem paginada de usuarios do inventario.
      * @param renameInventoryService servico responsavel pela renomeacao de inventarios.
+     * @param updateInventoryUserService servico responsavel pela atualizacao de roles de usuarios no inventario.
      */
     public InventoriesController(
             AddInventoryUserService addInventoryUserService,
@@ -68,7 +73,8 @@ public class InventoriesController {
             DeleteInventoryService deleteInventoryService,
             ListInventoriesService listInventoriesService,
             ListInventoryUsersService listInventoryUsersService,
-            RenameInventoryService renameInventoryService
+            RenameInventoryService renameInventoryService,
+            UpdateInventoryUserService updateInventoryUserService
     ) {
         this.addInventoryUserService = addInventoryUserService;
         this.createInventoryService = createInventoryService;
@@ -76,6 +82,7 @@ public class InventoriesController {
         this.listInventoriesService = listInventoriesService;
         this.listInventoryUsersService = listInventoryUsersService;
         this.renameInventoryService = renameInventoryService;
+        this.updateInventoryUserService = updateInventoryUserService;
     }
 
     /**
@@ -214,6 +221,28 @@ public class InventoriesController {
             @Valid @RequestBody AddInventoryUserRequest request
     ) {
         return addInventoryUserService.addInventoryUser(authenticatedUser, inventoryId, request);
+    }
+
+    /**
+     * PATCH /api/v1/inventories/{inv_id}/users/{user_id}
+     * Atualiza a role de um usuario existente no inventario quando o usuario autenticado possui role owner no recurso.
+     * Estrategia: valida o payload via Bean Validation, resolve os UUIDs do path e delega a alteracao ao servico de negocio.
+     * Efeitos colaterais: persiste a nova role do usuario no inventario.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param userId identificador do usuario cuja role sera alterada.
+     * @param request payload HTTP com a nova role.
+     * @return inventario e usuario com a role atualizada.
+     */
+    @PatchMapping("/inventories/{inv_id}/users/{user_id}")
+    public UpdateInventoryUserResponse updateInventoryUser(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("user_id") UUID userId,
+            @Valid @RequestBody UpdateInventoryUserRequest request
+    ) {
+        return updateInventoryUserService.updateInventoryUser(authenticatedUser, inventoryId, userId, request);
     }
 
     /**
