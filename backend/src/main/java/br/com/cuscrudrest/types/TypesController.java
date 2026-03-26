@@ -5,6 +5,7 @@ import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import br.com.cuscrudrest.types.create.CreateTypeRequest;
 import br.com.cuscrudrest.types.create.CreateTypeResponse;
 import br.com.cuscrudrest.types.create.CreateTypeService;
+import br.com.cuscrudrest.types.delete.DeleteTypeService;
 import br.com.cuscrudrest.types.get.GetTypeResponse;
 import br.com.cuscrudrest.types.get.GetTypeService;
 import br.com.cuscrudrest.types.list.ListTypesPage;
@@ -18,6 +19,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,6 +42,7 @@ import java.util.UUID;
 public class TypesController {
 
     private final CreateTypeService createTypeService;
+    private final DeleteTypeService deleteTypeService;
     private final GetTypeService getTypeService;
     private final ListTypesService listTypesService;
     private final UpdateTypeService updateTypeService;
@@ -48,17 +51,20 @@ public class TypesController {
      * Cria o controller de tipos.
      *
      * @param createTypeService servico responsavel pela criacao de tipos.
+     * @param deleteTypeService servico responsavel pela remocao de tipos.
      * @param getTypeService servico responsavel pela leitura unitaria de tipos.
      * @param listTypesService servico responsavel pela listagem paginada de tipos.
      * @param updateTypeService servico responsavel pela atualizacao parcial de tipos.
      */
     public TypesController(
             CreateTypeService createTypeService,
+            DeleteTypeService deleteTypeService,
             GetTypeService getTypeService,
             ListTypesService listTypesService,
             UpdateTypeService updateTypeService
     ) {
         this.createTypeService = createTypeService;
+        this.deleteTypeService = deleteTypeService;
         this.getTypeService = getTypeService;
         this.listTypesService = listTypesService;
         this.updateTypeService = updateTypeService;
@@ -153,6 +159,26 @@ public class TypesController {
             @RequestBody UpdateTypeRequest request
     ) {
         return updateTypeService.updateType(authenticatedUser, inventoryId, typeId, request);
+    }
+
+    /**
+     * DELETE /api/v1/inventories/{inv_id}/types/{type_id}
+     * Remove um tipo existente quando o usuario autenticado possui permissao de escrita no inventario.
+     * Estrategia: resolve os identificadores do path e delega a exclusao ao servico de negocio.
+     * Efeitos colaterais: remove o tipo informado da base, salvo conflito por produtos vinculados.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param typeId identificador do tipo a ser removido.
+     */
+    @DeleteMapping("/inventories/{inv_id}/types/{type_id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteType(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("type_id") long typeId
+    ) {
+        deleteTypeService.deleteType(authenticatedUser, inventoryId, typeId);
     }
 
     /**

@@ -223,4 +223,24 @@ public class TypeRepository {
                         "Tipo atualizado mas nao encontrado ao reler o registro."
                 ));
     }
+
+    /**
+     * Remove um tipo existente do inventario informado.
+     * Estrategia: executa delete direto em `types` por `inv_id` e `type_id`.
+     * Efeitos colaterais: remove um registro persistido da tabela `types`.
+     *
+     * @param inventoryId identificador do inventario alvo.
+     * @param typeId identificador do tipo a ser removido.
+     * @return quantidade de linhas removidas.
+     */
+    public int deleteType(UUID inventoryId, long typeId) {
+        return jdbcClient.sql("""
+                DELETE FROM types
+                WHERE inv_id = :inventoryId
+                  AND type_id = :typeId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("typeId", typeId)
+                .update();
+    }
 }
