@@ -12,6 +12,9 @@ import br.com.cuscrudrest.inventories.list.ListInventoriesService;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryRequest;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryResponse;
 import br.com.cuscrudrest.inventories.rename.RenameInventoryService;
+import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersPage;
+import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersResponse;
+import br.com.cuscrudrest.inventories.users.list.ListInventoryUsersService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
@@ -42,6 +45,7 @@ public class InventoriesController {
     private final CreateInventoryService createInventoryService;
     private final DeleteInventoryService deleteInventoryService;
     private final ListInventoriesService listInventoriesService;
+    private final ListInventoryUsersService listInventoryUsersService;
     private final RenameInventoryService renameInventoryService;
 
     /**
@@ -50,17 +54,20 @@ public class InventoriesController {
      * @param createInventoryService servico responsavel pela criacao de inventarios.
      * @param deleteInventoryService servico responsavel pela remocao de inventarios.
      * @param listInventoriesService servico responsavel pela listagem paginada de inventarios.
+     * @param listInventoryUsersService servico responsavel pela listagem paginada de usuarios do inventario.
      * @param renameInventoryService servico responsavel pela renomeacao de inventarios.
      */
     public InventoriesController(
             CreateInventoryService createInventoryService,
             DeleteInventoryService deleteInventoryService,
             ListInventoriesService listInventoriesService,
+            ListInventoryUsersService listInventoryUsersService,
             RenameInventoryService renameInventoryService
     ) {
         this.createInventoryService = createInventoryService;
         this.deleteInventoryService = deleteInventoryService;
         this.listInventoriesService = listInventoriesService;
+        this.listInventoryUsersService = listInventoryUsersService;
         this.renameInventoryService = renameInventoryService;
     }
 
@@ -143,7 +150,41 @@ public class InventoriesController {
         ListInventoriesPage page = listInventoriesService.listInventories(authenticatedUser, limit, offset);
         return new ListInventoriesResponse(
                 page.inventories(),
-                buildNextPageUrl(request, page)
+                buildNextPageUrl(request, page.nextOffset(), page.limit())
+        );
+    }
+
+    /**
+     * GET /api/v1/inventories/{inv_id}/users
+     * Lista os usuarios com acesso ao inventario quando o usuario autenticado possui role owner no recurso.
+     * Estrategia: delega a validacao de ownership e a consulta paginada ao servico de negocio e monta `next_page`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario consultado.
+     * @param limit limite opcional da pagina.
+     * @param offset offset opcional da pagina.
+     * @param request request HTTP atual usada para montar `next_page`.
+     * @return lista paginada de usuarios com acesso ao inventario.
+     */
+    @GetMapping("/inventories/{inv_id}/users")
+    public ListInventoryUsersResponse listInventoryUsers(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @RequestParam(value = "limit", required = false) Integer limit,
+            @RequestParam(value = "offset", required = false) Integer offset,
+            HttpServletRequest request
+    ) {
+        ListInventoryUsersPage page = listInventoryUsersService.listInventoryUsers(
+                authenticatedUser,
+                inventoryId,
+                limit,
+                offset
+        );
+        return new ListInventoryUsersResponse(
+                page.inventory(),
+                page.users(),
+                buildNextPageUrl(request, page.nextOffset(), page.limit())
         );
     }
 
@@ -151,17 +192,18 @@ public class InventoriesController {
      * Monta a URL absoluta da proxima pagina a partir da request atual.
      *
      * @param request request HTTP atual.
-     * @param page pagina retornada pelo servico de negocio.
+     * @param nextOffset proximo offset, quando houver.
+     * @param limit limite efetivo usado na consulta.
      * @return URL absoluta da proxima pagina, ou `null` quando nao houver mais resultados.
      */
-    private String buildNextPageUrl(HttpServletRequest request, ListInventoriesPage page) {
-        if (page.nextOffset() == null) {
+    private String buildNextPageUrl(HttpServletRequest request, Integer nextOffset, int limit) {
+        if (nextOffset == null) {
             return null;
         }
 
         return ServletUriComponentsBuilder.fromRequestUri(request)
-                .replaceQueryParam("offset", page.nextOffset())
-                .replaceQueryParam("limit", page.limit())
+                .replaceQueryParam("offset", nextOffset)
+                .replaceQueryParam("limit", limit)
                 .build()
                 .toUriString();
     }

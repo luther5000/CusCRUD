@@ -53,7 +53,7 @@ public class InventoryAccessService {
                 .orElseThrow(() -> new NotFoundException(
                         "Inventario nao encontrado.",
                         "inv_id",
-                        "inventory not found for user"
+                        "inventory not found"
                 ));
 
         if (role != OWNER_ROLE) {

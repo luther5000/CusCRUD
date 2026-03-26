@@ -100,6 +100,57 @@ public class InventoryRepository {
     }
 
     /**
+     * Conta quantos usuarios possuem acesso ao inventario informado.
+     * Estrategia: consulta `inventory_access` filtrando por `inv_id`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param inventoryId identificador do inventario consultado.
+     * @return quantidade total de usuarios com acesso ao inventario.
+     */
+    public int countInventoryUsers(UUID inventoryId) {
+        Integer count = jdbcClient.sql("""
+                SELECT COUNT(*)
+                FROM inventory_access
+                WHERE inv_id = :inventoryId
+                """)
+                .param("inventoryId", inventoryId)
+                .query(Integer.class)
+                .single();
+        return count != null ? count : 0;
+    }
+
+    /**
+     * Lista os usuarios com acesso ao inventario com paginacao por offset.
+     * Estrategia: faz join entre `inventory_access` e `users`, ordenando por `user_id ASC`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param inventoryId identificador do inventario consultado.
+     * @param limit limite da pagina.
+     * @param offset deslocamento da pagina.
+     * @return usuarios com acesso ao inventario na pagina solicitada.
+     */
+    public List<InventoryUserSummary> listInventoryUsers(UUID inventoryId, int limit, int offset) {
+        return jdbcClient.sql("""
+                SELECT u.user_id, u.name, u.login, ia.role
+                FROM inventory_access ia
+                INNER JOIN users u ON u.user_id = ia.user_id
+                WHERE ia.inv_id = :inventoryId
+                ORDER BY u.user_id ASC
+                LIMIT :limit OFFSET :offset
+                """)
+                .param("inventoryId", inventoryId)
+                .param("limit", limit)
+                .param("offset", offset)
+                .query((resultSet, rowNum) -> new InventoryUserSummary(
+                        resultSet.getObject("user_id", UUID.class),
+                        resultSet.getString("name"),
+                        resultSet.getString("login"),
+                        resultSet.getInt("role")
+                ))
+                .list();
+    }
+
+    /**
      * Busca um inventario pelo identificador.
      * Estrategia: consulta a tabela `inventories` retornando apenas os campos necessarios para uso interno do dominio.
      * Efeitos colaterais: nenhum alem da leitura da base.

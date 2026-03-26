@@ -85,7 +85,7 @@ class InventoryAccessServiceTest {
     /**
      * Verifica que o servico rejeita usuario sem vinculo ao inventario.
      * Entrada: inventario existente sem registro correspondente em `inventory_access`.
-     * Esperado: NotFoundException associada ao campo `inv_id`.
+     * Esperado: NotFoundException identica ao caso de inventario inexistente.
      */
     @Test
     void shouldRejectWhenUserDoesNotBelongToInventory() {
@@ -98,7 +98,7 @@ class InventoryAccessServiceTest {
         );
 
         assertEquals("inv_id", exception.getCampo());
-        assertEquals("inventory not found for user", exception.getInfo());
+        assertEquals("inventory not found", exception.getInfo());
     }
 
     /**
