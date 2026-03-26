@@ -2,6 +2,8 @@ package br.com.cuscrudrest.products;
 
 import br.com.cuscrudrest.auth.security.AuthenticatedUserPrincipal;
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
+import br.com.cuscrudrest.products.get.GetProductResponse;
+import br.com.cuscrudrest.products.get.GetProductService;
 import br.com.cuscrudrest.products.list.ListProductsPage;
 import br.com.cuscrudrest.products.list.ListProductsResponse;
 import br.com.cuscrudrest.products.list.ListProductsService;
@@ -25,14 +27,20 @@ import java.util.UUID;
 @Conditional(DatabaseConfiguredCondition.class)
 public class ProductsController {
 
+    private final GetProductService getProductService;
     private final ListProductsService listProductsService;
 
     /**
      * Cria o controller de produtos.
      *
+     * @param getProductService servico responsavel pela leitura unitaria de produtos.
      * @param listProductsService servico responsavel pela listagem paginada de produtos.
      */
-    public ProductsController(ListProductsService listProductsService) {
+    public ProductsController(
+            GetProductService getProductService,
+            ListProductsService listProductsService
+    ) {
+        this.getProductService = getProductService;
         this.listProductsService = listProductsService;
     }
 
@@ -62,6 +70,26 @@ public class ProductsController {
                 page.products(),
                 buildNextPageUrl(request, page.nextOffset(), page.limit())
         );
+    }
+
+    /**
+     * GET /api/v1/inventories/{inv_id}/products/{product_id}
+     * Retorna um produto especifico do inventario quando o usuario autenticado possui algum acesso ao recurso.
+     * Estrategia: resolve os identificadores do path e delega a leitura unitaria ao servico de negocio.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario consultado.
+     * @param productId identificador do produto a ser retornado.
+     * @return produto encontrado no inventario informado.
+     */
+    @GetMapping("/inventories/{inv_id}/products/{product_id}")
+    public GetProductResponse getProduct(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("product_id") long productId
+    ) {
+        return getProductService.getProduct(authenticatedUser, inventoryId, productId);
     }
 
     /**

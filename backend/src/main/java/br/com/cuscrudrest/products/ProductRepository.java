@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -80,5 +81,35 @@ public class ProductRepository {
                         resultSet.getObject("inv_id", UUID.class)
                 ))
                 .list();
+    }
+
+    /**
+     * Busca um produto especifico do inventario informado.
+     * Estrategia: consulta a tabela `products` filtrando por `inv_id` e `product_id`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param inventoryId identificador do inventario consultado.
+     * @param productId identificador do produto a ser localizado.
+     * @return produto encontrado, quando existir para o inventario informado.
+     */
+    public Optional<ProductSummary> findProductById(UUID inventoryId, long productId) {
+        return jdbcClient.sql("""
+                SELECT product_id, type_id, marca, dataValidade, unidade, unidadeMedida, quantidade, inv_id
+                FROM products
+                WHERE inv_id = :inventoryId AND product_id = :productId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("productId", productId)
+                .query((resultSet, rowNum) -> new ProductSummary(
+                        resultSet.getLong("product_id"),
+                        resultSet.getLong("type_id"),
+                        resultSet.getString("marca"),
+                        resultSet.getObject("dataValidade", java.time.OffsetDateTime.class),
+                        resultSet.getObject("unidade", Long.class),
+                        resultSet.getString("unidadeMedida"),
+                        resultSet.getLong("quantidade"),
+                        resultSet.getObject("inv_id", UUID.class)
+                ))
+                .optional();
     }
 }
