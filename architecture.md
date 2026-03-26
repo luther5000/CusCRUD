@@ -146,7 +146,7 @@ CREATE TABLE products (
     marca VARCHAR(255) NULL,
     dataValidade TIMESTAMP WITH TIME ZONE NULL,
     unidade INT8 NULL,
-    unidadeMedida VARCHAR(32) NULL,
+    unidadeMedida VARCHAR(255) NULL,
     quantidade INT8 NOT NULL DEFAULT 0,
     inv_id UUID NOT NULL REFERENCES inventories(inv_id) ON DELETE CASCADE,
     FOREIGN KEY (inv_id, type_id) REFERENCES types(inv_id, type_id) ON DELETE RESTRICT
@@ -1492,7 +1492,7 @@ Content-Type: application/json
 | `marca`         |         string          |     Não     | Marca ou fabricante                    | Até 255 caracteres                                              |
 | `dataValidade`  | timestamp with timezone |     Não     | Data de validade                       | ISO 8601 com offset explícito (ex: `2026-12-31T00:00:00-03:00`) |
 | `unidade`       |          int64          |     Não     | Unidade de medida base (ex: 1, 500)    | ≥ 0                                                             |
-| `unidadeMedida` |         string          |     Não     | Texto da unidade (ex: `un`, `g`, `ml`) | Até 32 caracteres                                               |
+| `unidadeMedida` |         string          |     Não     | Texto da unidade (ex: `un`, `g`, `ml`) | Até 255 caracteres                                              |
 | `quantidade`    |          int64          |     Não     | Quantidade inicial                     | ≥ 0, padrão 0                                                   |
 
 **Status Codes:**
@@ -1570,7 +1570,7 @@ Content-Type: application/json
 | `marca`         |         string          |     Não     | Marca ou fabricante  | Até 255 caracteres                           |
 | `dataValidade`  | timestamp with timezone |     Não     | Data de validade     | ISO 8601 com offset explícito                |
 | `unidade`       |          int64          |     Não     | Unidade base         | ≥ 0                                          |
-| `unidadeMedida` |         string          |     Não     | Texto da unidade     | Até 32 caracteres                            |
+| `unidadeMedida` |         string          |     Não     | Texto da unidade     | Até 255 caracteres                           |
 | `quantidade`    |          int64          |     Não     | Quantidade           | ≥ 0                                          |
 
 **Status Codes:**
