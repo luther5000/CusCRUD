@@ -10,12 +10,16 @@ import br.com.cuscrudrest.types.get.GetTypeService;
 import br.com.cuscrudrest.types.list.ListTypesPage;
 import br.com.cuscrudrest.types.list.ListTypesResponse;
 import br.com.cuscrudrest.types.list.ListTypesService;
+import br.com.cuscrudrest.types.update.UpdateTypeRequest;
+import br.com.cuscrudrest.types.update.UpdateTypeResponse;
+import br.com.cuscrudrest.types.update.UpdateTypeService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,6 +42,7 @@ public class TypesController {
     private final CreateTypeService createTypeService;
     private final GetTypeService getTypeService;
     private final ListTypesService listTypesService;
+    private final UpdateTypeService updateTypeService;
 
     /**
      * Cria o controller de tipos.
@@ -45,15 +50,18 @@ public class TypesController {
      * @param createTypeService servico responsavel pela criacao de tipos.
      * @param getTypeService servico responsavel pela leitura unitaria de tipos.
      * @param listTypesService servico responsavel pela listagem paginada de tipos.
+     * @param updateTypeService servico responsavel pela atualizacao parcial de tipos.
      */
     public TypesController(
             CreateTypeService createTypeService,
             GetTypeService getTypeService,
-            ListTypesService listTypesService
+            ListTypesService listTypesService,
+            UpdateTypeService updateTypeService
     ) {
         this.createTypeService = createTypeService;
         this.getTypeService = getTypeService;
         this.listTypesService = listTypesService;
+        this.updateTypeService = updateTypeService;
     }
 
     /**
@@ -123,6 +131,28 @@ public class TypesController {
             @PathVariable("type_id") long typeId
     ) {
         return getTypeService.getType(authenticatedUser, inventoryId, typeId);
+    }
+
+    /**
+     * PATCH /api/v1/inventories/{inv_id}/types/{type_id}
+     * Atualiza parcialmente um tipo existente quando o usuario autenticado possui permissao de escrita no inventario.
+     * Estrategia: resolve os identificadores do path e delega a aplicacao do patch ao servico de negocio.
+     * Efeitos colaterais: persiste alteracoes parciais do tipo informado.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param typeId identificador do tipo a ser atualizado.
+     * @param request payload parcial do patch.
+     * @return estado final persistido do tipo apos a atualizacao.
+     */
+    @PatchMapping("/inventories/{inv_id}/types/{type_id}")
+    public UpdateTypeResponse updateType(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @PathVariable("type_id") long typeId,
+            @RequestBody UpdateTypeRequest request
+    ) {
+        return updateTypeService.updateType(authenticatedUser, inventoryId, typeId, request);
     }
 
     /**

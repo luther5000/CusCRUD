@@ -165,4 +165,62 @@ public class TypeRepository {
                         "Tipo criado mas nao encontrado ao reler o registro."
                 ));
     }
+
+    /**
+     * Verifica se ja existe outro tipo com o mesmo nome no inventario, exceto o registro informado.
+     * Estrategia: consulta `types` filtrando por `inv_id`, `nome` e exclusao por `type_id`.
+     * Efeitos colaterais: nenhum alem da leitura da base.
+     *
+     * @param inventoryId identificador do inventario alvo.
+     * @param typeId identificador do tipo que esta sendo atualizado.
+     * @param nome nome cuja unicidade sera validada.
+     * @return `true` quando existir outro tipo com o mesmo nome no inventario.
+     */
+    public boolean existsTypeByInventoryIdAndNameExcludingTypeId(UUID inventoryId, long typeId, String nome) {
+        Integer count = jdbcClient.sql("""
+                SELECT COUNT(*)
+                FROM types
+                WHERE inv_id = :inventoryId
+                  AND nome = :nome
+                  AND type_id <> :typeId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("typeId", typeId)
+                .param("nome", nome)
+                .query(Integer.class)
+                .single();
+        return count != null && count > 0;
+    }
+
+    /**
+     * Atualiza os dados de um tipo existente no inventario informado.
+     * Estrategia: executa update por `inv_id` e `type_id` e relocaliza o registro para retornar o estado persistido.
+     * Efeitos colaterais: persiste novas colunas em um registro da tabela `types`.
+     *
+     * @param inventoryId identificador do inventario alvo.
+     * @param typeId identificador do tipo a ser atualizado.
+     * @param nome novo nome persistido do tipo.
+     * @param imagem novos bytes persistidos da imagem, ou `null` para remover.
+     * @return tipo atualizado com o estado persistido.
+     * @throws IllegalStateException quando o registro e atualizado, mas nao pode ser relido da base.
+     */
+    public TypeDetails updateType(UUID inventoryId, long typeId, String nome, byte[] imagem) {
+        jdbcClient.sql("""
+                UPDATE types
+                SET nome = :nome,
+                    imagem = :imagem
+                WHERE inv_id = :inventoryId
+                  AND type_id = :typeId
+                """)
+                .param("inventoryId", inventoryId)
+                .param("typeId", typeId)
+                .param("nome", nome)
+                .param("imagem", imagem)
+                .update();
+
+        return findTypeById(inventoryId, typeId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Tipo atualizado mas nao encontrado ao reler o registro."
+                ));
+    }
 }

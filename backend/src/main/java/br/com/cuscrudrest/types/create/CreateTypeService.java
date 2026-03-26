@@ -7,16 +7,14 @@ import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import br.com.cuscrudrest.inventories.InventoryAccessContext;
 import br.com.cuscrudrest.inventories.InventoryAccessService;
 import br.com.cuscrudrest.types.TypeDetails;
+import br.com.cuscrudrest.types.TypeImageCodec;
 import br.com.cuscrudrest.types.TypeRepository;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Base64;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Servico de criacao de tipos da aplicacao.
@@ -26,9 +24,6 @@ import java.util.regex.Pattern;
 @Service
 @Conditional(DatabaseConfiguredCondition.class)
 public class CreateTypeService {
-
-    private static final Pattern DATA_URI_PATTERN = Pattern.compile("^data:([^;]+);base64,(.+)$", Pattern.DOTALL);
-    private static final int MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
     private final InventoryAccessService inventoryAccessService;
     private final TypeRepository typeRepository;
@@ -69,14 +64,14 @@ public class CreateTypeService {
         );
 
         ensureUniqueTypeName(accessContext.inventoryId(), request.nome());
-        ParsedImage parsedImage = parseImage(request.imagem());
+        byte[] imageBytes = request.imagem() == null ? null : TypeImageCodec.parseDataUri(request.imagem());
 
         TypeDetails createdType;
         try {
             createdType = typeRepository.createType(
                     accessContext.inventoryId(),
                     request.nome(),
-                    parsedImage.bytes()
+                    imageBytes
             );
         } catch (DataIntegrityViolationException exception) {
             throw new ConflictException(
@@ -89,7 +84,7 @@ public class CreateTypeService {
         return new CreateTypeResponse(
                 createdType.typeId(),
                 createdType.nome(),
-                parsedImage.originalDataUri(),
+                TypeImageCodec.toDataUri(createdType.imagem()),
                 createdType.inventoryId()
         );
     }
@@ -111,55 +106,4 @@ public class CreateTypeService {
         }
     }
 
-    /**
-     * Valida e decodifica a imagem opcional recebida no payload.
-     *
-     * @param imageDataUri imagem em data URI, quando informada.
-     * @return imagem validada com bytes decodificados e valor original para resposta.
-     * @throws ValidationException quando a imagem nao esta em data URI valido ou excede 5 MiB.
-     */
-    private ParsedImage parseImage(String imageDataUri) {
-        if (imageDataUri == null) {
-            return new ParsedImage(null, null);
-        }
-
-        Matcher matcher = DATA_URI_PATTERN.matcher(imageDataUri);
-        if (!matcher.matches() || matcher.group(1).isBlank()) {
-            throw new ValidationException(
-                    "Imagem invalida.",
-                    "imagem",
-                    "must be a valid data URI with mime and base64 content"
-            );
-        }
-
-        byte[] imageBytes;
-        try {
-            imageBytes = Base64.getDecoder().decode(matcher.group(2));
-        } catch (IllegalArgumentException exception) {
-            throw new ValidationException(
-                    "Imagem invalida.",
-                    "imagem",
-                    "must be a valid data URI with mime and base64 content"
-            );
-        }
-
-        if (imageBytes.length > MAX_IMAGE_BYTES) {
-            throw new ValidationException(
-                    "Imagem excede o tamanho maximo permitido.",
-                    "imagem",
-                    "must not exceed 5 MiB"
-            );
-        }
-
-        return new ParsedImage(imageDataUri, imageBytes);
-    }
-
-    /**
-     * Representa a imagem recebida no payload apos validacao e decodificacao.
-     *
-     * @param originalDataUri valor original recebido no request.
-     * @param bytes bytes decodificados a serem persistidos.
-     */
-    private record ParsedImage(String originalDataUri, byte[] bytes) {
-    }
 }

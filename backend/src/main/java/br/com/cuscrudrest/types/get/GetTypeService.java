@@ -5,11 +5,11 @@ import br.com.cuscrudrest.common.error.NotFoundException;
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import br.com.cuscrudrest.inventories.InventoryAccessService;
 import br.com.cuscrudrest.types.TypeDetails;
+import br.com.cuscrudrest.types.TypeImageCodec;
 import br.com.cuscrudrest.types.TypeRepository;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Service;
 
-import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -20,8 +20,6 @@ import java.util.UUID;
 @Service
 @Conditional(DatabaseConfiguredCondition.class)
 public class GetTypeService {
-
-    private static final String DEFAULT_IMAGE_MIME_TYPE = "image/png";
 
     private final InventoryAccessService inventoryAccessService;
     private final TypeRepository typeRepository;
@@ -67,23 +65,8 @@ public class GetTypeService {
         return new GetTypeResponse(
                 type.typeId(),
                 type.nome(),
-                toDataUri(type.imagem()),
+                TypeImageCodec.toDataUri(type.imagem()),
                 type.inventoryId()
         );
-    }
-
-    /**
-     * Serializa os bytes da imagem para o formato `data:<mime>;base64,<dados>`.
-     *
-     * @param imageBytes bytes persistidos da imagem, quando houver.
-     * @return data URI padrao da API, ou `null` quando nao houver imagem.
-     */
-    private String toDataUri(byte[] imageBytes) {
-        if (imageBytes == null || imageBytes.length == 0) {
-            return null;
-        }
-
-        return "data:" + DEFAULT_IMAGE_MIME_TYPE + ";base64," +
-                Base64.getEncoder().encodeToString(imageBytes);
     }
 }
