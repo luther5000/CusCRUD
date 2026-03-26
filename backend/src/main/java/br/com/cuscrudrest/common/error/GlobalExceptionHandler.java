@@ -1,7 +1,10 @@
 package br.com.cuscrudrest.common.error;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -30,6 +33,39 @@ public class GlobalExceptionHandler {
                 .orElse(null);
         String campo = fieldError != null ? fieldError.getField() : null;
         String info = fieldError != null ? fieldError.getDefaultMessage() : "invalid request body";
+        return buildErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "VALIDATION_ERROR",
+                "Payload invalido.",
+                campo,
+                info
+        );
+    }
+
+    /**
+     * Converte payloads JSON malformados ou campos com tipo invalido em erro HTTP 400.
+     * Estrategia: tenta extrair o primeiro campo Jackson associado a falha e usa uma mensagem padrao para o cliente.
+     * Efeitos colaterais: nenhum alem da construcao da resposta HTTP.
+     *
+     * @param exception excecao produzida por falha de desserializacao do corpo da requisicao.
+     * @return resposta 400 no formato padrao de erro da API.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException exception) {
+        InvalidFormatException invalidFormatException = findCause(exception, InvalidFormatException.class);
+        JsonMappingException jsonMappingException = invalidFormatException != null
+                ? invalidFormatException
+                : findCause(exception, JsonMappingException.class);
+        String campo = null;
+        String info = "invalid request body";
+
+        if (invalidFormatException != null) {
+            campo = extractFirstField(invalidFormatException);
+            info = "invalid field format";
+        } else if (jsonMappingException != null) {
+            campo = extractFirstField(jsonMappingException);
+        }
+
         return buildErrorResponse(
                 HttpStatus.BAD_REQUEST,
                 "VALIDATION_ERROR",
@@ -144,5 +180,26 @@ public class GlobalExceptionHandler {
         ApiErrorDetails details = new ApiErrorDetails(campo, info);
         ApiErrorBody errorBody = new ApiErrorBody(code, message, details);
         return ResponseEntity.status(status).body(new ApiErrorResponse(errorBody));
+    }
+
+    private String extractFirstField(JsonMappingException exception) {
+        return exception.getPath().stream()
+                .map(JsonMappingException.Reference::getFieldName)
+                .filter(fieldName -> fieldName != null && !fieldName.isBlank())
+                .findFirst()
+                .orElse(null);
+    }
+
+    private <T extends Throwable> T findCause(Throwable throwable, Class<T> type) {
+        Throwable current = throwable;
+
+        while (current != null) {
+            if (type.isInstance(current)) {
+                return type.cast(current);
+            }
+            current = current.getCause();
+        }
+
+        return null;
     }
 }

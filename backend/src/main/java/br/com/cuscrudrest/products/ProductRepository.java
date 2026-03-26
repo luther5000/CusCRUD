@@ -2,9 +2,14 @@ package br.com.cuscrudrest.products;
 
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,14 +24,20 @@ import java.util.UUID;
 public class ProductRepository {
 
     private final JdbcClient jdbcClient;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     /**
      * Cria o repositorio de produtos.
      *
      * @param jdbcClient facade JDBC configurada para o banco da aplicacao.
+     * @param namedParameterJdbcTemplate template JDBC com suporte a parametros nomeados e generated keys.
      */
-    public ProductRepository(JdbcClient jdbcClient) {
+    public ProductRepository(
+            JdbcClient jdbcClient,
+            NamedParameterJdbcTemplate namedParameterJdbcTemplate
+    ) {
         this.jdbcClient = jdbcClient;
+        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
     /**
@@ -170,5 +181,57 @@ public class ProductRepository {
                         resultSet.getObject("inv_id", UUID.class)
                 ))
                 .optional();
+    }
+
+    /**
+     * Cria um novo produto associado ao inventario informado.
+     * Estrategia: executa `INSERT ... RETURNING` para recuperar imediatamente o estado persistido com `product_id` gerado.
+     * Efeitos colaterais: persiste um novo registro na tabela `products`.
+     *
+     * @param inventoryId identificador do inventario alvo.
+     * @param typeId identificador do tipo ao qual o produto pertence.
+     * @param marca marca ou fabricante, quando houver.
+     * @param dataValidade data de validade com timezone, quando houver.
+     * @param unidade unidade base do produto, quando houver.
+     * @param unidadeMedida texto da unidade de medida, quando houver.
+     * @param quantidade quantidade inicial do produto.
+     * @return produto criado com os dados persistidos e `product_id` gerado.
+     */
+    public ProductSummary createProduct(
+            UUID inventoryId,
+            long typeId,
+            String marca,
+            OffsetDateTime dataValidade,
+            Long unidade,
+            String unidadeMedida,
+            long quantidade
+    ) {
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("inventoryId", inventoryId)
+                .addValue("typeId", typeId)
+                .addValue("marca", marca)
+                .addValue("dataValidade", dataValidade)
+                .addValue("unidade", unidade)
+                .addValue("unidadeMedida", unidadeMedida)
+                .addValue("quantidade", quantidade);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+
+        namedParameterJdbcTemplate.update("""
+                INSERT INTO products (
+                    type_id, marca, dataValidade, unidade, unidadeMedida, quantidade, inv_id
+                ) VALUES (
+                    :typeId, :marca, :dataValidade, :unidade, :unidadeMedida, :quantidade, :inventoryId
+                )
+                """, parameters, keyHolder, new String[]{"product_id"});
+
+        Number generatedId = keyHolder.getKey();
+        if (generatedId == null) {
+            throw new IllegalStateException("Produto criado mas nenhuma chave foi retornada.");
+        }
+
+        return findProductById(inventoryId, generatedId.longValue())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Produto criado mas nao encontrado ao reler o registro."
+                ));
     }
 }

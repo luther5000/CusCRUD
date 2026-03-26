@@ -1,12 +1,10 @@
-package br.com.cuscrudrest.products.listbytype;
+package br.com.cuscrudrest.products.create;
 
 import br.com.cuscrudrest.auth.security.AuthenticatedUserPrincipal;
 import br.com.cuscrudrest.common.error.NotFoundException;
 import br.com.cuscrudrest.inventories.InventoryAccessService;
 import br.com.cuscrudrest.inventories.InventoryRepository;
 import br.com.cuscrudrest.products.ProductRepository;
-import br.com.cuscrudrest.products.list.ListProductsItemResponse;
-import br.com.cuscrudrest.products.list.ListProductsPage;
 import br.com.cuscrudrest.types.TypeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,23 +14,22 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class ListProductsByTypeServiceTest {
+class CreateProductServiceTest {
 
     private JdbcClient jdbcClient;
-    private ListProductsByTypeService listProductsByTypeService;
+    private CreateProductService createProductService;
     private AuthenticatedUserPrincipal authenticatedUser;
 
     /**
-     * Prepara o schema minimo e as dependencias reais do servico de listagem de produtos por tipo.
+     * Prepara o schema minimo e as dependencias reais do servico de criacao de produtos.
      * Entrada: nenhuma.
-     * Esperado: servico pronto para listar produtos filtrados por tipo em inventarios acessiveis.
+     * Esperado: servico pronto para criar produtos em inventarios acessiveis para escrita.
      */
     @BeforeEach
     void setUp() {
@@ -102,7 +99,7 @@ class ListProductsByTypeServiceTest {
         );
 
         InventoryRepository inventoryRepository = new InventoryRepository(jdbcClient);
-        listProductsByTypeService = new ListProductsByTypeService(
+        createProductService = new CreateProductService(
                 new InventoryAccessService(inventoryRepository),
                 new ProductRepository(jdbcClient, new NamedParameterJdbcTemplate(dataSource)),
                 new TypeRepository(jdbcClient)
@@ -110,71 +107,61 @@ class ListProductsByTypeServiceTest {
     }
 
     /**
-     * Verifica que o servico lista apenas os produtos do tipo informado ordenados por `product_id`.
-     * Entrada: inventario acessivel com produtos de dois tipos distintos.
-     * Esperado: pagina contendo somente os produtos do `type_id` solicitado.
+     * Verifica que o servico cria um produto e aplica `quantidade = 0` quando o campo nao e informado.
+     * Entrada: inventario acessivel para escrita, tipo existente e payload sem `quantidade`.
+     * Esperado: resposta com `product_id` gerado e `quantidade = 0`.
      */
     @Test
-    void shouldListOnlyProductsFromRequestedTypeOrderedByProductId() {
+    void shouldCreateProductWithDefaultQuantityWhenNotProvided() {
         UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
-        insertInventory(inventoryId, "Estoque da Loja");
-        insertInventoryAccess(authenticatedUser.userId(), inventoryId, 2);
-        insertType(1L, "Bebidas", inventoryId);
-        insertType(2L, "Alimentos", inventoryId);
-        insertProduct(2L, 1L, "B", null, 1L, "un", 10L, inventoryId);
-        insertProduct(1L, 1L, "A", OffsetDateTime.parse("2026-12-31T00:00:00-03:00"), 1L, "un", 5L, inventoryId);
-        insertProduct(3L, 2L, "C", null, 1L, "un", 8L, inventoryId);
-
-        ListProductsPage page = listProductsByTypeService.listProductsByType(authenticatedUser, inventoryId, 1L, null, null);
-
-        assertEquals(List.of(1L, 2L), page.products().stream().map(ListProductsItemResponse::productId).toList());
-        assertEquals(List.of(1L, 1L), page.products().stream().map(ListProductsItemResponse::typeId).toList());
-        assertNull(page.nextOffset());
-    }
-
-    /**
-     * Verifica que o servico calcula a continuidade da paginacao quando ha mais produtos no tipo.
-     * Entrada: inventario com dois produtos do mesmo tipo e requisicao com `limit = 1`.
-     * Esperado: pagina com um item e `nextOffset = 1`.
-     */
-    @Test
-    void shouldReturnNextOffsetWhenThereAreMoreProductsForType() {
-        UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        OffsetDateTime validade = OffsetDateTime.parse("2026-12-31T00:00:00-03:00");
         insertInventory(inventoryId, "Estoque da Loja");
         insertInventoryAccess(authenticatedUser.userId(), inventoryId, 1);
         insertType(1L, "Bebidas", inventoryId);
-        insertProduct(1L, 1L, "A", null, 1L, "un", 10L, inventoryId);
-        insertProduct(2L, 1L, "B", null, 2L, "cx", 5L, inventoryId);
 
-        ListProductsPage page = listProductsByTypeService.listProductsByType(authenticatedUser, inventoryId, 1L, 1, 0);
+        CreateProductResponse response = createProductService.createProduct(
+                authenticatedUser,
+                inventoryId,
+                new CreateProductRequest(1L, "Acme", validade, 1L, "un", null)
+        );
 
-        assertEquals(1, page.products().size());
-        assertEquals(1, page.nextOffset());
-        assertEquals(1, page.limit());
+        assertEquals(1L, response.typeId());
+        assertEquals("Acme", response.marca());
+        assertEquals(validade, response.dataValidade());
+        assertEquals(1L, response.unidade());
+        assertEquals("un", response.unidadeMedida());
+        assertEquals(0L, response.quantidade());
+        assertEquals(inventoryId, response.inventoryId());
     }
 
     /**
-     * Verifica que o servico rejeita inventario sem acesso para o usuario autenticado.
-     * Entrada: inventario existente sem vinculo do usuario autenticado.
-     * Esperado: NotFoundException associada ao campo `inv_id`.
+     * Verifica que o servico preserva campos opcionais nulos quando o payload nao os informa.
+     * Entrada: inventario acessivel para escrita, tipo existente e payload minimo.
+     * Esperado: resposta com campos opcionais nulos e quantidade default.
      */
     @Test
-    void shouldRejectWhenAuthenticatedUserDoesNotBelongToInventory() {
+    void shouldCreateProductWithNullOptionalFields() {
         UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
         insertInventory(inventoryId, "Estoque da Loja");
+        insertInventoryAccess(authenticatedUser.userId(), inventoryId, 0);
+        insertType(1L, "Bebidas", inventoryId);
 
-        NotFoundException exception = assertThrows(
-                NotFoundException.class,
-                () -> listProductsByTypeService.listProductsByType(authenticatedUser, inventoryId, 1L, null, null)
+        CreateProductResponse response = createProductService.createProduct(
+                authenticatedUser,
+                inventoryId,
+                new CreateProductRequest(1L, null, null, null, null, null)
         );
 
-        assertEquals("inv_id", exception.getCampo());
-        assertEquals("inventory not found", exception.getInfo());
+        assertNull(response.marca());
+        assertNull(response.dataValidade());
+        assertNull(response.unidade());
+        assertNull(response.unidadeMedida());
+        assertEquals(0L, response.quantidade());
     }
 
     /**
      * Verifica que o servico rejeita `type_id` inexistente para o inventario informado.
-     * Entrada: inventario acessivel sem tipo correspondente.
+     * Entrada: inventario acessivel para escrita sem tipo correspondente.
      * Esperado: NotFoundException associada ao campo `type_id`.
      */
     @Test
@@ -185,33 +172,15 @@ class ListProductsByTypeServiceTest {
 
         NotFoundException exception = assertThrows(
                 NotFoundException.class,
-                () -> listProductsByTypeService.listProductsByType(authenticatedUser, inventoryId, 1L, null, null)
+                () -> createProductService.createProduct(
+                        authenticatedUser,
+                        inventoryId,
+                        new CreateProductRequest(1L, "Acme", null, null, null, 5L)
+                )
         );
 
         assertEquals("type_id", exception.getCampo());
         assertEquals("type not found", exception.getInfo());
-    }
-
-    /**
-     * Verifica que o servico rejeita `offset` apos o fim da lista filtrada pelo tipo.
-     * Entrada: inventario com um unico produto do tipo e requisicao com `offset = 1`.
-     * Esperado: NotFoundException associada ao campo `offset`.
-     */
-    @Test
-    void shouldRejectOffsetAfterEndOfFilteredList() {
-        UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
-        insertInventory(inventoryId, "Estoque da Loja");
-        insertInventoryAccess(authenticatedUser.userId(), inventoryId, 0);
-        insertType(1L, "Bebidas", inventoryId);
-        insertProduct(1L, 1L, "A", null, 1L, "un", 10L, inventoryId);
-
-        NotFoundException exception = assertThrows(
-                NotFoundException.class,
-                () -> listProductsByTypeService.listProductsByType(authenticatedUser, inventoryId, 1L, 10, 1)
-        );
-
-        assertEquals("offset", exception.getCampo());
-        assertEquals("offset after end of list", exception.getInfo());
     }
 
     private void insertUser(UUID userId, String name, String login) {
@@ -258,38 +227,10 @@ class ListProductsByTypeServiceTest {
                 .update();
     }
 
-    private void insertProduct(
-            long productId,
-            long typeId,
-            String marca,
-            OffsetDateTime dataValidade,
-            Long unidade,
-            String unidadeMedida,
-            long quantidade,
-            UUID inventoryId
-    ) {
-        jdbcClient.sql("""
-                INSERT INTO products (
-                    product_id, type_id, marca, dataValidade, unidade, unidadeMedida, quantidade, inv_id
-                ) VALUES (
-                    :productId, :typeId, :marca, :dataValidade, :unidade, :unidadeMedida, :quantidade, :inventoryId
-                )
-                """)
-                .param("productId", productId)
-                .param("typeId", typeId)
-                .param("marca", marca)
-                .param("dataValidade", dataValidade)
-                .param("unidade", unidade)
-                .param("unidadeMedida", unidadeMedida)
-                .param("quantidade", quantidade)
-                .param("inventoryId", inventoryId)
-                .update();
-    }
-
     private DataSource createDataSource() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource();
         dataSource.setDriverClassName("org.h2.Driver");
-        dataSource.setUrl("jdbc:h2:mem:list_products_by_type_service;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
+        dataSource.setUrl("jdbc:h2:mem:create_product_service;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
         dataSource.setUsername("sa");
         dataSource.setPassword("test");
         return dataSource;

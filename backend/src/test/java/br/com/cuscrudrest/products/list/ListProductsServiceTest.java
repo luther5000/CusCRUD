@@ -7,6 +7,7 @@ import br.com.cuscrudrest.inventories.InventoryRepository;
 import br.com.cuscrudrest.products.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
@@ -100,7 +101,7 @@ class ListProductsServiceTest {
         InventoryRepository inventoryRepository = new InventoryRepository(jdbcClient);
         listProductsService = new ListProductsService(
                 new InventoryAccessService(inventoryRepository),
-                new ProductRepository(jdbcClient)
+                new ProductRepository(jdbcClient, new NamedParameterJdbcTemplate(dataSource))
         );
     }
 

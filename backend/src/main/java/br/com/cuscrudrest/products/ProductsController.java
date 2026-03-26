@@ -2,18 +2,26 @@ package br.com.cuscrudrest.products;
 
 import br.com.cuscrudrest.auth.security.AuthenticatedUserPrincipal;
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
+import br.com.cuscrudrest.products.create.CreateProductRequest;
+import br.com.cuscrudrest.products.create.CreateProductResponse;
+import br.com.cuscrudrest.products.create.CreateProductService;
 import br.com.cuscrudrest.products.get.GetProductResponse;
 import br.com.cuscrudrest.products.get.GetProductService;
 import br.com.cuscrudrest.products.list.ListProductsPage;
 import br.com.cuscrudrest.products.list.ListProductsResponse;
 import br.com.cuscrudrest.products.list.ListProductsService;
 import br.com.cuscrudrest.products.listbytype.ListProductsByTypeService;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Conditional;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -28,6 +36,7 @@ import java.util.UUID;
 @Conditional(DatabaseConfiguredCondition.class)
 public class ProductsController {
 
+    private final CreateProductService createProductService;
     private final GetProductService getProductService;
     private final ListProductsByTypeService listProductsByTypeService;
     private final ListProductsService listProductsService;
@@ -35,15 +44,18 @@ public class ProductsController {
     /**
      * Cria o controller de produtos.
      *
+     * @param createProductService servico responsavel pela criacao de produtos.
      * @param getProductService servico responsavel pela leitura unitaria de produtos.
      * @param listProductsByTypeService servico responsavel pela listagem paginada de produtos filtrados por tipo.
      * @param listProductsService servico responsavel pela listagem paginada de produtos.
      */
     public ProductsController(
+            CreateProductService createProductService,
             GetProductService getProductService,
             ListProductsByTypeService listProductsByTypeService,
             ListProductsService listProductsService
     ) {
+        this.createProductService = createProductService;
         this.getProductService = getProductService;
         this.listProductsByTypeService = listProductsByTypeService;
         this.listProductsService = listProductsService;
@@ -75,6 +87,27 @@ public class ProductsController {
                 page.products(),
                 buildNextPageUrl(request, page.nextOffset(), page.limit())
         );
+    }
+
+    /**
+     * POST /api/v1/inventories/{inv_id}/products
+     * Cria um novo produto no inventario quando o usuario autenticado possui permissao de escrita no recurso.
+     * Estrategia: valida o payload via Bean Validation, resolve o UUID do path e delega a criacao ao servico de negocio.
+     * Efeitos colaterais: persiste um novo produto associado ao inventario informado.
+     *
+     * @param authenticatedUser principal autenticado da request atual.
+     * @param inventoryId identificador do inventario alvo.
+     * @param request payload HTTP com os dados do produto a ser criado.
+     * @return produto criado com `product_id` gerado.
+     */
+    @PostMapping("/inventories/{inv_id}/products")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CreateProductResponse createProduct(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal authenticatedUser,
+            @PathVariable("inv_id") UUID inventoryId,
+            @Valid @RequestBody CreateProductRequest request
+    ) {
+        return createProductService.createProduct(authenticatedUser, inventoryId, request);
     }
 
     /**
