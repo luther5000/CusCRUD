@@ -19,6 +19,16 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
+    sourceSets {
+        getByName("test") {
+            java.srcDirs("src/test/java", "src/sharedTest/java")
+        }
+        getByName("androidTest") {
+            java.srcDirs("src/androidTest/java", "src/sharedTest/java")
+            assets.srcDirs("src/androidTest/assets")
+        }
+    }
 }
 
 dependencies {
