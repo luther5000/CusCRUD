@@ -1,0 +1,46 @@
+package com.cuscrud.domain.repository
+
+import com.cuscrud.data.remote.dto.InventoryDto
+import com.cuscrud.domain.util.Result
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * Interface de repositório para operações de Inventário.
+ */
+interface InventoryRepository {
+
+    /**
+     * StateFlow que emite o ID do inventário ativo no momento.
+     */
+    val activeInventoryId: StateFlow<String?>
+
+    /**
+     * Busca a lista de inventários do usuário.
+     */
+    suspend fun getInventories(limit: Int = 20, offset: Int = 0): Result<List<InventoryDto>>
+
+    /**
+     * Cria um novo inventário.
+     */
+    suspend fun createInventory(name: String): Result<InventoryDto>
+
+    /**
+     * Atualiza o nome de um inventário existente.
+     */
+    suspend fun updateInventory(invId: String, name: String): Result<InventoryDto>
+
+    /**
+     * Deleta um inventário. Caso seja o ativo, ele será limpo.
+     */
+    suspend fun deleteInventory(invId: String): Result<Unit>
+
+    /**
+     * Define o inventário ativo para o contexto global da aplicação.
+     */
+    fun setActiveInventory(invId: String)
+
+    /**
+     * Limpa o inventário ativo selecionado.
+     */
+    fun clearActiveInventory()
+}
