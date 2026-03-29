@@ -28,7 +28,7 @@ private fun getIsoFormat(): SimpleDateFormat {
 fun TipoResponseDto.toDomain(): Tipo {
     val imageBytes = try {
         Base64.decode(imagem, Base64.DEFAULT)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         byteArrayOf()
     }
     return Tipo(
@@ -44,7 +44,7 @@ fun TipoResponseDto.toDomain(): Tipo {
 fun ProdutoResponseDto.toDomain(): Produto {
     val date = try {
         getIsoFormat().parse(dataValidade.replace("Z", "+0000")) ?: Date()
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Date()
     }
     return Produto(
