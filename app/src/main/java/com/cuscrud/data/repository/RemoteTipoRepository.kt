@@ -6,6 +6,7 @@ import com.cuscrud.data.remote.dto.CreateTipoRequest
 import com.cuscrud.data.remote.dto.UpdateTipoRequest
 import com.cuscrud.domain.model.Tipo
 import com.cuscrud.domain.repository.InventoryRepository
+import com.cuscrud.domain.repository.TipoRepository
 import com.cuscrud.domain.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,28 +14,25 @@ import retrofit2.HttpException
 import javax.inject.Inject
 
 /**
- * Implementação remota do repositório de Tipos.
+ * Implementação remota do repositório de Tipos que se comunica com a API REST.
  * 
- * NOTA: Esta classe foi desacoplada da interface [TipoRepository] principal para evitar quebras na UI atual,
- * que ainda utiliza fluxos reativos locais (Room/Flow).
- * Esta implementação está pronta para ser integrada futuramente em uma arquitetura totalmente online.
- *
- * Conforme a Seção 5.4 do architecture.md, as operações são vinculadas a um `inv_id`.
+ * Segue a Seção 5.4 do architecture.md, vinculando todas as operações ao [inv_id] 
+ * do inventário ativo obtido via [InventoryRepository].
  */
 class RemoteTipoRepository @Inject constructor(
     private val apiService: CuscrudApiService,
     private val inventoryRepository: InventoryRepository
-) {
+) : TipoRepository {
 
     /**
-     * Recupera o ID do inventário ativo. Se não houver inventário selecionado, retorna erro.
+     * Recupera o ID do inventário ativo. Se não houver inventário selecionado, retorna null.
      */
     private fun getActiveInventoryId(): String? = inventoryRepository.activeInventoryId.value
 
     /**
      * Recupera uma lista paginada de tipos para o inventário ativo na nuvem.
      */
-    suspend fun getTipos(limit: Int = 20, offset: Int = 0): Result<List<Tipo>> = withContext(Dispatchers.IO) {
+    override suspend fun getTipos(limit: Int, offset: Int): Result<List<Tipo>> = withContext(Dispatchers.IO) {
         val invId = getActiveInventoryId() ?: return@withContext Result.Error(Exception("Nenhum inventário ativo selecionado."))
         
         try {
@@ -53,7 +51,7 @@ class RemoteTipoRepository @Inject constructor(
     /**
      * Busca um tipo específico pelo seu identificador na nuvem.
      */
-    suspend fun getTipoById(id: Long): Result<Tipo> = withContext(Dispatchers.IO) {
+    override suspend fun getTipoById(id: Long): Result<Tipo> = withContext(Dispatchers.IO) {
         val invId = getActiveInventoryId() ?: return@withContext Result.Error(Exception("Nenhum inventário ativo selecionado."))
 
         try {
@@ -73,11 +71,11 @@ class RemoteTipoRepository @Inject constructor(
     /**
      * Cria um novo tipo no inventário ativo na nuvem.
      */
-    suspend fun insertTipo(nome: String, imagem: String? = null): Result<Tipo> = withContext(Dispatchers.IO) {
+    override suspend fun insertTipo(nome: String, imagemBase64: String?): Result<Tipo> = withContext(Dispatchers.IO) {
         val invId = getActiveInventoryId() ?: return@withContext Result.Error(Exception("Nenhum inventário ativo selecionado."))
 
         try {
-            val request = CreateTipoRequest(nome = nome, imagem = imagem)
+            val request = CreateTipoRequest(nome = nome, imagem = imagemBase64)
             val response = apiService.createType(invId, request)
             if (response.isSuccessful) {
                 response.body()?.let {
@@ -94,11 +92,11 @@ class RemoteTipoRepository @Inject constructor(
     /**
      * Atualiza os dados de um tipo existente na nuvem.
      */
-    suspend fun editTipo(id: Long, nome: String? = null, imagem: String? = null): Result<Tipo> = withContext(Dispatchers.IO) {
+    override suspend fun editTipo(id: Long, nome: String?, imagemBase64: String?): Result<Tipo> = withContext(Dispatchers.IO) {
         val invId = getActiveInventoryId() ?: return@withContext Result.Error(Exception("Nenhum inventário ativo selecionado."))
 
         try {
-            val request = UpdateTipoRequest(nome = nome, imagem = imagem)
+            val request = UpdateTipoRequest(nome = nome, imagem = imagemBase64)
             val response = apiService.updateType(invId, id, request)
             if (response.isSuccessful) {
                 response.body()?.let {
@@ -116,7 +114,7 @@ class RemoteTipoRepository @Inject constructor(
      * Remove um tipo do inventário na nuvem.
      * Retorna erro 409 se houver produtos vinculados.
      */
-    suspend fun removeTipo(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun removeTipo(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
         val invId = getActiveInventoryId() ?: return@withContext Result.Error(Exception("Nenhum inventário ativo selecionado."))
 
         try {

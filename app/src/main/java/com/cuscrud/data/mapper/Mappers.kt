@@ -20,18 +20,29 @@ private fun getIsoFormat(): SimpleDateFormat {
 }
 
 /**
- * Mapeia [TipoDto] (API) para [Tipo] (Domínio)
+ * Decodifica uma string Base64 para ByteArray, removendo prefixos MIME se presentes.
  */
-fun TipoDto.toDomain(): Tipo {
-    val imageBytes = try {
-        imagem?.let { Base64.decode(it, Base64.DEFAULT) } ?: byteArrayOf()
+private fun String.decodeBase64ToBytes(): ByteArray {
+    return try {
+        val cleanBase64 = if (this.startsWith("data:")) {
+            this.substringAfter("base64,")
+        } else {
+            this
+        }
+        Base64.decode(cleanBase64, Base64.DEFAULT)
     } catch (_: Exception) {
         byteArrayOf()
     }
+}
+
+/**
+ * Mapeia [TipoDto] (API) para [Tipo] (Domínio)
+ */
+fun TipoDto.toDomain(): Tipo {
     return Tipo(
         id = typeId,
         nome = nome,
-        imagem = imageBytes
+        imagem = imagem?.decodeBase64ToBytes() ?: byteArrayOf()
     )
 }
 
@@ -39,15 +50,10 @@ fun TipoDto.toDomain(): Tipo {
  * Mapeia [TipoResponseDto] (API) para [Tipo] (Domínio)
  */
 fun TipoResponseDto.toDomain(): Tipo {
-    val imageBytes = try {
-        Base64.decode(imagem, Base64.DEFAULT)
-    } catch (_: Exception) {
-        byteArrayOf()
-    }
     return Tipo(
         id = id,
         nome = nome,
-        imagem = imageBytes
+        imagem = imagem.decodeBase64ToBytes()
     )
 }
 

@@ -21,7 +21,7 @@ interface TipoDao {
     suspend fun getById(id: Long): TipoEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(tipo: TipoEntity)
+    suspend fun insert(tipo: TipoEntity): Long
 
     @Update
     suspend fun update(tipo: TipoEntity)
