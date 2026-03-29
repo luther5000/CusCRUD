@@ -4,13 +4,13 @@ import com.cuscrud.data.local.SessionManager
 import com.cuscrud.data.remote.api.CuscrudApiService
 import com.cuscrud.data.remote.dto.InventoryDto
 import com.cuscrud.data.remote.dto.InventoryListResponse
+import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.util.Result
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
@@ -36,6 +36,7 @@ class InventoryRepositoryImplTest {
     fun setup() {
         // Simula ausência de inventário salvo por padrão
         every { sessionManager.fetchActiveInventoryId() } returns null
+        every { sessionManager.fetchActiveInventoryRole() } returns -1
         repository = InventoryRepositoryImpl(apiService, sessionManager)
     }
 
@@ -43,33 +44,35 @@ class InventoryRepositoryImplTest {
 
     /**
      * Objetivo: Validar se o repositório inicializa o StateFlow com o valor do SessionManager.
-     * Entradas: SessionManager retornando "stored-id".
-     * Comportamento esperado: repository.activeInventoryId deve emitir "stored-id".
      */
     @Test
-    fun `activeInventoryId should be initialized with value from sessionManager`() = runTest {
+    fun `activeInventoryId and role should be initialized with values from sessionManager`() = runTest {
         val storedId = "stored-id"
+        val storedRole = Role.EDITOR.value
         every { sessionManager.fetchActiveInventoryId() } returns storedId
+        every { sessionManager.fetchActiveInventoryRole() } returns storedRole
         
         // Reinicializa para ler o mock
         val repo = InventoryRepositoryImpl(apiService, sessionManager)
 
         assertEquals(storedId, repo.activeInventoryId.value)
+        assertEquals(Role.EDITOR, repo.activeInventoryRole.value)
     }
 
     /**
      * Objetivo: Validar a alternância de inventário ativo.
-     * Entradas: ID "new-id".
-     * Comportamento esperado: Deve salvar no sessionManager e emitir no Flow.
      */
     @Test
     fun `setActiveInventory should update sessionManager and stateFlow`() = runTest {
         val newId = "new-id"
+        val role = Role.OWNER
 
-        repository.setActiveInventory(newId)
+        repository.setActiveInventory(newId, role)
 
         verify { sessionManager.saveActiveInventoryId(newId) }
+        verify { sessionManager.saveActiveInventoryRole(role.value) }
         assertEquals(newId, repository.activeInventoryId.value)
+        assertEquals(role, repository.activeInventoryRole.value)
     }
 
     // endregion
@@ -78,8 +81,6 @@ class InventoryRepositoryImplTest {
 
     /**
      * Objetivo: Validar listagem de inventários com sucesso.
-     * Entradas: Resposta 200 OK com lista.
-     * Comportamento esperado: Retornar Result.Success com os dados.
      */
     @Test
     fun `getInventories should return Success when API responds 200 OK`() = runTest {
@@ -94,13 +95,28 @@ class InventoryRepositoryImplTest {
     }
 
     /**
+     * Objetivo: Validar atualização automática da role ao listar inventários se o ativo estiver na lista.
+     */
+    @Test
+    fun `getInventories should update active role if current active inventory is in the list`() = runTest {
+        repository.setActiveInventory("id-1", Role.READER)
+        
+        val inventories = listOf(InventoryDto("id-1", "Inv 1", Role.EDITOR.value))
+        val response = InventoryListResponse(inventories)
+        coEvery { apiService.getInventories(any(), any()) } returns Response.success(response)
+
+        repository.getInventories()
+
+        assertEquals(Role.EDITOR, repository.activeInventoryRole.value)
+        verify { sessionManager.saveActiveInventoryRole(Role.EDITOR.value) }
+    }
+
+    /**
      * Objetivo: Validar tratamento de erro na API de listagem.
-     * Entradas: Resposta 401 Unauthorized.
-     * Comportamento esperado: Retornar Result.Error.
      */
     @Test
     fun `getInventories should return Error when API fails`() = runTest {
-        coEvery { apiService.getInventories() } returns Response.error(401, "".toResponseBody())
+        coEvery { apiService.getInventories(any(), any()) } returns Response.error(401, "".toResponseBody())
 
         val result = repository.getInventories()
 
@@ -113,12 +129,10 @@ class InventoryRepositoryImplTest {
 
     /**
      * Objetivo: Validar exclusão de inventário que NÃO é o ativo.
-     * Entradas: activeInventoryId = "id-A", deletando "id-B".
-     * Comportamento esperado: API chamada com sucesso, activeInventoryId permanece "id-A".
      */
     @Test
     fun `deleteInventory should not clear state if deleted ID is not the active one`() = runTest {
-        repository.setActiveInventory("id-A")
+        repository.setActiveInventory("id-A", Role.OWNER)
         coEvery { apiService.deleteInventory("id-B") } returns Response.success(Unit)
 
         repository.deleteInventory("id-B")
@@ -129,18 +143,18 @@ class InventoryRepositoryImplTest {
 
     /**
      * Objetivo: Validar exclusão do inventário que É o ativo.
-     * Entradas: activeInventoryId = "id-A", deletando "id-A".
-     * Comportamento esperado: API chamada, sessionManager limpo e Flow emite null.
      */
     @Test
     fun `deleteInventory should clear state if deleted ID is the active one`() = runTest {
-        repository.setActiveInventory("id-A")
+        repository.setActiveInventory("id-A", Role.OWNER)
         coEvery { apiService.deleteInventory("id-A") } returns Response.success(Unit)
 
         repository.deleteInventory("id-A")
 
         assertNull(repository.activeInventoryId.value)
+        assertNull(repository.activeInventoryRole.value)
         verify { sessionManager.clearActiveInventoryId() }
+        verify { sessionManager.clearActiveInventoryRole() }
     }
 
     // endregion
