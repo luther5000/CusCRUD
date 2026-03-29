@@ -3,6 +3,7 @@ package com.cuscrud.data.repository
 import com.cuscrud.data.mapper.toDomain
 import com.cuscrud.data.remote.api.CuscrudApiService
 import com.cuscrud.data.remote.dto.CreateTipoRequest
+import com.cuscrud.data.remote.dto.ErrorResponse
 import com.cuscrud.data.remote.dto.UpdateTipoRequest
 import com.cuscrud.domain.model.Tipo
 import com.cuscrud.domain.repository.InventoryRepository
@@ -10,7 +11,10 @@ import com.cuscrud.domain.repository.TipoRepository
 import com.cuscrud.domain.util.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import retrofit2.HttpException
+import kotlinx.serialization.json.Json
+import retrofit2.Response
+import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -21,7 +25,8 @@ import javax.inject.Inject
  */
 class RemoteTipoRepository @Inject constructor(
     private val apiService: CuscrudApiService,
-    private val inventoryRepository: InventoryRepository
+    private val inventoryRepository: InventoryRepository,
+    private val json: Json
 ) : TipoRepository {
 
     /**
@@ -41,10 +46,13 @@ class RemoteTipoRepository @Inject constructor(
                 val types = response.body()?.types?.map { it.toDomain() } ?: emptyList()
                 Result.Success(types)
             } else {
-                Result.Error(HttpException(response))
+                handleError(response)
             }
+        } catch (e: IOException) {
+            Result.Error(Exception("Falha de conexão ao buscar categorias. Verifique sua internet."))
         } catch (e: Exception) {
-            Result.Error(e)
+            Timber.e(e, "Erro ao buscar tipos")
+            Result.Error(Exception("Não foi possível carregar as categorias."))
         }
     }
 
@@ -59,12 +67,15 @@ class RemoteTipoRepository @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let {
                     Result.Success(it.toDomain())
-                } ?: Result.Error(Exception("Tipo não encontrado."))
+                } ?: Result.Error(Exception("Categoria não encontrada."))
             } else {
-                Result.Error(HttpException(response))
+                handleError(response)
             }
+        } catch (e: IOException) {
+            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
         } catch (e: Exception) {
-            Result.Error(e)
+            Timber.e(e, "Erro ao buscar tipo por id: $id")
+            Result.Error(Exception("Não foi possível carregar os detalhes da categoria."))
         }
     }
 
@@ -80,12 +91,15 @@ class RemoteTipoRepository @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let {
                     Result.Success(it.toDomain())
-                } ?: Result.Error(Exception("Erro ao criar tipo."))
+                } ?: Result.Error(Exception("Erro ao processar a criação da categoria."))
             } else {
-                Result.Error(HttpException(response))
+                handleError(response)
             }
+        } catch (e: IOException) {
+            Result.Error(Exception("Falha de conexão ao criar categoria."))
         } catch (e: Exception) {
-            Result.Error(e)
+            Timber.e(e, "Erro ao criar tipo")
+            Result.Error(Exception("Ocorreu um erro ao tentar salvar a categoria."))
         }
     }
 
@@ -101,12 +115,15 @@ class RemoteTipoRepository @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let {
                     Result.Success(it.toDomain())
-                } ?: Result.Error(Exception("Erro ao atualizar tipo."))
+                } ?: Result.Error(Exception("Erro ao processar a atualização da categoria."))
             } else {
-                Result.Error(HttpException(response))
+                handleError(response)
             }
+        } catch (e: IOException) {
+            Result.Error(Exception("Falha de conexão ao atualizar categoria."))
         } catch (e: Exception) {
-            Result.Error(e)
+            Timber.e(e, "Erro ao editar tipo id: $id")
+            Result.Error(Exception("Não foi possível atualizar a categoria."))
         }
     }
 
@@ -121,13 +138,38 @@ class RemoteTipoRepository @Inject constructor(
             val response = apiService.deleteType(invId, id)
             if (response.isSuccessful) {
                 Result.Success(Unit)
-            } else if (response.code() == 409) {
-                Result.Error(Exception("Não é possível excluir este tipo pois existem produtos vinculados a ele."))
             } else {
-                Result.Error(HttpException(response))
+                handleError(response)
             }
+        } catch (e: IOException) {
+            Result.Error(Exception("Falha de conexão ao excluir categoria."))
         } catch (e: Exception) {
-            Result.Error(e)
+            Timber.e(e, "Erro ao remover tipo id: $id")
+            Result.Error(Exception("Ocorreu um erro ao tentar excluir a categoria."))
+        }
+    }
+
+    /**
+     * Realiza o parse de erros vindos da API seguindo o padrão { "error": { "code": "...", "message": "..." } }
+     * definido no architecture.md.
+     */
+    private fun handleError(response: Response<*>): Result.Error {
+        val errorBody = response.errorBody()?.string()
+        return try {
+            val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
+            Result.Error(Exception(errorResponse.error.message))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
+            val friendlyMessage = when (response.code()) {
+                400 -> "Dados inválidos. Verifique as informações preenchidas."
+                401 -> "Sessão expirada. Por favor, faça login novamente."
+                403 -> "Você não tem permissão para esta ação."
+                404 -> "A categoria não foi encontrada."
+                409 -> "Não é possível excluir este tipo pois existem produtos vinculados a ele."
+                500 -> "Erro interno no servidor. Tente novamente em instantes."
+                else -> "Ocorreu um erro inesperado (Código: ${response.code()})"
+            }
+            Result.Error(Exception(friendlyMessage))
         }
     }
 }
