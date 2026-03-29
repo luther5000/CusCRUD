@@ -56,7 +56,7 @@ class RemoteTipoRepository @Inject constructor(
             } else {
                 handleError(response)
             }
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             Result.Error(Exception("Falha de conexão ao buscar categorias. Verifique sua internet."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar tipos")
@@ -79,7 +79,7 @@ class RemoteTipoRepository @Inject constructor(
             } else {
                 handleError(response)
             }
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             Result.Error(Exception("Falha de conexão. Verifique sua internet."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar tipo por id: $id")
@@ -103,7 +103,7 @@ class RemoteTipoRepository @Inject constructor(
             } else {
                 handleError(response)
             }
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             Result.Error(Exception("Falha de conexão ao criar categoria."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao criar tipo")
@@ -127,7 +127,7 @@ class RemoteTipoRepository @Inject constructor(
             } else {
                 handleError(response)
             }
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             Result.Error(Exception("Falha de conexão ao atualizar categoria."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao editar tipo id: $id")
@@ -149,7 +149,7 @@ class RemoteTipoRepository @Inject constructor(
             } else {
                 handleError(response)
             }
-        } catch (e: IOException) {
+        } catch (_: IOException) {
             Result.Error(Exception("Falha de conexão ao excluir categoria."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao remover tipo id: $id")

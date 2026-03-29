@@ -12,7 +12,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.compose.rememberNavController
 import com.cuscrud.domain.model.Produto
-import com.cuscrud.domain.model.Tipo
 import com.cuscrud.domain.repository.ProdutoRepository
 import com.cuscrud.domain.repository.TipoRepository
 import com.cuscrud.domain.util.Result
