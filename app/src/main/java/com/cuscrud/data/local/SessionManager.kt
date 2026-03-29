@@ -18,7 +18,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class SessionManager @Inject constructor(
-    @field:SecureStorage private val dataStore: DataStore<Preferences>
+    @SecureStorage private val dataStore: DataStore<Preferences>
 ) {
 
     private val keyToken = stringPreferencesKey("auth_token")

@@ -3,10 +3,7 @@ package com.cuscrud.data.mapper
 import android.util.Base64
 import com.cuscrud.data.local.entities.ProdutoEntity
 import com.cuscrud.data.local.entities.TipoEntity
-import com.cuscrud.data.remote.dto.ProdutoRequestDto
-import com.cuscrud.data.remote.dto.ProdutoResponseDto
-import com.cuscrud.data.remote.dto.ProdutoUpdateDto
-import com.cuscrud.data.remote.dto.TipoResponseDto
+import com.cuscrud.data.remote.dto.*
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
 import java.text.SimpleDateFormat
@@ -20,6 +17,22 @@ private fun getIsoFormat(): SimpleDateFormat {
     return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("America/Recife")
     }
+}
+
+/**
+ * Mapeia [TipoDto] (API) para [Tipo] (Domínio)
+ */
+fun TipoDto.toDomain(): Tipo {
+    val imageBytes = try {
+        imagem?.let { Base64.decode(it, Base64.DEFAULT) } ?: byteArrayOf()
+    } catch (_: Exception) {
+        byteArrayOf()
+    }
+    return Tipo(
+        id = typeId,
+        nome = nome,
+        imagem = imageBytes
+    )
 }
 
 /**

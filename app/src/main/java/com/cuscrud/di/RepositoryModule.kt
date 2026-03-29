@@ -36,6 +36,10 @@ abstract class RepositoryModule {
         remoteProdutoRepository: RemoteProdutoRepository
     ): ProdutoRepository
 
+    /**
+     * Mantém o OfflineTipoRepository vinculado à interface TipoRepository para 
+     * evitar quebras na UI atual. O RemoteTipoRepository deve ser integrado futuramente.
+     */
     @Binds
     @Singleton
     abstract fun bindTipoRepository(
