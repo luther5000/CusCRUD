@@ -15,12 +15,12 @@ import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
 import com.cuscrud.domain.repository.ProdutoRepository
 import com.cuscrud.domain.repository.TipoRepository
+import com.cuscrud.domain.util.Result
 import com.cuscrud.presentation.navigation.CusCrudNavGraph
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Date
@@ -70,28 +70,32 @@ class MainViewModel @Inject constructor(
 
     private fun setupInitialData() {
         viewModelScope.launch {
-            val tiposAtuais = tipoRepository.getAllTipos().first()
+            val result = tipoRepository.getTipos()
+            val tiposAtuais = if (result is Result.Success) result.data else emptyList()
+            
             if (tiposAtuais.isEmpty()) {
                 // Inserção síncrona dentro da coroutine para garantir ordem
-                tipoRepository.insertTipo(Tipo(id = 0, nome = "Carnes", imagem = byteArrayOf(0)))
-                tipoRepository.insertTipo(Tipo(id = 0, nome = "Laticínios", imagem = byteArrayOf(0)))
-                tipoRepository.insertTipo(Tipo(id = 0, nome = "Bebidas", imagem = byteArrayOf(0)))
+                tipoRepository.insertTipo(nome = "Carnes")
+                tipoRepository.insertTipo(nome = "Laticínios")
+                tipoRepository.insertTipo(nome = "Bebidas")
 
-                // Aguarda um pouco para o Room processar as categorias e busca o ID gerado
-                val categorias = tipoRepository.getAllTipos().first()
-                val primeiraCategoria = categorias.firstOrNull()
-                
-                primeiraCategoria?.let { tipo ->
-                    val produtoTeste = Produto(
-                        id = 0,
-                        tipo = tipo,
-                        marca = "Produto de Teste Inicial",
-                        dataValidade = Date(),
-                        unidade = 1,
-                        unidadeMedida = "kg",
-                        quantidade = 10
-                    )
-                    produtoRepository.insertProduto(produtoTeste)
+                // Busca as categorias inseridas para pegar o ID gerado
+                val updatedResult = tipoRepository.getTipos()
+                if (updatedResult is Result.Success) {
+                    val primeiraCategoria = updatedResult.data.firstOrNull()
+                    
+                    primeiraCategoria?.let { tipo ->
+                        val produtoTeste = Produto(
+                            id = 0,
+                            tipo = tipo,
+                            marca = "Produto de Teste Inicial",
+                            dataValidade = Date(),
+                            unidade = 1,
+                            unidadeMedida = "kg",
+                            quantidade = 10
+                        )
+                        produtoRepository.insertProduto(produtoTeste)
+                    }
                 }
             }
         }
@@ -99,24 +103,28 @@ class MainViewModel @Inject constructor(
 
     fun addSampleProduct() {
         viewModelScope.launch {
-            val tipos = tipoRepository.getAllTipos().first()
-            val tipo = if (tipos.isNotEmpty()) {
-                tipos.first()
+            val result = tipoRepository.getTipos()
+            val types = if (result is Result.Success) result.data else emptyList()
+            
+            val tipo = if (types.isNotEmpty()) {
+                types.first()
             } else {
-                tipoRepository.insertTipo(Tipo(id = 0, nome = "Geral", imagem = byteArrayOf(0)))
-                tipoRepository.getAllTipos().first().first()
+                val insertResult = tipoRepository.insertTipo(nome = "Geral")
+                if (insertResult is Result.Success) insertResult.data else null
             }
 
-            val newProduto = Produto(
-                id = 0,
-                tipo = tipo,
-                marca = "Exemplo ${System.currentTimeMillis() % 1000}",
-                dataValidade = Date(),
-                unidade = 1,
-                unidadeMedida = "un",
-                quantidade = (1..20).random().toLong()
-            )
-            produtoRepository.insertProduto(newProduto)
+            tipo?.let { selectedTipo ->
+                val newProduto = Produto(
+                    id = 0,
+                    tipo = selectedTipo,
+                    marca = "Exemplo ${System.currentTimeMillis() % 1000}",
+                    dataValidade = Date(),
+                    unidade = 1,
+                    unidadeMedida = "un",
+                    quantidade = (1..20).random().toLong()
+                )
+                produtoRepository.insertProduto(newProduto)
+            }
         }
     }
 
