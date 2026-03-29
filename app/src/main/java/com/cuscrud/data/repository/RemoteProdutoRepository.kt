@@ -37,7 +37,7 @@ class RemoteProdutoRepository @Inject constructor(
     override suspend fun getProdutos(limit: Int, offset: Int): Result<List<Produto>> = withContext(Dispatchers.IO) {
         val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Nenhum inventário ativo selecionado."))
         try {
-            val response = apiService.getProducts(invId)
+            val response = apiService.getProducts(invId, limit, offset)
             if (response.isSuccessful) {
                 Result.Success(response.body()?.map { it.toDomain() } ?: emptyList())
             } else {
@@ -68,7 +68,7 @@ class RemoteProdutoRepository @Inject constructor(
         }
     }
 
-    override suspend fun removeProduto(id: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun removeProduto(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
         val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
             val response = apiService.deleteProduct(invId, id)
@@ -104,7 +104,7 @@ class RemoteProdutoRepository @Inject constructor(
         }
     }
 
-    override suspend fun editProduto(id: Int, produto: Produto): Result<Produto> = withContext(Dispatchers.IO) {
+    override suspend fun editProduto(id: Long, produto: Produto): Result<Produto> = withContext(Dispatchers.IO) {
         val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
             val response = apiService.updateProduct(invId, id, produto.toUpdateDto())
@@ -123,7 +123,7 @@ class RemoteProdutoRepository @Inject constructor(
         }
     }
 
-    override suspend fun getProdutoById(id: Int): Result<Produto> = withContext(Dispatchers.IO) {
+    override suspend fun getProdutoById(id: Long): Result<Produto> = withContext(Dispatchers.IO) {
         val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
             val response = apiService.getProducts(invId)

@@ -12,7 +12,7 @@ import javax.inject.Inject
 class RemoveProdutoInteractor @Inject constructor(
     private val repository: ProdutoRepository
 ) {
-    suspend operator fun invoke(produto: Int): Result<Unit> {
+    suspend operator fun invoke(produto: Long): Result<Unit> {
         return repository.removeProduto(produto)
     }
 }

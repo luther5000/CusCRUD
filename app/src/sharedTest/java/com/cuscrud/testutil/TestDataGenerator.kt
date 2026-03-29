@@ -39,7 +39,7 @@ object TestDataGenerator {
      * @return Uma instância de [Produto] populada.
      */
     fun createProduto(
-        id: Int = 1,
+        id: Long = 1L,
         tipo: Tipo = createTipo(),
         marca: String = "Samsung",
         dataValidade: Date = Date(),

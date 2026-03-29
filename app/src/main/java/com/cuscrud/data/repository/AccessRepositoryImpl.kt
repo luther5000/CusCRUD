@@ -1,14 +1,15 @@
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.remote.api.CuscrudApiService
-import com.cuscrud.data.remote.dto.AddUserAccessRequest
-import com.cuscrud.data.remote.dto.UpdateUserAccessRequest
-import com.cuscrud.data.remote.dto.UserAccessDto
+import com.cuscrud.data.remote.dto.*
 import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.repository.AccessRepository
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
+import kotlinx.serialization.json.Json
+import retrofit2.Response
 import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -28,7 +29,8 @@ import javax.inject.Inject
 
 class AccessRepositoryImpl @Inject constructor(
     private val apiService: CuscrudApiService,
-    private val inventoryRepository: InventoryRepository
+    private val inventoryRepository: InventoryRepository,
+    private val json: Json
 ) : AccessRepository {
 
     override suspend fun getUsers(limit: Int, offset: Int): Result<List<UserAccessDto>> {
@@ -40,8 +42,10 @@ class AccessRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 Result.Success(response.body()?.users ?: emptyList())
             } else {
-                Result.Error(Exception("Erro ao buscar colaboradores: ${response.code()}"))
+                handleError(response)
             }
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao buscar colaboradores")
             Result.Error(e)
@@ -57,8 +61,10 @@ class AccessRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 Result.Success(response.body()!!)
             } else {
-                Result.Error(Exception("Erro ao adicionar colaborador: ${response.code()}"))
+                handleError(response)
             }
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão ao adicionar colaborador."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao adicionar colaborador")
             Result.Error(e)
@@ -74,8 +80,10 @@ class AccessRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 Result.Success(response.body()!!)
             } else {
-                Result.Error(Exception("Erro ao atualizar papel: ${response.code()}"))
+                handleError(response)
             }
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão ao atualizar papel."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao atualizar papel")
             Result.Error(e)
@@ -91,11 +99,33 @@ class AccessRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 Result.Success(Unit)
             } else {
-                Result.Error(Exception("Erro ao remover colaborador: ${response.code()}"))
+                handleError(response)
             }
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão ao remover colaborador."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao remover colaborador")
             Result.Error(e)
+        }
+    }
+
+    private fun handleError(response: Response<*>): Result.Error {
+        val errorBody = response.errorBody()?.string()
+        return try {
+            val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
+            Result.Error(Exception(errorResponse.error.message))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao processar corpo de erro: ${'$'}errorBody")
+            val friendlyMessage = when (response.code()) {
+                400 -> "Dados inválidos. Verifique as informações preenchidas."
+                401 -> "Sessão expirada. Por favor, faça login novamente."
+                403 -> "Você não tem permissão para esta ação."
+                404 -> "O recurso solicitado não foi encontrado."
+                409 -> "Conflito de dados ou operação não permitida."
+                500 -> "Erro interno no servidor. Tente novamente em instantes."
+                else -> "Ocorreu um erro inesperado no servidor (${'$'}{response.code()})."
+            }
+            Result.Error(Exception(friendlyMessage))
         }
     }
 }

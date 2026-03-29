@@ -162,12 +162,12 @@ class RemoteProdutoRepositoryTest {
     fun `removeProduto should call API and return Success`() = runTest {
         val invId = "valid-uuid"
         activeInventoryFlow.value = invId
-        coEvery { apiService.deleteProduct(invId, 1) } returns Response.success(Unit)
+        coEvery { apiService.deleteProduct(invId, 1L) } returns Response.success(Unit)
 
-        val result = repository.removeProduto(1)
+        val result = repository.removeProduto(1L)
 
         assertTrue(result is Result.Success)
-        coVerify { apiService.deleteProduct(invId, 1) }
+        coVerify { apiService.deleteProduct(invId, 1L) }
     }
 
     // endregion

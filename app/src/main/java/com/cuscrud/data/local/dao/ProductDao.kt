@@ -18,7 +18,7 @@ interface ProdutoDao {
     fun getAllFlow(): Flow<List<ProdutoEntity>>
 
     @Query("SELECT * FROM produto WHERE id = :id")
-    suspend fun getById(id: Int): ProdutoEntity?
+    suspend fun getById(id: Long): ProdutoEntity?
 
     @Query("SELECT * FROM produto WHERE tipo = :tipoId")
     fun getByTipo(tipoId: Long): Flow<List<ProdutoEntity>>

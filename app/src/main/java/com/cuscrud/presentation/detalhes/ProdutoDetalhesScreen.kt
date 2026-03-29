@@ -26,7 +26,7 @@ import java.util.*
 fun ProdutoDetalhesScreen(
     viewModel: ProdutoDetalhesViewModel,
     onBackClick: () -> Unit,
-    onEditClick: (Int) -> Unit
+    onEditClick: (Long) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

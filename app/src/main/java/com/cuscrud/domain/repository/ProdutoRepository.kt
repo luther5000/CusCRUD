@@ -24,7 +24,7 @@ interface ProdutoRepository {
     /**
      * Remove um produto por meio do seu [id].
      */
-    suspend fun removeProduto(id: Int): Result<Unit>
+    suspend fun removeProduto(id: Long): Result<Unit>
 
     /**
      * Retorna todos os produtos que pertencem a um [tipoId] especifico.
@@ -34,10 +34,10 @@ interface ProdutoRepository {
     /**
      * Atualiza um produto existente identificado por um [id] com os dados do [produto].
      */
-    suspend fun editProduto(id: Int, produto: Produto): Result<Produto>
+    suspend fun editProduto(id: Long, produto: Produto): Result<Produto>
 
     /**
      * Retorna um produto especifico pelo seu [id].
      */
-    suspend fun getProdutoById(id: Int): Result<Produto>
+    suspend fun getProdutoById(id: Long): Result<Produto>
 }

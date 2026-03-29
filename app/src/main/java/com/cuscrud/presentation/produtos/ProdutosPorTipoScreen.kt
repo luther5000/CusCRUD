@@ -26,7 +26,7 @@ fun ProdutosPorTipoScreen(
     viewModel: ProdutosPorTipoViewModel,
     navController: NavController,
     onBackClick: () -> Unit,
-    onProdutoClick: (Int) -> Unit,
+    onProdutoClick: (Long) -> Unit,
     onAddProdutoClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()

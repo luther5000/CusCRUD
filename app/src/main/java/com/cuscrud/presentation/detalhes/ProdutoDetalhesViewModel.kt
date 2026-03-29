@@ -18,7 +18,7 @@ class ProdutoDetalhesViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val produtoId: Int = checkNotNull(savedStateHandle["produtoId"])
+    private val produtoId: Long = checkNotNull(savedStateHandle["produtoId"])
 
     private val _uiState = MutableStateFlow<ProdutoDetalhesUiState>(ProdutoDetalhesUiState.Loading)
     val uiState: StateFlow<ProdutoDetalhesUiState> = _uiState.asStateFlow()

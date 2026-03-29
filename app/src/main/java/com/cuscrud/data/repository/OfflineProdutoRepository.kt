@@ -38,8 +38,8 @@ class OfflineProdutoRepository @Inject constructor(
 
     override suspend fun insertProduto(produto: Produto): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val entityToInsert = if (produto.id <= 0) {
-                produto.toEntity().copy(id = 0)
+            val entityToInsert = if (produto.id <= 0L) {
+                produto.toEntity().copy(id = 0L)
             } else {
                 produto.toEntity()
             }
@@ -50,7 +50,7 @@ class OfflineProdutoRepository @Inject constructor(
         }
     }
 
-    override suspend fun removeProduto(id: Int): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun removeProduto(id: Long): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val entity = produtoDao.getById(id)
             if (entity != null) {
@@ -78,7 +78,7 @@ class OfflineProdutoRepository @Inject constructor(
         }
     }
 
-    override suspend fun editProduto(id: Int, produto: Produto): Result<Produto> = withContext(Dispatchers.IO) {
+    override suspend fun editProduto(id: Long, produto: Produto): Result<Produto> = withContext(Dispatchers.IO) {
         try {
             val existingEntity = produtoDao.getById(id) ?: return@withContext Result.Error(Exception("Não encontrado"))
             val typeEntity = tipoDao.getById(produto.tipo.id) ?: return@withContext Result.Error(Exception("Tipo não encontrado"))
@@ -90,7 +90,7 @@ class OfflineProdutoRepository @Inject constructor(
         }
     }
 
-    override suspend fun getProdutoById(id: Int): Result<Produto> = withContext(Dispatchers.IO) {
+    override suspend fun getProdutoById(id: Long): Result<Produto> = withContext(Dispatchers.IO) {
         try {
             val entity = produtoDao.getById(id) ?: return@withContext Result.Error(Exception("Não encontrado"))
             val typeEntity = tipoDao.getById(entity.tipo) ?: return@withContext Result.Error(Exception("Tipo não encontrado"))

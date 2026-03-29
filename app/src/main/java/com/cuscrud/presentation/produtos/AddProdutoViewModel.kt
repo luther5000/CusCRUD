@@ -29,7 +29,7 @@ class AddProdutoViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val tipoId: Long? = savedStateHandle.get<Long>("tipoId")
-    private val produtoId: Int? = savedStateHandle.get<Int>("produtoId")
+    private val produtoId: Long? = savedStateHandle.get<Long>("produtoId")
 
     private val _uiState = MutableStateFlow(AddProdutoUiState())
     val uiState: StateFlow<AddProdutoUiState> = _uiState.asStateFlow()
@@ -66,7 +66,7 @@ class AddProdutoViewModel @Inject constructor(
         }
     }
 
-    private fun loadProduto(id: Int) {
+    private fun loadProduto(id: Long) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             when (val result = getProdutoDetalhesInteractor(id)) {

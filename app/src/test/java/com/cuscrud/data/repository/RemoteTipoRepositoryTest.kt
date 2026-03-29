@@ -100,7 +100,7 @@ class RemoteTipoRepositoryTest {
     /**
      * Objetivo: Tratar falhas físicas de comunicação (timeout, sem internet).
      * Entradas: API lançando IOException.
-     * Critério de Aceitação: Retornar Result.Error com mensagem de falha de conexão.
+     * Critério de Aceitação: Retornar Result.Error with mensagem de falha de conexão.
      */
     @Test
     fun `getTipos should return Error with friendly message when network fails`() = runTest {
@@ -121,7 +121,7 @@ class RemoteTipoRepositoryTest {
     @Test
     fun `getTipoById should return Error with friendly message when API returns 404 Not Found`() = runTest {
         activeInventoryIdFlow.value = "valid-uuid"
-        coEvery { apiService.getTypeById(any(), any()) } returns Response.error(404, "".toResponseBody())
+        coEvery { apiService.getTypeById(any(), 1L) } returns Response.error(404, "".toResponseBody())
 
         val result = repository.getTipoById(1L)
 

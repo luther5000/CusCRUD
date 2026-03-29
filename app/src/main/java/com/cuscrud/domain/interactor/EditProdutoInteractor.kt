@@ -12,7 +12,7 @@ import javax.inject.Inject
 class EditProdutoInteractor @Inject constructor(
     private val repository: ProdutoRepository
 ) {
-    suspend operator fun invoke(id: Int, produto: Produto): Result<Unit> {
+    suspend operator fun invoke(id: Long, produto: Produto): Result<Unit> {
         // Validação de campos obrigatórios
         if (produto.marca.isBlank() || produto.unidadeMedida.isBlank()) {
             return Result.Error(IllegalArgumentException("é necessário preencher todos os campos obrigatórios para fazer a edição"))

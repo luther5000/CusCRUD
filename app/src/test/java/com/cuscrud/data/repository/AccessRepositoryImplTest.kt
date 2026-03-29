@@ -1,9 +1,7 @@
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.remote.api.CuscrudApiService
-import com.cuscrud.data.remote.dto.UserAccessDto
-import com.cuscrud.data.remote.dto.UserAccessListResponse
-import com.cuscrud.data.remote.dto.InventoryDto
+import com.cuscrud.data.remote.dto.*
 import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
@@ -12,6 +10,8 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -23,19 +23,21 @@ import retrofit2.Response
  * 
  * Esta classe valida a gestão de permissões de usuários em inventários compartilhados.
  * Garante que as operações de listagem, adição, atualização e remoção de membros
- * respeitem o contexto do inventário ativo e tratem corretamente as respostas da API.
+ * respeitem o contexto do inventário ativo e tratem corretamente as respostas da API,
+ * incluindo o parse de mensagens de erro detalhadas.
  */
 class AccessRepositoryImplTest {
 
     private lateinit var repository: AccessRepositoryImpl
     private val apiService: CuscrudApiService = mockk()
     private val inventoryRepository: InventoryRepository = mockk()
+    private val json = Json { ignoreUnknownKeys = true }
     private val activeInventoryIdFlow = MutableStateFlow<String?>(null)
 
     @Before
     fun setup() {
         every { inventoryRepository.activeInventoryId } returns activeInventoryIdFlow
-        repository = AccessRepositoryImpl(apiService, inventoryRepository)
+        repository = AccessRepositoryImpl(apiService, inventoryRepository, json)
     }
 
     /**
@@ -75,41 +77,40 @@ class AccessRepositoryImplTest {
     }
 
     /**
-     * Objetivo: Validar a adição de um novo usuário ao inventário.
-     * Entradas: Login do usuário, Role desejada e API retornando sucesso.
-     * Critério de Aceitação: Retornar Result.Success com os dados do novo acesso criado.
+     * Objetivo: Validar a extração de mensagem de erro customizada da API.
+     * Entradas: Resposta HTTP 403 com JSON de erro padronizado.
+     * Critério de Aceitação: O Result.Error deve conter a mensagem "Usuário sem permissão" extraída do JSON.
      */
     @Test
-    fun `addUser should return Success when API responds 200 OK`() = runTest {
+    fun `addUser should return Error with message from API JSON on failure`() = runTest {
         val invId = "inv-123"
         activeInventoryIdFlow.value = invId
-        val userDto = UserAccessDto("u1", "User 1", "login1", Role.EDITOR.value)
+        val errorJson = """{"error": {"code": "FORBIDDEN", "message": "Usuário sem permissão"}}"""
         
-        coEvery { apiService.addInventoryUser(invId, any()) } returns Response.success(userDto)
+        coEvery { apiService.addInventoryUser(invId, any()) } returns Response.error(403, errorJson.toResponseBody())
 
         val result = repository.addUser("login1", Role.EDITOR)
 
-        assertTrue(result is Result.Success)
-        assertEquals(userDto, (result as Result.Success).data)
+        assertTrue(result is Result.Error)
+        assertEquals("Usuário sem permissão", (result as Result.Error).exception.message)
     }
 
     /**
-     * Objetivo: Validar a alteração do nível de permissão de um usuário existente.
-     * Entradas: UserID, nova Role e resposta de sucesso da API.
-     * Critério de Aceitação: Retornar Result.Success com o DTO atualizado.
+     * Objetivo: Garantir fallback para mensagens genéricas quando o JSON de erro é inválido.
+     * Entradas: Resposta HTTP 401 com corpo vazio.
+     * Critério de Aceitação: Retornar Result.Error com a mensagem amigável de fallback para 401.
      */
     @Test
-    fun `updateUserRole should return Success when API responds 200 OK`() = runTest {
+    fun `updateUserRole should return fallback message when API error JSON is invalid`() = runTest {
         val invId = "inv-123"
         activeInventoryIdFlow.value = invId
-        val userDto = UserAccessDto("u1", "User 1", "login1", Role.READER.value)
         
-        coEvery { apiService.updateInventoryUserRole(invId, "u1", any()) } returns Response.success(userDto)
+        coEvery { apiService.updateInventoryUserRole(invId, "u1", any()) } returns Response.error(401, "".toResponseBody())
 
         val result = repository.updateUserRole("u1", Role.READER)
 
-        assertTrue(result is Result.Success)
-        assertEquals(userDto, (result as Result.Success).data)
+        assertTrue(result is Result.Error)
+        assertEquals("Sessão expirada. Por favor, faça login novamente.", (result as Result.Error).exception.message)
     }
 
     /**

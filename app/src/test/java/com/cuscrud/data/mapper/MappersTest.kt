@@ -85,7 +85,7 @@ class MappersTest {
         val date = Date()
         val tipoEntity = TipoEntity(1L, "Teste Category", byteArrayOf(0x05))
         val entity = ProdutoEntity(
-            id = 1, 
+            id = 1L, 
             tipo = 1L, 
             marca = "Samsung",
             dataValidade = date.time, 
@@ -113,7 +113,7 @@ class MappersTest {
         val date = Date()
         val tipoDomain = Tipo(2L, "Category Name", byteArrayOf(0x06))
         val domain = Produto(
-            id = 5,
+            id = 5L,
             tipo = tipoDomain,
             marca = "Apple",
             dataValidade = date,
@@ -181,7 +181,7 @@ class MappersTest {
         val dateStr = "2023-12-25T10:00:00.000-0300"
         val tipoResponse = TipoResponseDto(1L, "Tipo", "SGVsbG8=")
         val dto = ProdutoResponseDto(
-            id = 1,
+            id = 1L,
             type = tipoResponse,
             marca = "Marca",
             dataValidade = dateStr,
@@ -205,7 +205,7 @@ class MappersTest {
     fun produtoToRequestDtoMapping() {
         val date = Date()
         val tipo = Tipo(1L, "Tipo", byteArrayOf())
-        val domain = Produto(1, tipo, "Marca", date, 1, "un", 5)
+        val domain = Produto(1L, tipo, "Marca", date, 1, "un", 5)
 
         val dto = domain.toRequestDto()
 
@@ -221,7 +221,7 @@ class MappersTest {
     fun produtoToUpdateDtoMapping() {
         val date = Date()
         val tipo = Tipo(2L, "Tipo", byteArrayOf())
-        val domain = Produto(2, tipo, "Outra Marca", date, 2, "kg", 10)
+        val domain = Produto(2L, tipo, "Outra Marca", date, 2, "kg", 10)
 
         val dto = domain.toUpdateDto()
 

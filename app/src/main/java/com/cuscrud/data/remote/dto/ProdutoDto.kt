@@ -40,7 +40,7 @@ data class ProdutoUpdateDto(
 
 @Serializable
 data class ProdutoResponseDto(
-    val id: Int,
+    val id: Long,
     val type: TipoResponseDto,
     val marca: String,
     @SerialName("data_validade") val dataValidade: String,

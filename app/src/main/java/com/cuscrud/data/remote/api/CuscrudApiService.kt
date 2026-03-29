@@ -156,14 +156,14 @@ interface CuscrudApiService {
     @PATCH("inventories/{inv_id}/products/{product_id}")
     suspend fun updateProduct(
         @Path("inv_id") invId: String,
-        @Path("product_id") productId: Int,
+        @Path("product_id") productId: Long,
         @Body product: ProdutoUpdateDto
     ): Response<ProdutoResponseDto>
 
     @DELETE("inventories/{inv_id}/products/{product_id}")
     suspend fun deleteProduct(
         @Path("inv_id") invId: String,
-        @Path("product_id") productId: Int
+        @Path("product_id") productId: Long
     ): Response<Unit>
 
     // endregion

@@ -12,7 +12,7 @@ import javax.inject.Inject
 class GetProdutoDetalhesInteractor @Inject constructor(
     private val repository: ProdutoRepository
 ) {
-    suspend operator fun invoke(produtoId: Int): Result<Produto> {
+    suspend operator fun invoke(produtoId: Long): Result<Produto> {
         return repository.getProdutoById(produtoId)
     }
 }
