@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -52,7 +53,8 @@ class AuthRepositoryImplTest {
         // Assert
         assertTrue(result is Result.Success)
         assertEquals(responseDto, (result as Result.Success).data)
-        verify { sessionManager.saveAuthToken("jwt_token") }
+        // Agora saveAuthToken é suspend, usamos coVerify
+        coVerify { sessionManager.saveAuthToken("jwt_token") }
     }
 
     /**
@@ -74,13 +76,13 @@ class AuthRepositoryImplTest {
         // Assert
         assertTrue(result is Result.Error)
         assertEquals("Credenciais inválidas", (result as Result.Error).exception.message)
-        verify(exactly = 0) { sessionManager.saveAuthToken(any()) }
+        coVerify(exactly = 0) { sessionManager.saveAuthToken(any()) }
     }
 
     /**
      * Objetivo: Validar falha de rede durante o login.
      * Entradas: LoginRequest, API lançando IOException.
-     * Comportamento esperado: Retornar Result.Error capturando a exceção.
+     * Comportamento esperado: Retornar Result.Error com a mensagem amigável mapeada no repositório.
      */
     @Test
     fun `login should return Error when network exception occurs`() = runTest {
@@ -93,7 +95,8 @@ class AuthRepositoryImplTest {
 
         // Assert
         assertTrue(result is Result.Error)
-        assertTrue((result as Result.Error).exception is IOException)
+        // O repositório mapeia IOException para uma Exception com mensagem específica
+        assertEquals("Falha de conexão. Verifique sua internet.", (result as Result.Error).exception.message)
     }
 
     // endregion
@@ -111,7 +114,42 @@ class AuthRepositoryImplTest {
         repository.logout()
 
         // Assert
-        verify { sessionManager.clearAuthToken() }
+        // clearAuthToken agora é suspend, usamos coVerify
+        coVerify { sessionManager.clearAuthToken() }
+    }
+
+    // endregion
+
+    // region Session Tests
+
+    /**
+     * Objetivo: Validar que o usuário é considerado logado se o token existir.
+     */
+    @Test
+    fun `isUserLoggedIn should return true when token exists`() = runTest {
+        // Arrange
+        coEvery { sessionManager.fetchAuthToken() } returns "valid_token"
+
+        // Act
+        val result = repository.isUserLoggedIn()
+
+        // Assert
+        assertTrue(result)
+    }
+
+    /**
+     * Objetivo: Validar que o usuário NÃO é considerado logado se o token for nulo.
+     */
+    @Test
+    fun `isUserLoggedIn should return false when token is null`() = runTest {
+        // Arrange
+        coEvery { sessionManager.fetchAuthToken() } returns null
+
+        // Act
+        val result = repository.isUserLoggedIn()
+
+        // Assert
+        assertFalse(result)
     }
 
     // endregion

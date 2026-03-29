@@ -1,9 +1,11 @@
 package com.cuscrud.data.remote.interceptors
 
 import com.cuscrud.data.local.SessionManager
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.test.runTest
 import okhttp3.Interceptor
 import okhttp3.Protocol
 import okhttp3.Request
@@ -31,14 +33,15 @@ class AuthInterceptorTest {
      * Comportamento esperado: O chain.proceed deve ser chamado com um novo request contendo "Authorization: Bearer valid_token".
      */
     @Test
-    fun `intercept should add Authorization header when token exists`() {
+    fun `intercept should add Authorization header when token exists`() = runTest {
         // Arrange
         val token = "valid_token"
         val originalRequest = Request.Builder()
             .url("https://api.example.com/")
             .build()
         
-        every { sessionManager.fetchAuthToken() } returns token
+        // fetchAuthToken agora é suspend, usamos coEvery
+        coEvery { sessionManager.fetchAuthToken() } returns token
         every { chain.request() } returns originalRequest
         every { chain.proceed(any()) } returns Response.Builder()
             .request(originalRequest)
@@ -64,13 +67,13 @@ class AuthInterceptorTest {
      * Comportamento esperado: O chain.proceed deve ser chamado com um request idêntico ao original (sem header Authorization).
      */
     @Test
-    fun `intercept should not add Authorization header when token is null`() {
+    fun `intercept should not add Authorization header when token is null`() = runTest {
         // Arrange
         val originalRequest = Request.Builder()
             .url("https://api.example.com/")
             .build()
         
-        every { sessionManager.fetchAuthToken() } returns null
+        coEvery { sessionManager.fetchAuthToken() } returns null
         every { chain.request() } returns originalRequest
         every { chain.proceed(any()) } returns Response.Builder()
             .request(originalRequest)
