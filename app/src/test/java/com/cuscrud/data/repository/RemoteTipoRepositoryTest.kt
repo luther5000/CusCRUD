@@ -21,9 +21,9 @@ import retrofit2.Response
 
 /**
  * Suite de testes unitários para o [RemoteTipoRepository].
- * Esta classe valida a integração com a API REST, o tratamento de erros HTTP e a dependência do contexto de inventário.
- *
- * Segue rigorosamente a Seção 7.2 do architecture.md para documentação e TDD.
+ * 
+ * Esta classe valida a gestão de categorias (Tipos) via API, assegurando o isolamento
+ * por inventário e o tratamento adequado de erros HTTP (404, 409) e falhas de rede.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class RemoteTipoRepositoryTest {
@@ -33,18 +33,13 @@ class RemoteTipoRepositoryTest {
     private val inventoryRepository: InventoryRepository = mockk()
     private val json = Json { ignoreUnknownKeys = true }
     
-    // Fluxo para simular o ID do inventário ativo
     private val activeInventoryIdFlow = MutableStateFlow<String?>(null)
-
     private val testDispatcher = StandardTestDispatcher()
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        
-        // Mock padrão para o inventário ativo
         every { inventoryRepository.activeInventoryId } returns activeInventoryIdFlow
-        
         repository = RemoteTipoRepository(apiService, inventoryRepository, json)
     }
 
@@ -54,12 +49,12 @@ class RemoteTipoRepositoryTest {
         unmockkAll()
     }
 
-    // region Início do Bloco: Validação de Contexto (Inventário Ativo)
+    // region Bloco: Validação de Contexto
 
     /**
-     * Objetivo do teste: Garantir que operações falhem se não houver um inventário selecionado.
-     * Entradas usadas: activeInventoryIdFlow emitindo null.
-     * Comportamento esperado: Retorno de Result.Error e a API não deve ser chamada.
+     * Objetivo: Impedir operações sem um inventário ativo selecionado.
+     * Entradas: activeInventoryId nulo.
+     * Critério de Aceitação: Retornar Result.Error e não disparar chamadas de rede.
      */
     @Test
     fun `getTipos should return Error and not call API when no active inventory`() = runTest {
@@ -72,10 +67,15 @@ class RemoteTipoRepositoryTest {
         coVerify(exactly = 0) { apiService.getTypes(any(), any(), any()) }
     }
 
-    // endregion Fim do Bloco: Validação de Contexto
+    // endregion
 
-    // region Início do Bloco: Cenários de Sucesso
+    // region Bloco: Listagem de Tipos
 
+    /**
+     * Objetivo: Validar a recuperação bem-sucedida das categorias do inventário.
+     * Entradas: API retornando 200 OK com uma lista de tipos.
+     * Critério de Aceitação: Retornar Result.Success com os dados mapeados corretamente.
+     */
     @Test
     fun `getTipos should return Success when API responds 200 OK`() = runTest {
         val invId = "valid-uuid"
@@ -93,14 +93,14 @@ class RemoteTipoRepositoryTest {
         assertEquals("Alimentos", data[0].nome)
     }
 
-    // endregion Fim do Bloco: Cenários de Sucesso
+    // endregion
 
-    // region Início do Bloco: Tratamento de Falhas (Rede e HTTP)
+    // region Bloco: Tratamento de Erros e Exceções
 
     /**
-     * Objetivo do teste: Validar o tratamento de falha de conexão (rede).
-     * Entradas usadas: API lançando IOException.
-     * Comportamento esperado: Retorno de Result.Error capturando a exceção de IO com mensagem amigável.
+     * Objetivo: Tratar falhas físicas de comunicação (timeout, sem internet).
+     * Entradas: API lançando IOException.
+     * Critério de Aceitação: Retornar Result.Error com mensagem de falha de conexão.
      */
     @Test
     fun `getTipos should return Error with friendly message when network fails`() = runTest {
@@ -114,9 +114,9 @@ class RemoteTipoRepositoryTest {
     }
 
     /**
-     * Objetivo do teste: Validar o tratamento de erro HTTP genérico (ex: 404) usando o handleError.
-     * Entradas usadas: API retornando Response.error(404).
-     * Comportamento esperado: Retorno de Result.Error contendo a mensagem mapeada no repositório.
+     * Objetivo: Tratar recursos inexistentes.
+     * Entradas: API retornando 404 Not Found para um ID específico.
+     * Critério de Aceitação: Retornar Result.Error com mensagem informando que a categoria não existe.
      */
     @Test
     fun `getTipoById should return Error with friendly message when API returns 404 Not Found`() = runTest {
@@ -129,14 +129,10 @@ class RemoteTipoRepositoryTest {
         assertEquals("A categoria não foi encontrada.", (result as Result.Error).exception.message)
     }
 
-    // endregion Fim do Bloco: Tratamento de Falhas
-
-    // region Início do Bloco: Regra de Negócio Específica (Conflict 409)
-
     /**
-     * Objetivo do teste: Validar o tratamento de erro 409 Conflict na remoção (ON DELETE RESTRICT).
-     * Entradas usadas: API retornando status 409.
-     * Comportamento esperado: Retorno de Result.Error com mensagem amigável sobre produtos vinculados.
+     * Objetivo: Validar integridade referencial ao excluir um tipo.
+     * Entradas: API retornando 409 Conflict (provavelmente devido a produtos vinculados).
+     * Critério de Aceitação: Retornar Result.Error com instrução clara ao usuário sobre o impedimento.
      */
     @Test
     fun `removeTipo should return friendly Error message when API returns 409 Conflict`() = runTest {
@@ -152,5 +148,5 @@ class RemoteTipoRepositoryTest {
         assertEquals("Não é possível excluir este tipo pois existem produtos vinculados a ele.", errorMessage)
     }
 
-    // endregion Fim do Bloco: Conflict 409
+    // endregion
 }

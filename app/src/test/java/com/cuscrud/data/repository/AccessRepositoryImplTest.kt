@@ -18,6 +18,13 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
 
+/**
+ * Suite de testes unitários para o [AccessRepositoryImpl].
+ * 
+ * Esta classe valida a gestão de permissões de usuários em inventários compartilhados.
+ * Garante que as operações de listagem, adição, atualização e remoção de membros
+ * respeitem o contexto do inventário ativo e tratem corretamente as respostas da API.
+ */
 class AccessRepositoryImplTest {
 
     private lateinit var repository: AccessRepositoryImpl
@@ -31,6 +38,11 @@ class AccessRepositoryImplTest {
         repository = AccessRepositoryImpl(apiService, inventoryRepository)
     }
 
+    /**
+     * Objetivo: Impedir a listagem de usuários sem um inventário selecionado.
+     * Entradas: Fluxo de inventário ativo emitindo null.
+     * Critério de Aceitação: Retornar Result.Error com mensagem de erro de contexto.
+     */
     @Test
     fun `getUsers should return Error when no inventory is active`() = runTest {
         activeInventoryIdFlow.value = null
@@ -41,6 +53,11 @@ class AccessRepositoryImplTest {
         assertEquals("Nenhum inventário ativo selecionado", (result as Result.Error).exception.message)
     }
 
+    /**
+     * Objetivo: Validar a recuperação da lista de usuários com acesso ao inventário.
+     * Entradas: ID de inventário ativo válido e resposta de sucesso da API.
+     * Critério de Aceitação: Retornar Result.Success contendo a lista de UserAccessDto.
+     */
     @Test
     fun `getUsers should return Success when API responds 200 OK`() = runTest {
         val invId = "inv-123"
@@ -57,6 +74,11 @@ class AccessRepositoryImplTest {
         assertEquals(users, (result as Result.Success).data)
     }
 
+    /**
+     * Objetivo: Validar a adição de um novo usuário ao inventário.
+     * Entradas: Login do usuário, Role desejada e API retornando sucesso.
+     * Critério de Aceitação: Retornar Result.Success com os dados do novo acesso criado.
+     */
     @Test
     fun `addUser should return Success when API responds 200 OK`() = runTest {
         val invId = "inv-123"
@@ -71,6 +93,11 @@ class AccessRepositoryImplTest {
         assertEquals(userDto, (result as Result.Success).data)
     }
 
+    /**
+     * Objetivo: Validar a alteração do nível de permissão de um usuário existente.
+     * Entradas: UserID, nova Role e resposta de sucesso da API.
+     * Critério de Aceitação: Retornar Result.Success com o DTO atualizado.
+     */
     @Test
     fun `updateUserRole should return Success when API responds 200 OK`() = runTest {
         val invId = "inv-123"
@@ -85,6 +112,11 @@ class AccessRepositoryImplTest {
         assertEquals(userDto, (result as Result.Success).data)
     }
 
+    /**
+     * Objetivo: Validar a revogação de acesso de um usuário ao inventário.
+     * Entradas: UserID e resposta 204 No Content da API.
+     * Critério de Aceitação: Retornar Result.Success vazio indicando sucesso na remoção.
+     */
     @Test
     fun `removeUser should return Success when API responds 204 No Content`() = runTest {
         val invId = "inv-123"

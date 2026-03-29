@@ -21,7 +21,10 @@ import org.junit.Test
 import retrofit2.Response
 
 /**
- * Suite de testes unitários para o [InventoryRepositoryImpl] atualizado para DataStore.
+ * Suite de testes unitários para o [InventoryRepositoryImpl].
+ * 
+ * Esta classe valida a gestão de inventários (CRUD) e a sincronização do estado global
+ * do inventário ativo (ID e Role) entre o repositório e o SessionManager (DataStore).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class InventoryRepositoryImplTest {
@@ -54,6 +57,11 @@ class InventoryRepositoryImplTest {
 
     // region Bloco: Inicialização e Estado (StateFlow)
 
+    /**
+     * Objetivo: Garantir que o repositório reflita mudanças no DataStore em tempo real.
+     * Entradas: Emissões de novos valores nos fluxos do SessionManager.
+     * Critério de Aceitação: Os StateFlows do repositório devem expor o ID e Role corretos.
+     */
     @Test
     fun `activeInventoryId and role should be updated when sessionManager flows emit`() = runTest {
         val storedId = "stored-id"
@@ -66,6 +74,11 @@ class InventoryRepositoryImplTest {
         assertEquals(Role.EDITOR, repository.activeInventoryRole.value)
     }
 
+    /**
+     * Objetivo: Validar a persistência da seleção de inventário.
+     * Entradas: Chamada para setActiveInventory com novo ID e Role.
+     * Critério de Aceitação: Invocar os métodos de salvamento correspondentes no SessionManager.
+     */
     @Test
     fun `setActiveInventory should call sessionManager suspend methods`() = runTest {
         val newId = "new-id"
@@ -81,6 +94,11 @@ class InventoryRepositoryImplTest {
 
     // region Bloco: CRUD Inventários
 
+    /**
+     * Objetivo: Validar a listagem de inventários do usuário.
+     * Entradas: API retornando lista de InventoryDto.
+     * Critério de Aceitação: Retornar Result.Success com a lista mapeada.
+     */
     @Test
     fun `getInventories should return Success when API responds 200 OK`() = runTest {
         val inventories = listOf(InventoryDto("1", "Inv 1", 0))
@@ -93,6 +111,11 @@ class InventoryRepositoryImplTest {
         assertEquals(inventories, (result as Result.Success).data)
     }
 
+    /**
+     * Objetivo: Sincronizar permissões locais com o servidor ao listar inventários.
+     * Entradas: Inventário ativo atual está na lista retornada pela API com uma Role diferente.
+     * Critério de Aceitação: Atualizar a Role no SessionManager para refletir o estado atual do servidor.
+     */
     @Test
     fun `getInventories should update active role via sessionManager if current active inventory is in the list`() = runTest {
         // Simula inventário ativo "id-1" com role READER (2)
@@ -109,6 +132,11 @@ class InventoryRepositoryImplTest {
         coVerify { sessionManager.saveActiveInventoryRole(Role.EDITOR.value) }
     }
 
+    /**
+     * Objetivo: Tratar falhas na listagem de inventários.
+     * Entradas: Resposta de erro da API (401).
+     * Critério de Aceitação: Retornar Result.Error.
+     */
     @Test
     fun `getInventories should return Error when API fails`() = runTest {
         coEvery { apiService.getInventories(any(), any()) } returns Response.error(401, "".toResponseBody())
@@ -122,6 +150,11 @@ class InventoryRepositoryImplTest {
 
     // region Bloco: Remoção e Limpeza de Estado
 
+    /**
+     * Objetivo: Limpar o contexto ativo se o inventário selecionado for excluído.
+     * Entradas: Exclusão bem-sucedida de um inventário que é o "activeInventoryId".
+     * Critério de Aceitação: Invocar métodos de limpeza no SessionManager para evitar referências a IDs inexistentes.
+     */
     @Test
     fun `deleteInventory should clear session via sessionManager if deleted ID is the active one`() = runTest {
         idFlow.value = "id-A"

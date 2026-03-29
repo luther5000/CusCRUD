@@ -14,6 +14,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 
+/**
+ * Suite de testes unitários para o [AuthInterceptor].
+ * 
+ * Esta classe valida a lógica de interceptação de requisições HTTP para injeção automática
+ * de tokens de autenticação (JWT). Garante que o cabeçalho "Authorization" seja adicionado
+ * apenas quando houver uma sessão ativa, mantendo a transparência para o restante da app.
+ */
 class AuthInterceptorTest {
 
     private lateinit var authInterceptor: AuthInterceptor
@@ -25,12 +32,13 @@ class AuthInterceptorTest {
         authInterceptor = AuthInterceptor(sessionManager)
     }
 
-    // region Interceptor Header Injection Tests
+    // region Bloco: Injeção de Cabeçalhos
 
     /**
-     * Objetivo: Verificar se o interceptor injeta o cabeçalho Authorization quando existe um token.
-     * Entradas: Mock do SessionManager retornando "valid_token" e um request original sem headers.
-     * Comportamento esperado: O chain.proceed deve ser chamado com um novo request contendo "Authorization: Bearer valid_token".
+     * Objetivo: Verificar a injeção do token JWT nas requisições de saída.
+     * Entradas: Mock do SessionManager retornando um token válido e uma requisição original.
+     * Critério de Aceitação: A requisição processada pelo 'chain' deve conter o header 
+     * 'Authorization' no formato 'Bearer <token>'.
      */
     @Test
     fun `intercept should add Authorization header when token exists`() = runTest {
@@ -40,7 +48,6 @@ class AuthInterceptorTest {
             .url("https://api.example.com/")
             .build()
         
-        // fetchAuthToken agora é suspend, usamos coEvery
         coEvery { sessionManager.fetchAuthToken() } returns token
         every { chain.request() } returns originalRequest
         every { chain.proceed(any()) } returns Response.Builder()
@@ -62,9 +69,10 @@ class AuthInterceptorTest {
     }
 
     /**
-     * Objetivo: Verificar se o interceptor não injeta o cabeçalho Authorization quando não existe um token.
-     * Entradas: Mock do SessionManager retornando null e um request original sem headers.
-     * Comportamento esperado: O chain.proceed deve ser chamado com um request idêntico ao original (sem header Authorization).
+     * Objetivo: Evitar o envio de cabeçalhos de autorização inválidos/vazios.
+     * Entradas: SessionManager sem token armazenado (null).
+     * Critério de Aceitação: A requisição deve prosseguir sem o header 'Authorization',
+     * permitindo que requisições públicas funcionem normalmente.
      */
     @Test
     fun `intercept should not add Authorization header when token is null`() = runTest {

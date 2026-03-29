@@ -14,10 +14,11 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Suite de testes unitários atualizada para o [RemoteProdutoRepository].
+ * Suite de testes unitários para o [RemoteProdutoRepository].
  * 
- * Valida a dependência do repositório em relação ao inventário ativo e o
- * tratamento de erro quando nenhum contexto de inventário está selecionado.
+ * Esta classe valida a integração com a API de produtos, focando na obrigatoriedade
+ * de um contexto de inventário ativo para todas as operações. Garante que o repositório
+ * não realize chamadas indevidas quando nenhum inventário está selecionado.
  */
 class RemoteProdutoRepositoryTest {
 
@@ -30,16 +31,15 @@ class RemoteProdutoRepositoryTest {
     @Before
     fun setup() {
         every { inventoryRepository.activeInventoryId } returns activeInventoryFlow
-        // O construtor agora exige apiService e inventoryRepository
         repository = RemoteProdutoRepository(apiService, inventoryRepository)
     }
 
     // region Bloco: Validação de Contexto (Inventário Ativo)
 
     /**
-     * Objetivo: Impedir chamadas de API quando não há inventário selecionado.
-     * Entradas: inventoryRepository.activeInventoryId emitindo null.
-     * Comportamento esperado: Retornar lista vazia e NÃO chamar a API.
+     * Objetivo: Impedir a busca de produtos sem um inventário selecionado.
+     * Entradas: activeInventoryId emitindo null.
+     * Critério de Aceitação: Retornar uma lista vazia imediatamente e NÃO invocar a API.
      */
     @Test
     fun `getAllProdutos should not call API and return empty when no inventory is active`() = runTest {
@@ -48,14 +48,13 @@ class RemoteProdutoRepositoryTest {
         val result = repository.getAllProdutos().first()
 
         assertTrue(result.isEmpty())
-        // getProducts é suspend, deve usar coVerify
         coVerify(exactly = 0) { apiService.getProducts(any(), any(), any()) }
     }
 
     /**
-     * Objetivo: Permitir chamadas de API quando há um inventário selecionado.
-     * Entradas: activeInventoryId = "valid-uuid".
-     * Comportamento esperado: Chamar a API usando o UUID correto no path.
+     * Objetivo: Garantir que a busca de produtos utilize o inventário correto.
+     * Entradas: activeInventoryId com um UUID válido.
+     * Critério de Aceitação: Chamar o endpoint da API passando o ID do inventário ativo no path.
      */
     @Test
     fun `getAllProdutos should call API with active inventory ID`() = runTest {
@@ -65,7 +64,6 @@ class RemoteProdutoRepositoryTest {
 
         repository.getAllProdutos().first()
 
-        // getProducts é suspend, deve usar coVerify
         coVerify { apiService.getProducts(invId, any(), any()) }
     }
 
@@ -74,9 +72,9 @@ class RemoteProdutoRepositoryTest {
     // region Bloco: Operações de Escrita sem Contexto
 
     /**
-     * Objetivo: Validar que inserção falha sem inventário ativo.
-     * Entradas: activeInventoryId = null.
-     * Comportamento esperado: API de addProduct não deve ser chamada.
+     * Objetivo: Impedir a criação de produtos sem contexto.
+     * Entradas: activeInventoryId nulo.
+     * Critério de Aceitação: Abortar a operação silenciosamente sem realizar chamadas de rede.
      */
     @Test
     fun `insertProduto should not call API when no inventory is active`() = runTest {
@@ -85,7 +83,6 @@ class RemoteProdutoRepositoryTest {
 
         repository.insertProduto(produto)
 
-        // addProduct é suspend, deve usar coVerify
         coVerify(exactly = 0) { apiService.addProduct(any(), any()) }
     }
 

@@ -17,6 +17,13 @@ import org.junit.Test
 import retrofit2.Response
 import java.io.IOException
 
+/**
+ * Suite de testes unitários para o [AuthRepositoryImpl].
+ * 
+ * Esta classe valida o fluxo de autenticação, persistência de tokens e gestão de sessão.
+ * Garante que o estado de login do usuário seja refletido corretamente com base na
+ * presença de tokens válidos e que erros de rede ou credenciais sejam tratados.
+ */
 class AuthRepositoryImplTest {
 
     private lateinit var repository: AuthRepositoryImpl
@@ -34,7 +41,7 @@ class AuthRepositoryImplTest {
     /**
      * Objetivo: Validar o sucesso do login.
      * Entradas: LoginRequest válido, API retornando 200 OK com LoginResponse.
-     * Comportamento esperado: Retornar Result.Success com os dados e salvar o token no SessionManager.
+     * Critério de Aceitação: Retornar Result.Success com os dados e salvar o token no SessionManager.
      */
     @Test
     fun `login should return Success and save token when API call is successful`() = runTest {
@@ -53,14 +60,13 @@ class AuthRepositoryImplTest {
         // Assert
         assertTrue(result is Result.Success)
         assertEquals(responseDto, (result as Result.Success).data)
-        // Agora saveAuthToken é suspend, usamos coVerify
         coVerify { sessionManager.saveAuthToken("jwt_token") }
     }
 
     /**
      * Objetivo: Validar erro de autenticação (401 Unauthorized).
      * Entradas: LoginRequest, API retornando 401 com JSON de erro.
-     * Comportamento esperado: Retornar Result.Error com a mensagem da API e não salvar o token.
+     * Critério de Aceitação: Retornar Result.Error com a mensagem da API e não salvar o token.
      */
     @Test
     fun `login should return Error and not save token when API returns 401`() = runTest {
@@ -82,7 +88,7 @@ class AuthRepositoryImplTest {
     /**
      * Objetivo: Validar falha de rede durante o login.
      * Entradas: LoginRequest, API lançando IOException.
-     * Comportamento esperado: Retornar Result.Error com a mensagem amigável mapeada no repositório.
+     * Critério de Aceitação: Retornar Result.Error com mensagem amigável de conexão.
      */
     @Test
     fun `login should return Error when network exception occurs`() = runTest {
@@ -95,7 +101,6 @@ class AuthRepositoryImplTest {
 
         // Assert
         assertTrue(result is Result.Error)
-        // O repositório mapeia IOException para uma Exception com mensagem específica
         assertEquals("Falha de conexão. Verifique sua internet.", (result as Result.Error).exception.message)
     }
 
@@ -106,7 +111,7 @@ class AuthRepositoryImplTest {
     /**
      * Objetivo: Validar o encerramento da sessão.
      * Entradas: Chamada para logout().
-     * Comportamento esperado: Invocar clearAuthToken no SessionManager.
+     * Critério de Aceitação: Invocar clearAuthToken no SessionManager para remover credenciais.
      */
     @Test
     fun `logout should clear token from session manager`() = runTest {
@@ -114,7 +119,6 @@ class AuthRepositoryImplTest {
         repository.logout()
 
         // Assert
-        // clearAuthToken agora é suspend, usamos coVerify
         coVerify { sessionManager.clearAuthToken() }
     }
 
@@ -123,7 +127,9 @@ class AuthRepositoryImplTest {
     // region Session Tests
 
     /**
-     * Objetivo: Validar que o usuário é considerado logado se o token existir.
+     * Objetivo: Verificar se o sistema identifica corretamente um usuário logado.
+     * Entradas: SessionManager possuindo um token não nulo.
+     * Critério de Aceitação: Retornar true.
      */
     @Test
     fun `isUserLoggedIn should return true when token exists`() = runTest {
@@ -138,7 +144,9 @@ class AuthRepositoryImplTest {
     }
 
     /**
-     * Objetivo: Validar que o usuário NÃO é considerado logado se o token for nulo.
+     * Objetivo: Verificar se o sistema identifica corretamente um usuário não logado.
+     * Entradas: SessionManager retornando nulo para o token.
+     * Critério de Aceitação: Retornar false.
      */
     @Test
     fun `isUserLoggedIn should return false when token is null`() = runTest {
