@@ -27,7 +27,9 @@ import javax.inject.Singleton
 
 @Singleton
 class SessionManager @Inject constructor(
-    @field:SecureStorage private val dataStore: DataStore<Preferences>
+    //Não mude o @SecureStorage para @field:SecureStorage, mesmo com o warning!!
+    //Não entendi o motivo, mas se mudar simplesmente não conseguimos buildar o projeto :D
+    @SecureStorage private val dataStore: DataStore<Preferences>
 ) {
 
     private val keyToken = stringPreferencesKey("auth_token")
