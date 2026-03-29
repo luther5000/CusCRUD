@@ -12,8 +12,20 @@ import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * Implementação do repositório para gestão de acessos.
+ * Implementação do repositório [AccessRepository] responsável por gerenciar as permissões e colaboradores
+ * de um inventário no sistema CusCRUD.
+ *
+ * Esta classe atua como uma ponte entre a camada de dados (API remota) e a camada de domínio,
+ * realizando as seguintes operações:
+ * - **Listagem**: Busca a lista de usuários com acesso ao inventário ativo.
+ * - **Adição**: Convida ou adiciona novos colaboradores via login.
+ * - **Atualização**: Modifica o nível de acesso (Role) de um colaborador existente.
+ * - **Remoção**: Revoga o acesso de um usuário ao inventário.
+ *
+ * Depende de [InventoryRepository] para identificar qual o inventário está atualmente ativo
+ * para as operações de contexto.
  */
+
 class AccessRepositoryImpl @Inject constructor(
     private val apiService: CuscrudApiService,
     private val inventoryRepository: InventoryRepository

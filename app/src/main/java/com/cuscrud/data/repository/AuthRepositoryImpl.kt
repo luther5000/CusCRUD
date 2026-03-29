@@ -1,3 +1,4 @@
+
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.local.SessionManager
@@ -13,6 +14,18 @@ import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Implementação do repositório [AuthRepository] responsável por gerenciar a autenticação e sessão do usuário.
+ *
+ * Esta classe centraliza a lógica de:
+ * - **Login**: Realiza a autenticação, salva o token recebido no [SessionManager] e trata erros específicos de credenciais.
+ * - **Registro**: Cria novos usuários no sistema e trata conflitos (como e-mail já em uso).
+ * - **Gerenciamento de Sessão**: Provê métodos para logout (limpeza de token) e verificação de estado da sessão.
+ * - **Tratamento de Erros**: Converte respostas de erro da API em mensagens amigáveis para a UI.
+ *
+ * Todas as operações de rede são executadas no [Dispatchers.IO] para garantir que a Main Thread não seja bloqueada.
+ */
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(

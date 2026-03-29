@@ -1,7 +1,19 @@
+
 package com.cuscrud.data.remote.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+
+/**
+ * Este arquivo contém os Data Transfer Objects (DTOs) para o gerenciamento de inventários.
+ * Ele define a estrutura de dados para:
+ * - Representação de um inventário (InventoryDto).
+ * - Listagem de inventários (InventoryListResponse).
+ * - Criação e atualização de inventários (Create/UpdateInventoryRequest).
+ *
+ * Utiliza kotlinx.serialization para a comunicação com a API remota.
+ */
+
 
 /**
  * DTO representando um Inventário retornado pela API.

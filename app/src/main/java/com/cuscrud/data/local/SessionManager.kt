@@ -13,12 +13,21 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Gerencia a sessão do usuário utilizando Jetpack DataStore para o token JWT
- * e o ID do inventário ativo.
+ * Gerencia o estado persistente da sessão do usuário e preferências de contexto da aplicação.
+ *
+ * Esta classe utiliza o Jetpack DataStore para armazenar de forma segura:
+ * - **Token de Autenticação (JWT)**: Mantém o usuário logado entre as sessões do app.
+ * - **ID do Inventário Ativo**: Identifica qual inventário o usuário está visualizando/editando atualmente.
+ * - **Papel (Role) do Usuário**: Armazena o nível de acesso do usuário no inventário selecionado para controle de UI.
+ *
+ * O uso do qualificador `@SecureStorage` indica que os dados são persistidos em uma instância do DataStore
+ * configurada para armazenamento seguro. Fornece dados de forma reativa através de [Flow] e de forma pontual
+ * via funções suspensas (suspend).
  */
+
 @Singleton
 class SessionManager @Inject constructor(
-    @SecureStorage private val dataStore: DataStore<Preferences>
+    @field:SecureStorage private val dataStore: DataStore<Preferences>
 ) {
 
     private val keyToken = stringPreferencesKey("auth_token")

@@ -3,6 +3,17 @@ package com.cuscrud.data.remote.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * Este arquivo contém os Data Transfer Objects (DTOs) para o gerenciamento de produtos e seus tipos.
+ * Define a estrutura de dados para as operações de:
+ * - **Criação (ProdutoRequestDto)**: Dados necessários para adicionar um novo produto.
+ * - **Atualização Parcial (ProdutoUpdateDto)**: Campos opcionais para requisições PATCH.
+ * - **Resposta (ProdutoResponseDto)**: Dados retornados pela API ao consultar produtos.
+ * - **Tipos de Produto (TipoResponseDto)**: Informações sobre a categoria/tipo do produto, incluindo imagem em Base64.
+ *
+ * Utiliza kotlinx.serialization para mapeamento JSON e segue o padrão ISO 8601 para datas.
+ */
+
 @Serializable
 data class ProdutoRequestDto(
     @SerialName("type_id") val typeId: Long,

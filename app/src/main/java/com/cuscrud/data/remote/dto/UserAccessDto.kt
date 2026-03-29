@@ -4,6 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Este arquivo define os Data Transfer Objects (DTOs) para o controle de acesso baseado em funções (RBAC) nos inventários.
+ * Ele gerencia a estrutura de dados para:
+ * - **UserAccessDto**: Detalhes de um usuário e seu nível de permissão (role) em um inventário.
+ * - **UserAccessListResponse**: Resposta paginada contendo a lista de usuários vinculados a um inventário específico.
+ * - **AddUserAccessRequest**: Requisição para convidar/adicionar um novo usuário a um inventário com uma função definida.
+ * - **UpdateUserAccessRequest**: Requisição para alterar o nível de acesso (role) de um usuário já existente no inventário.
+ *
+ * Utiliza kotlinx.serialization para garantir a integridade dos dados trafegados via JSON.
+ */
+
+/**
  * DTO representando o acesso de um usuário a um inventário.
  */
 @Serializable

@@ -1,3 +1,4 @@
+
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.local.SessionManager
@@ -17,6 +18,21 @@ import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Implementação do repositório [InventoryRepository] responsável por gerenciar os inventários e o estado
+ * do inventário ativo no sistema CusCRUD.
+ *
+ * Esta classe centraliza a lógica de:
+ * - **Listagem**: Busca todos os inventários aos quais o usuário tem acesso.
+ * - **Criação e Gestão**: Permite criar, atualizar e excluir inventários, tratando erros de rede e persistência.
+ * - **Estado Ativo**: Mantém o ID e o papel (Role) do inventário selecionado atualmente, persistindo essas
+ *   informações via [SessionManager] e expondo-as através de [StateFlow].
+ * - **Sincronização**: Garante que mudanças no armazenamento local (DataStore) sejam refletidas em tempo real na UI.
+ * - **Tratamento de Erros**: Converte respostas HTTP em mensagens de erro amigáveis para o usuário.
+ *
+ * Sendo um `@Singleton`, garante uma fonte única de verdade para o inventário selecionado em toda a aplicação.
+ */
 
 @Singleton
 class InventoryRepositoryImpl @Inject constructor(

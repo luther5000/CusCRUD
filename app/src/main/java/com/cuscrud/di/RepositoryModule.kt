@@ -43,6 +43,6 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindTipoRepository(
-        offlineTipoRepository: OfflineTipoRepository
+        remoteTipoRepository: RemoteTipoRepository
     ): TipoRepository
 }

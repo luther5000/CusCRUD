@@ -15,6 +15,18 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import javax.inject.Singleton
 
+/**
+ * Módulo de Injeção de Dependências (Hilt) responsável pela configuração da camada de rede.
+ *
+ * Este módulo provê as instâncias necessárias para a comunicação com a API REST:
+ * - **Json**: Configuração do serializador Kotlinx Serialization, ignorando chaves desconhecidas.
+ * - **OkHttpClient**: Cliente HTTP configurado com o [AuthInterceptor] para gerenciamento automático de tokens.
+ * - **Retrofit**: Cliente Type-safe configurado com a Base URL do projeto e conversor JSON.
+ * - **CuscrudApiService**: Interface que define os contratos de endpoints da aplicação.
+ *
+ * Todas as dependências são providas como `@Singleton` para garantir uma única instância em todo o ciclo de vida do app.
+ */
+
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {

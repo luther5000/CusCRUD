@@ -18,11 +18,19 @@ import java.io.IOException
 import javax.inject.Inject
 
 /**
- * Implementação remota do repositório de Tipos que se comunica com a API REST.
- * 
- * Segue a Seção 5.4 do architecture.md, vinculando todas as operações ao [inv_id] 
- * do inventário ativo obtido via [InventoryRepository].
+ * Implementação do repositório [TipoRepository] responsável pela gestão remota das categorias (tipos) de produtos.
+ *
+ * Esta classe centraliza a lógica de:
+ * - **Listagem Paginada**: Busca as categorias vinculadas ao inventário ativo no backend.
+ * - **Operações de CRUD**: Gerencia a criação, edição e exclusão de tipos de produtos, incluindo o suporte a imagens em Base64.
+ * - **Gestão de Contexto**: Integra-se com o [InventoryRepository] para recuperar dinamicamente o ID do inventário ativo.
+ * - **Tratamento de Erros**: Segue o padrão da arquitetura para converter respostas HTTP (como o erro 409 ao excluir tipos com produtos vinculados)
+ *   em resultados amigáveis ([Result]) para a UI.
+ * - **Threading**: Executa todas as chamadas de rede de forma assíncrona utilizando [Dispatchers.IO].
+ *
+ * Segue as especificações da Seção 5.4 do documento de arquitetura.
  */
+
 class RemoteTipoRepository @Inject constructor(
     private val apiService: CuscrudApiService,
     private val inventoryRepository: InventoryRepository,

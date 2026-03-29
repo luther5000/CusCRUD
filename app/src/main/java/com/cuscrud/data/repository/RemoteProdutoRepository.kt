@@ -1,3 +1,4 @@
+
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.remote.api.CuscrudApiService
@@ -15,6 +16,20 @@ import kotlinx.serialization.json.Json
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Implementação do repositório [ProdutoRepository] que gerencia as operações de produtos via API remota.
+ *
+ * Esta classe é responsável por:
+ * - **Listagem e Filtro**: Recupera todos os produtos ou filtra por tipo, sempre vinculados ao inventário ativo.
+ * - **Operações de Escrita**: Insere, edita e remove produtos através do [CuscrudApiService].
+ * - **Gerenciamento de Contexto**: Obtém dinamicamente o ID do inventário ativo a partir do [InventoryRepository].
+ * - **Tratamento de Erros**: Centraliza a lógica de tratamento de respostas HTTP, convertendo-as em
+ *   mensagens legíveis ou exceções de negócio conforme definido no architecture.md.
+ * - **Reatividade**: Expõe dados através de [Flow], garantindo que as chamadas sejam executadas no [Dispatchers.IO].
+ *
+ * Sendo um `@Singleton`, garante a consistência das operações de produtos em toda a aplicação.
+ */
 
 @Singleton
 class RemoteProdutoRepository @Inject constructor(

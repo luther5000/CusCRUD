@@ -3,6 +3,16 @@ package com.cuscrud.data.remote.dto
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * Este arquivo define os Data Transfer Objects (DTOs) utilizados para as operações de autenticação no sistema.
+ * As classes aqui presentes mapeiam a estrutura de dados das requisições e respostas da API para:
+ * - **Login**: Credenciais e retorno de token de acesso.
+ * - **Registro**: Criação de novos usuários e confirmação de cadastro.
+ * - **UserDto**: Representação simplificada do usuário no sistema.
+ * - **ErrorResponse**: Estrutura padrão para tratamento de erros retornados pelo servidor.
+ *
+ * Todas as classes utilizam `kotlinx.serialization` para garantir a correta serialização/desserialização do JSON.
+ */
 @Serializable
 data class LoginRequest(
     val login: String,

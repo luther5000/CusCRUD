@@ -8,8 +8,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Interceptor para injetar o token de autenticação Bearer em todas as requisições.
+ * Este interceptor é responsável por gerenciar a autenticação das requisições de rede.
+ * Ele atua de forma centralizada para:
+ * - **Injeção de Token**: Recupera o token de autenticação atual através do [SessionManager].
+ * - **Autorização**: Adiciona automaticamente o cabeçalho `Authorization: Bearer <token>` em todas as chamadas de saída da API,
+ *   garantindo que o usuário permaneça autenticado perante o servidor.
+ * - **Sincronização**: Utiliza `runBlocking` para obter o token de forma segura dentro do fluxo síncrono do OkHttp.
+ *
+ * Sendo um `@Singleton`, ele mantém a consistência da sessão em toda a aplicação.
  */
+
 @Singleton
 class AuthInterceptor @Inject constructor(
     private val sessionManager: SessionManager

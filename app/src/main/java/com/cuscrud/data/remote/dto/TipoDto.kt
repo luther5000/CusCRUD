@@ -4,6 +4,17 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
+ * Este arquivo define os Data Transfer Objects (DTOs) para o gerenciamento de categorias/tipos de produtos.
+ * As classes aqui presentes facilitam a comunicação com a API para:
+ * - **Representação (TipoDto)**: Dados detalhados de um tipo, incluindo suporte a imagens em Base64.
+ * - **Listagem (TipoListResponse)**: Resposta paginada contendo uma coleção de tipos.
+ * - **Criação e Atualização (Create/UpdateTipoRequest)**: Estruturas para envio de novos dados ou modificações parciais.
+ *
+ * O uso de Base64 para imagens permite o transporte de mídia diretamente no corpo do JSON.
+ * Utiliza kotlinx.serialization para a conversão de dados.
+ */
+
+/**
  * DTO para representação de um Tipo de produto retornado pela API.
  */
 @Serializable
