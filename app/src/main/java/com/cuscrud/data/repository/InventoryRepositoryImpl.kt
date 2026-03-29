@@ -2,32 +2,50 @@ package com.cuscrud.data.repository
 
 import com.cuscrud.data.local.SessionManager
 import com.cuscrud.data.remote.api.CuscrudApiService
-import com.cuscrud.data.remote.dto.CreateInventoryRequest
-import com.cuscrud.data.remote.dto.InventoryDto
-import com.cuscrud.data.remote.dto.UpdateInventoryRequest
+import com.cuscrud.data.remote.dto.*
 import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import retrofit2.Response
 import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class InventoryRepositoryImpl @Inject constructor(
     private val apiService: CuscrudApiService,
-    private val sessionManager: SessionManager
+    private val sessionManager: SessionManager,
+    private val json: Json
 ) : InventoryRepository {
 
-    private val _activeInventoryId = MutableStateFlow<String?>(sessionManager.fetchActiveInventoryId())
+    private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private val _activeInventoryId = MutableStateFlow<String?>(null)
     override val activeInventoryId: StateFlow<String?> = _activeInventoryId.asStateFlow()
 
-    private val _activeInventoryRole = MutableStateFlow<Role?>(
-        Role.fromInt(sessionManager.fetchActiveInventoryRole())
-    )
+    private val _activeInventoryRole = MutableStateFlow<Role?>(null)
     override val activeInventoryRole: StateFlow<Role?> = _activeInventoryRole.asStateFlow()
+
+    init {
+        // Observa mudanças no DataStore e reflete no StateFlow do repositório
+        repositoryScope.launch {
+            sessionManager.activeInventoryIdFlow.collect { id ->
+                _activeInventoryId.value = id
+            }
+        }
+        repositoryScope.launch {
+            sessionManager.activeInventoryRoleFlow.collect { roleInt ->
+                _activeInventoryRole.value = Role.fromInt(roleInt)
+            }
+        }
+    }
 
     override suspend fun getInventories(limit: Int, offset: Int): Result<List<InventoryDto>> {
         return try {
@@ -35,12 +53,10 @@ class InventoryRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 val inventories = response.body()?.inventories ?: emptyList()
                 
-                // Se o inventário ativo estiver na lista, atualizamos a role por garantia
                 _activeInventoryId.value?.let { activeId ->
                     inventories.find { it.invId == activeId }?.let { activeInv ->
                         val newRole = Role.fromInt(activeInv.role)
                         if (newRole != _activeInventoryRole.value) {
-                            _activeInventoryRole.value = newRole
                             newRole?.let { sessionManager.saveActiveInventoryRole(it.value) }
                         }
                     }
@@ -48,11 +64,13 @@ class InventoryRepositoryImpl @Inject constructor(
                 
                 Result.Success(inventories)
             } else {
-                Result.Error(Exception("Erro ao carregar inventários: ${response.code()}"))
+                handleError(response)
             }
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão ao buscar inventários."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao buscar inventários")
-            Result.Error(e)
+            Result.Error(Exception("Não foi possível carregar a lista de inventários."))
         }
     }
 
@@ -61,15 +79,15 @@ class InventoryRepositoryImpl @Inject constructor(
             val response = apiService.createInventory(CreateInventoryRequest(name))
             if (response.isSuccessful && response.body() != null) {
                 val inventory = response.body()!!
-                // Ao criar, o usuário é OWNER (0)
                 setActiveInventory(inventory.invId, Role.OWNER)
                 Result.Success(inventory)
             } else {
-                Result.Error(Exception("Erro ao criar inventário: ${response.code()}"))
+                handleError(response)
             }
-        } catch (e: Exception) {
-            Timber.e(e, "Falha ao criar inventário")
-            Result.Error(e)
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão ao criar inventário."))
+        } catch (_: Exception) {
+            Result.Error(Exception("Erro ao criar inventário."))
         }
     }
 
@@ -79,11 +97,12 @@ class InventoryRepositoryImpl @Inject constructor(
             if (response.isSuccessful && response.body() != null) {
                 Result.Success(response.body()!!)
             } else {
-                Result.Error(Exception("Erro ao atualizar inventário: ${response.code()}"))
+                handleError(response)
             }
-        } catch (e: Exception) {
-            Timber.e(e, "Falha ao atualizar inventário")
-            Result.Error(e)
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão ao atualizar."))
+        } catch (_: Exception) {
+            Result.Error(Exception("Erro ao atualizar inventário."))
         }
     }
 
@@ -96,25 +115,46 @@ class InventoryRepositoryImpl @Inject constructor(
                 }
                 Result.Success(Unit)
             } else {
-                Result.Error(Exception("Erro ao deletar inventário: ${response.code()}"))
+                handleError(response)
             }
-        } catch (e: Exception) {
-            Timber.e(e, "Falha ao deletar inventário")
-            Result.Error(e)
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão ao excluir."))
+        } catch (_: Exception) {
+            Result.Error(Exception("Erro ao excluir inventário."))
         }
     }
 
-    override fun setActiveInventory(invId: String, role: Role) {
+    override suspend fun setActiveInventory(invId: String, role: Role) {
         sessionManager.saveActiveInventoryId(invId)
         sessionManager.saveActiveInventoryRole(role.value)
-        _activeInventoryId.value = invId
-        _activeInventoryRole.value = role
     }
 
-    override fun clearActiveInventory() {
+    override suspend fun clearActiveInventory() {
         sessionManager.clearActiveInventoryId()
         sessionManager.clearActiveInventoryRole()
-        _activeInventoryId.value = null
-        _activeInventoryRole.value = null
+    }
+
+    /**
+     * Realiza o parse de erros vindos da API seguindo o padrão { "error": { "code": "...", "message": "..." } }
+     * definido no architecture.md.
+     */
+    private fun handleError(response: Response<*>): Result.Error {
+        val errorBody = response.errorBody()?.string()
+        return try {
+            val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
+            Result.Error(Exception(errorResponse.error.message))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
+            val friendlyMessage = when (response.code()) {
+                400 -> "Dados inválidos. Verifique as informações preenchidas."
+                401 -> "Sessão expirada. Por favor, faça login novamente."
+                403 -> "Você não tem permissão para esta ação."
+                404 -> "O inventário ou recurso não foi encontrado."
+                409 -> "Conflito de dados. Talvez este nome já esteja em uso."
+                500 -> "Erro interno no servidor. Tente novamente em instantes."
+                else -> "Ocorreu um erro inesperado (Código: ${response.code()})"
+            }
+            Result.Error(Exception(friendlyMessage))
+        }
     }
 }

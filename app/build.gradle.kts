@@ -120,6 +120,9 @@ dependencies {
     implementation(libs.androidx.test.espresso.idling.resources)
     implementation(libs.androidx.security.crypto)
 
+    // DataStore
+    implementation(libs.androidx.dataStore.preferences)
+
     // Architecture Components
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

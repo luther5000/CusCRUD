@@ -43,12 +43,12 @@ interface InventoryRepository {
     /**
      * Define o inventário ativo e sua role para o contexto global da aplicação.
      */
-    fun setActiveInventory(invId: String, role: Role)
+    suspend fun setActiveInventory(invId: String, role: Role)
 
     /**
      * Limpa o inventário ativo selecionado.
      */
-    fun clearActiveInventory()
+    suspend fun clearActiveInventory()
 }
 
 /**

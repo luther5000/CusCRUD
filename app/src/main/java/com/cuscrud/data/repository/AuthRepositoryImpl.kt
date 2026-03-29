@@ -10,16 +10,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import retrofit2.Response
 import timber.log.Timber
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Implementação do repositório de autenticação que interage com a API remota e o armazenamento local seguro.
- *
- * @property apiService Interface do Retrofit para chamadas de rede.
- * @property sessionManager Gerenciador de sessão segura para persistência do token.
- * @property json Instância do Kotlinx Serialization para parse de erros.
- */
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val apiService: CuscrudApiService,
@@ -34,13 +28,15 @@ class AuthRepositoryImpl @Inject constructor(
                 response.body()?.let { loginResponse ->
                     sessionManager.saveAuthToken(loginResponse.token)
                     Result.Success(loginResponse)
-                } ?: Result.Error(Exception("Corpo da resposta de login vazio"))
+                } ?: Result.Error(Exception("Resposta do servidor inválida."))
             } else {
                 handleError(response)
             }
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao realizar login")
-            Result.Error(e)
+            Result.Error(Exception("Não foi possível realizar o login. Tente novamente mais tarde."))
         }
     }
 
@@ -50,13 +46,15 @@ class AuthRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let {
                     Result.Success(it)
-                } ?: Result.Error(Exception("Corpo da resposta de registro vazio"))
+                } ?: Result.Error(Exception("Resposta do servidor inválida."))
             } else {
                 handleError(response)
             }
+        } catch (_: IOException) {
+            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao realizar registro")
-            Result.Error(e)
+            Result.Error(Exception("Não foi possível realizar o cadastro no momento."))
         }
     }
 
@@ -64,13 +62,10 @@ class AuthRepositoryImpl @Inject constructor(
         sessionManager.clearAuthToken()
     }
 
-    override fun isUserLoggedIn(): Boolean {
+    override suspend fun isUserLoggedIn(): Boolean {
         return !sessionManager.fetchAuthToken().isNullOrBlank()
     }
 
-    /**
-     * Realiza o parse de erros vindos da API seguindo o padrão { "error": { "code": "...", "message": "..." } }.
-     */
     private fun handleError(response: Response<*>): Result.Error {
         val errorBody = response.errorBody()?.string()
         return try {
@@ -78,7 +73,16 @@ class AuthRepositoryImpl @Inject constructor(
             Result.Error(Exception(errorResponse.error.message))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
-            Result.Error(Exception("Ocorreu um erro inesperado: ${response.code()}"))
+            val friendlyMessage = when (response.code()) {
+                400 -> "Verifique se os dados informados estão corretos."
+                401 -> "E-mail ou senha incorretos."
+                403 -> "Conta sem permissão de acesso."
+                404 -> "Serviço temporariamente indisponível."
+                409 -> "Este e-mail já está em uso por outro usuário."
+                500 -> "Erro interno no servidor. Tente novamente em instantes."
+                else -> "Erro inesperado (Código: ${response.code()})"
+            }
+            Result.Error(Exception(friendlyMessage))
         }
     }
 }
