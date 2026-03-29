@@ -62,8 +62,32 @@ class SessionManager @Inject constructor(
         sharedPreferences.edit().remove(KEY_ACTIVE_INV_ID).apply()
     }
 
+    /**
+     * Salva a role associada ao inventário ativo.
+     * @param role O valor inteiro da Role.
+     */
+    fun saveActiveInventoryRole(role: Int) {
+        sharedPreferences.edit().putInt(KEY_ACTIVE_INV_ROLE, role).apply()
+    }
+
+    /**
+     * Recupera a role associada ao inventário ativo.
+     * @return O valor inteiro ou -1 se não houver.
+     */
+    fun fetchActiveInventoryRole(): Int {
+        return sharedPreferences.getInt(KEY_ACTIVE_INV_ROLE, -1)
+    }
+
+    /**
+     * Limpa a role do inventário ativo.
+     */
+    fun clearActiveInventoryRole() {
+        sharedPreferences.edit().remove(KEY_ACTIVE_INV_ROLE).apply()
+    }
+
     companion object {
         const val KEY_TOKEN = "auth_token"
         const val KEY_ACTIVE_INV_ID = "active_inventory_id"
+        const val KEY_ACTIVE_INV_ROLE = "active_inventory_role"
     }
 }

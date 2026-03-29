@@ -5,6 +5,7 @@ import com.cuscrud.data.remote.api.CuscrudApiService
 import com.cuscrud.data.remote.dto.CreateInventoryRequest
 import com.cuscrud.data.remote.dto.InventoryDto
 import com.cuscrud.data.remote.dto.UpdateInventoryRequest
+import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,11 +24,29 @@ class InventoryRepositoryImpl @Inject constructor(
     private val _activeInventoryId = MutableStateFlow<String?>(sessionManager.fetchActiveInventoryId())
     override val activeInventoryId: StateFlow<String?> = _activeInventoryId.asStateFlow()
 
+    private val _activeInventoryRole = MutableStateFlow<Role?>(
+        Role.fromInt(sessionManager.fetchActiveInventoryRole())
+    )
+    override val activeInventoryRole: StateFlow<Role?> = _activeInventoryRole.asStateFlow()
+
     override suspend fun getInventories(limit: Int, offset: Int): Result<List<InventoryDto>> {
         return try {
             val response = apiService.getInventories(limit, offset)
             if (response.isSuccessful) {
-                Result.Success(response.body()?.inventories ?: emptyList())
+                val inventories = response.body()?.inventories ?: emptyList()
+                
+                // Se o inventário ativo estiver na lista, atualizamos a role por garantia
+                _activeInventoryId.value?.let { activeId ->
+                    inventories.find { it.invId == activeId }?.let { activeInv ->
+                        val newRole = Role.fromInt(activeInv.role)
+                        if (newRole != _activeInventoryRole.value) {
+                            _activeInventoryRole.value = newRole
+                            newRole?.let { sessionManager.saveActiveInventoryRole(it.value) }
+                        }
+                    }
+                }
+                
+                Result.Success(inventories)
             } else {
                 Result.Error(Exception("Erro ao carregar inventários: ${response.code()}"))
             }
@@ -41,7 +60,10 @@ class InventoryRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.createInventory(CreateInventoryRequest(name))
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                val inventory = response.body()!!
+                // Ao criar, o usuário é OWNER (0)
+                setActiveInventory(inventory.invId, Role.OWNER)
+                Result.Success(inventory)
             } else {
                 Result.Error(Exception("Erro ao criar inventário: ${response.code()}"))
             }
@@ -82,13 +104,17 @@ class InventoryRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun setActiveInventory(invId: String) {
+    override fun setActiveInventory(invId: String, role: Role) {
         sessionManager.saveActiveInventoryId(invId)
+        sessionManager.saveActiveInventoryRole(role.value)
         _activeInventoryId.value = invId
+        _activeInventoryRole.value = role
     }
 
     override fun clearActiveInventory() {
         sessionManager.clearActiveInventoryId()
+        sessionManager.clearActiveInventoryRole()
         _activeInventoryId.value = null
+        _activeInventoryRole.value = null
     }
 }

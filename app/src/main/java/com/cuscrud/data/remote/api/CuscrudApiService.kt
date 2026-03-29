@@ -45,6 +45,36 @@ interface CuscrudApiService {
 
     // endregion
 
+    // region Inventory Access (RBAC)
+
+    @GET("inventories/{inv_id}/users")
+    suspend fun getInventoryUsers(
+        @Path("inv_id") invId: String,
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): Response<UserAccessListResponse>
+
+    @POST("inventories/{inv_id}/users")
+    suspend fun addInventoryUser(
+        @Path("inv_id") invId: String,
+        @Body request: AddUserAccessRequest
+    ): Response<UserAccessDto>
+
+    @PATCH("inventories/{inv_id}/users/{user_id}")
+    suspend fun updateInventoryUserRole(
+        @Path("inv_id") invId: String,
+        @Path("user_id") userId: String,
+        @Body request: UpdateUserAccessRequest
+    ): Response<UserAccessDto>
+
+    @DELETE("inventories/{inv_id}/users/{user_id}")
+    suspend fun removeInventoryUser(
+        @Path("inv_id") invId: String,
+        @Path("user_id") userId: String
+    ): Response<Unit>
+
+    // endregion
+
     // region Products
 
     @GET("inventories/{inv_id}/products")
