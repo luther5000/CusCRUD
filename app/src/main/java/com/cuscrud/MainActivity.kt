@@ -18,9 +18,9 @@ import com.cuscrud.domain.util.Result
 import com.cuscrud.presentation.navigation.CusCrudNavGraph
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
@@ -60,6 +60,9 @@ class MainViewModel @Inject constructor(
     private val tipoRepository: TipoRepository
 ) : ViewModel() {
 
+    private val _produtos = MutableStateFlow<List<Produto>>(emptyList())
+    val produtos: StateFlow<List<Produto>> = _produtos.asStateFlow()
+
     init {
         setupInitialData()
     }
@@ -97,6 +100,19 @@ class MainViewModel @Inject constructor(
                     }
                 }
             }
+            fetchProdutos()
+        }
+    }
+
+    /**
+     * Busca produtos da API para manter o estado local do MainViewModel (se necessário).
+     */
+    fun fetchProdutos() {
+        viewModelScope.launch {
+            when (val result = produtoRepository.getProdutos()) {
+                is Result.Success -> _produtos.value = result.data
+                else -> { /* Log ou erro silencioso para o MainViewModel */ }
+            }
         }
     }
 
@@ -123,14 +139,8 @@ class MainViewModel @Inject constructor(
                     quantidade = (1..20).random().toLong()
                 )
                 produtoRepository.insertProduto(newProduto)
+                fetchProdutos() // Atualiza a lista após adicionar
             }
         }
     }
-
-    val produtos: StateFlow<List<Produto>> = produtoRepository.getAllProdutos()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
 }

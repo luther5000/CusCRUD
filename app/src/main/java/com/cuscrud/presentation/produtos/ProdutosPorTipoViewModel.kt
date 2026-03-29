@@ -11,7 +11,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,20 +31,28 @@ class ProdutosPorTipoViewModel @Inject constructor(
         loadProdutos()
     }
 
-    private fun loadProdutos() {
+    /**
+     * Carrega a lista de produtos do tipo especificado via API.
+     */
+    fun loadProdutos() {
         viewModelScope.launch {
-            getProdutosPorTipoInteractor(tipoId).collectLatest { result ->
-                when (result) {
-                    is Result.Loading -> _uiState.update { it.copy(isLoading = true) }
-                    is Result.Success -> _uiState.update { 
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = getProdutosPorTipoInteractor(tipoId)) {
+                is Result.Success -> {
+                    _uiState.update { 
                         it.copy(isLoading = false, produtos = result.data, errorMessage = null) 
                     }
-                    is Result.Error -> _uiState.update { 
+                }
+                is Result.Error -> {
+                    _uiState.update { 
                         it.copy(
                             isLoading = false, 
-                            errorMessage = result.exception.message ?: "Erro: Não foi possivel carregar os dados dos produtos desse tipo, tente novamente mais tarde."
+                            errorMessage = result.exception.message ?: "Erro ao carregar produtos."
                         ) 
                     }
+                }
+                Result.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
                 }
             }
         }
@@ -64,22 +71,26 @@ class ProdutosPorTipoViewModel @Inject constructor(
         
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, produtoParaRemover = null) }
-            val produtoDeletado = removeProdutoInteractor(produtoParaRemover)
-            
-            if (produtoDeletado != null) {
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false, 
-                        mensagemSucesso = "${produtoDeletado.marca} removido com sucesso"
-                    ) 
+            when (val result = removeProdutoInteractor(produtoParaRemover.id)) {
+                is Result.Success -> {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false, 
+                            mensagemSucesso = "${produtoParaRemover.marca} removido com sucesso"
+                        ) 
+                    }
+                    // Refresh manual da lista após sucesso
+                    loadProdutos()
                 }
-            } else {
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false, 
-                        errorMessage = "Não foi possível realizar a remoção: Produto não encontrado ou erro no banco." 
-                    )
+                is Result.Error -> {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false, 
+                            errorMessage = result.exception.message ?: "Erro ao excluir produto."
+                        ) 
+                    }
                 }
+                Result.Loading -> {}
             }
         }
     }

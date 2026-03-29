@@ -68,29 +68,27 @@ class AddProdutoViewModel @Inject constructor(
 
     private fun loadProduto(id: Int) {
         viewModelScope.launch {
-            getProdutoDetalhesInteractor(id).collect { result ->
-                when (result) {
-                    is Result.Success -> {
-                        result.data?.let { produto ->
-                            _uiState.update {
-                                it.copy(
-                                    marca = produto.marca,
-                                    unidade = produto.unidade.toString(),
-                                    unidadeMedida = produto.unidadeMedida,
-                                    quantidade = produto.quantidade.toString(),
-                                    dataValidade = produto.dataValidade,
-                                    tipoSelecionado = produto.tipo,
-                                    isLoading = false
-                                )
-                            }
-                        }
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = getProdutoDetalhesInteractor(id)) {
+                is Result.Success -> {
+                    val produto = result.data
+                    _uiState.update {
+                        it.copy(
+                            marca = produto.marca,
+                            unidade = produto.unidade.toString(),
+                            unidadeMedida = produto.unidadeMedida,
+                            quantidade = produto.quantidade.toString(),
+                            dataValidade = produto.dataValidade,
+                            tipoSelecionado = produto.tipo,
+                            isLoading = false
+                        )
                     }
-                    is Result.Error -> {
-                        _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
-                    }
-                    is Result.Loading -> {
-                        _uiState.update { it.copy(isLoading = true) }
-                    }
+                }
+                is Result.Error -> {
+                    _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
+                }
+                Result.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
                 }
             }
         }

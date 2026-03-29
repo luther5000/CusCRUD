@@ -1,46 +1,43 @@
 package com.cuscrud.domain.repository
 
 import com.cuscrud.domain.model.Produto
-import kotlinx.coroutines.flow.Flow
+import com.cuscrud.domain.util.Result
 
 /**
  * Repositório para operações relacionadas com [Produto].
+ * Refatorado para operações one-shot via API REST retornando [Result].
  */
+
 interface ProdutoRepository {
     /**
-     * Retorna todos os produtos como um [Flow] de uma [List] de [Produto].
-     * Esse fluxo emite novos valores sempre que os dados subjacentes mudam.
+     * Retorna uma lista de produtos vinculados ao inventário ativo.
+     * @param limit Limite de itens (paginação).
+     * @param offset Deslocamento (paginação).
      */
-    fun getAllProdutos(): Flow<List<Produto>>
+    suspend fun getProdutos(limit: Int = 100, offset: Int = 0): Result<List<Produto>>
 
     /**
      * Insere um novo [Produto] no repositório.
      */
-    suspend fun insertProduto(produto: Produto)
+    suspend fun insertProduto(produto: Produto): Result<Unit>
     
     /**
      * Remove um produto por meio do seu [id].
-     * @return O [Produto] removido ou null se não houver produto com o id especificado.
      */
-    suspend fun removeProduto(id: Int): Produto?
+    suspend fun removeProduto(id: Int): Result<Unit>
 
     /**
-     * Retorna todos os produtos que pertencem a um [tipoId] especifico
-     * como um [Flow] de uma [List] de [Produto].
-     * Esse fluxo emite novos valores sempre que os dados subjacentes mudam.
+     * Retorna todos os produtos que pertencem a um [tipoId] especifico.
      */
-    fun getProdutosByTipo(tipoId: Long): Flow<List<Produto>>
+    suspend fun getProdutosByTipo(tipoId: Long): Result<List<Produto>>
 
     /**
      * Atualiza um produto existente identificado por um [id] com os dados do [produto].
-     * @return O [Produto] atualizado ou null se não houver produto com o id especificado.
      */
-    suspend fun editProduto(id: Int, produto: Produto): Produto?
+    suspend fun editProduto(id: Int, produto: Produto): Result<Produto>
 
     /**
      * Retorna um produto especifico pelo seu [id].
-     * @param id O identificador único do produto.
-     * @return O [Produto] encontrado ou null caso não exista.
      */
-    suspend fun getProdutoById(id: Int): Produto?
+    suspend fun getProdutoById(id: Int): Result<Produto>
 }

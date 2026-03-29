@@ -23,6 +23,9 @@ interface ProdutoDao {
     @Query("SELECT * FROM produto WHERE tipo = :tipoId")
     fun getByTipo(tipoId: Long): Flow<List<ProdutoEntity>>
 
+    @Query("SELECT * FROM produto WHERE tipo = :tipoId")
+    suspend fun getByTipoSync(tipoId: Long): List<ProdutoEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(produto: ProdutoEntity)
 

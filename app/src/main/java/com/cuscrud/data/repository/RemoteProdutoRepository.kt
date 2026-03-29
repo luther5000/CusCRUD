@@ -1,150 +1,167 @@
-
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.remote.api.CuscrudApiService
 import com.cuscrud.data.mapper.toDomain
 import com.cuscrud.data.mapper.toRequestDto
 import com.cuscrud.data.mapper.toUpdateDto
+import com.cuscrud.data.remote.dto.ErrorResponse
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.repository.ProdutoRepository
+import com.cuscrud.domain.util.Result
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import retrofit2.Response
+import timber.log.Timber
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Implementação do repositório [ProdutoRepository] que gerencia as operações de produtos via API remota.
- *
- * Esta classe é responsável por:
- * - **Listagem e Filtro**: Recupera todos os produtos ou filtra por tipo, sempre vinculados ao inventário ativo.
- * - **Operações de Escrita**: Insere, edita e remove produtos através do [CuscrudApiService].
- * - **Gerenciamento de Contexto**: Obtém dinamicamente o ID do inventário ativo a partir do [InventoryRepository].
- * - **Tratamento de Erros**: Centraliza a lógica de tratamento de respostas HTTP, convertendo-as em
- *   mensagens legíveis ou exceções de negócio conforme definido no architecture.md.
- * - **Reatividade**: Expõe dados através de [Flow], garantindo que as chamadas sejam executadas no [Dispatchers.IO].
- *
- * Sendo um `@Singleton`, garante a consistência das operações de produtos em toda a aplicação.
+ * Refatorado para retornar [Result] e utilizar chamadas suspensas one-shot.
  */
 
 @Singleton
 class RemoteProdutoRepository @Inject constructor(
     private val apiService: CuscrudApiService,
-    private val inventoryRepository: InventoryRepository
+    private val inventoryRepository: InventoryRepository,
+    private val json: Json
 ) : ProdutoRepository {
 
     private fun getActiveInvIdOrNull(): String? {
         return inventoryRepository.activeInventoryId.value
     }
 
-    override fun getAllProdutos(): Flow<List<Produto>> = flow {
+    override suspend fun getProdutos(limit: Int, offset: Int): Result<List<Produto>> = withContext(Dispatchers.IO) {
+        val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Nenhum inventário ativo selecionado."))
         try {
-            val invId = getActiveInvIdOrNull() ?: throw Exception("Nenhum inventário ativo selecionado.")
             val response = apiService.getProducts(invId)
             if (response.isSuccessful) {
-                emit(response.body()?.map { it.toDomain() } ?: emptyList())
+                Result.Success(response.body()?.map { it.toDomain() } ?: emptyList())
             } else {
-                val errorMsg = parseErrorMessage(response)
-                throw Exception(errorMsg)
+                handleError(response)
             }
         } catch (_: IOException) {
-            throw Exception("Falha de conexão. Verifique sua internet.")
+            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
         } catch (e: Exception) {
-            throw e
-        }
-    }.flowOn(Dispatchers.IO)
-
-    override suspend fun insertProduto(produto: Produto) {
-        try {
-            val invId = getActiveInvIdOrNull() ?: throw Exception("Identificador de inventário não encontrado.")
-            val response = apiService.addProduct(invId, produto.toRequestDto())
-            if (!response.isSuccessful) {
-                throw Exception(parseErrorMessage(response))
-            }
-        } catch (_: IOException) {
-            throw Exception("Não foi possível salvar o produto. Verifique sua conexão.")
+            Timber.e(e, "Erro ao buscar produtos")
+            Result.Error(Exception("Não foi possível carregar os produtos."))
         }
     }
 
-    override suspend fun removeProduto(id: Int): Produto? {
+    override suspend fun insertProduto(produto: Produto): Result<Unit> = withContext(Dispatchers.IO) {
+        val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
-            val invId = getActiveInvIdOrNull() ?: throw Exception("Identificador de inventário não encontrado.")
+            val response = apiService.addProduct(invId, produto.toRequestDto())
+            if (response.isSuccessful) {
+                Result.Success(Unit)
+            } else {
+                handleError(response)
+            }
+        } catch (_: IOException) {
+            Result.Error(Exception("Não foi possível salvar o produto. Verifique sua conexão."))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao inserir produto")
+            Result.Error(Exception("Erro ao salvar o produto."))
+        }
+    }
+
+    override suspend fun removeProduto(id: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
+        try {
             val response = apiService.deleteProduct(invId, id)
             if (response.isSuccessful) {
-                return null // Ou retornar o produto se a API suportar
+                Result.Success(Unit)
             } else {
-                throw Exception(parseErrorMessage(response))
+                handleError(response)
             }
         } catch (_: IOException) {
-            throw Exception("Erro ao excluir produto. Verifique sua conexão.")
+            Result.Error(Exception("Erro ao excluir produto. Verifique sua conexão."))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao remover produto")
+            Result.Error(Exception("Erro ao excluir produto."))
         }
     }
 
-    override fun getProdutosByTipo(tipoId: Long): Flow<List<Produto>> = flow {
+    override suspend fun getProdutosByTipo(tipoId: Long): Result<List<Produto>> = withContext(Dispatchers.IO) {
+        val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
-            val invId = getActiveInvIdOrNull() ?: throw Exception("Identificador de inventário não encontrado.")
             val response = apiService.getProducts(invId)
             if (response.isSuccessful) {
                 val filtered = response.body()?.map { it.toDomain() }
                     ?.filter { it.tipo.id == tipoId } ?: emptyList()
-                emit(filtered)
+                Result.Success(filtered)
             } else {
-                throw Exception(parseErrorMessage(response))
+                handleError(response)
             }
         } catch (_: IOException) {
-            throw Exception("Erro ao carregar produtos por categoria.")
+            Result.Error(Exception("Erro ao carregar produtos por categoria. Verifique sua conexão."))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao buscar produtos por tipo")
+            Result.Error(Exception("Erro ao carregar produtos da categoria."))
         }
-    }.flowOn(Dispatchers.IO)
+    }
 
-    override suspend fun editProduto(id: Int, produto: Produto): Produto? {
+    override suspend fun editProduto(id: Int, produto: Produto): Result<Produto> = withContext(Dispatchers.IO) {
+        val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
-            val invId = getActiveInvIdOrNull() ?: throw Exception("Identificador de inventário não encontrado.")
             val response = apiService.updateProduct(invId, id, produto.toUpdateDto())
             if (response.isSuccessful) {
-                return response.body()?.toDomain()
+                response.body()?.let {
+                    Result.Success(it.toDomain())
+                } ?: Result.Error(Exception("Erro ao processar a atualização do produto."))
             } else {
-                throw Exception(parseErrorMessage(response))
+                handleError(response)
             }
         } catch (_: IOException) {
-            throw Exception("Erro ao atualizar produto. Verifique sua conexão.")
+            Result.Error(Exception("Erro ao atualizar produto. Verifique sua conexão."))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao editar produto")
+            Result.Error(Exception("Não foi possível atualizar o produto."))
         }
     }
 
-    override suspend fun getProdutoById(id: Int): Produto? {
+    override suspend fun getProdutoById(id: Int): Result<Produto> = withContext(Dispatchers.IO) {
+        val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
-            val invId = getActiveInvIdOrNull() ?: throw Exception("Identificador de inventário não encontrado.")
             val response = apiService.getProducts(invId)
             if (response.isSuccessful) {
-                return response.body()?.find { it.id == id }?.toDomain()
+                val produto = response.body()?.find { it.id == id }?.toDomain()
+                if (produto != null) {
+                    Result.Success(produto)
+                } else {
+                    Result.Error(Exception("Produto não encontrado."))
+                }
             } else {
-                throw Exception(parseErrorMessage(response))
+                handleError(response)
             }
         } catch (_: IOException) {
-            throw Exception("Erro ao buscar detalhes do produto.")
+            Result.Error(Exception("Erro ao buscar detalhes do produto. Verifique sua conexão."))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao buscar produto")
+            Result.Error(Exception("Erro ao carregar detalhes do produto."))
         }
     }
 
-    private fun parseErrorMessage(response: retrofit2.Response<*>): String {
+    private fun handleError(response: Response<*>): Result.Error {
         val errorBody = response.errorBody()?.string()
         return try {
-            // Tenta decodificar o erro conforme o padrão da arquitetura { "error": { "code": "...", "message": "..." } }
-            val errorResponse =
-                Json.decodeFromString<com.cuscrud.data.remote.dto.ErrorResponse>(errorBody ?: "")
-            errorResponse.error.message
-        } catch (_: Exception) {
-            // Fallback baseado nos códigos de erro da arquitetura (Seção 5)
-            when (response.code()) {
-                400 -> "Dados inválidos. Verifique as informações preenchidas." // VALIDATION_ERROR
-                401 -> "Sessão expirada. Por favor, faça login novamente."      // UNAUTHENTICATED
-                403 -> "Você não tem permissão para esta ação."                // FORBIDDEN
-                404 -> "O recurso solicitado não foi encontrado."               // NOT_FOUND
-                409 -> "Conflito de dados. O item pode já existir."              // CONFLICT
-                else -> "Ocorreu um erro inesperado no servidor (${response.code()})."
+            val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
+            Result.Error(Exception(errorResponse.error.message))
+        } catch (e: Exception) {
+            Timber.e(e, "Erro ao processar corpo de erro: ${'$'}errorBody")
+            val friendlyMessage = when (response.code()) {
+                400 -> "Dados inválidos. Verifique as informações preenchidas."
+                401 -> "Sessão expirada. Por favor, faça login novamente."
+                403 -> "Você não tem permissão para esta ação."
+                404 -> "O recurso solicitado não foi encontrado."
+                409 -> "Conflito de dados. O item pode já existir."
+                500 -> "Erro interno no servidor. Tente novamente em instantes."
+                else -> "Ocorreu um erro inesperado no servidor (${'$'}{response.code()})."
             }
+            Result.Error(Exception(friendlyMessage))
         }
     }
 }
