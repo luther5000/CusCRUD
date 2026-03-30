@@ -3,6 +3,7 @@ package com.cuscrud.di
 import com.cuscrud.BuildConfig
 import com.cuscrud.data.remote.api.CuscrudApiService
 import com.cuscrud.data.remote.interceptors.AuthInterceptor
+import com.cuscrud.data.remote.interceptors.TokenAuthenticator
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
@@ -20,7 +21,8 @@ import javax.inject.Singleton
  *
  * Este módulo provê as instâncias necessárias para a comunicação com a API REST:
  * - **Json**: Configuração do serializador Kotlinx Serialization, ignorando chaves desconhecidas.
- * - **OkHttpClient**: Cliente HTTP configurado com o [AuthInterceptor] para gerenciamento automático de tokens.
+ * - **OkHttpClient**: Cliente HTTP configurado com o [AuthInterceptor] para gerenciamento automático de tokens
+ *   e [TokenAuthenticator] para Silent Login (renovação automática em caso de 401).
  * - **Retrofit**: Cliente Type-safe configurado com a Base URL do projeto e conversor JSON.
  * - **CuscrudApiService**: Interface que define os contratos de endpoints da aplicação.
  *
@@ -42,9 +44,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator
+    ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .authenticator(tokenAuthenticator)
             .build()
     }
 

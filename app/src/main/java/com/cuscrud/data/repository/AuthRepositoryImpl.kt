@@ -40,6 +40,7 @@ class AuthRepositoryImpl @Inject constructor(
             if (response.isSuccessful) {
                 response.body()?.let { loginResponse ->
                     sessionManager.saveAuthToken(loginResponse.token)
+                    sessionManager.saveCredentials(request.login, request.passwd)
                     Result.Success(loginResponse)
                 } ?: Result.Error(Exception("Resposta do servidor inválida."))
             } else {

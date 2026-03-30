@@ -19,6 +19,7 @@ import javax.inject.Singleton
  * - **Token de Autenticação (JWT)**: Mantém o usuário logado entre as sessões do app.
  * - **ID do Inventário Ativo**: Identifica qual inventário o usuário está visualizando/editando atualmente.
  * - **Papel (Role) do Usuário**: Armazena o nível de acesso do usuário no inventário selecionado para controle de UI.
+ * - **Credenciais do Usuário**: Armazena temporariamente o login e senha para Silent Login.
  *
  * O uso do qualificador `@SecureStorage` indica que os dados são persistidos em uma instância do DataStore
  * configurada para armazenamento seguro. Fornece dados de forma reativa através de [Flow] e de forma pontual
@@ -35,6 +36,8 @@ class SessionManager @Inject constructor(
     private val keyToken = stringPreferencesKey("auth_token")
     private val keyActiveInvId = stringPreferencesKey("active_inventory_id")
     private val keyActiveInvRole = intPreferencesKey("active_inventory_role")
+    private val keyLogin = stringPreferencesKey("user_login")
+    private val keyPass = stringPreferencesKey("user_pass")
 
     /**
      * Salva o token de autenticação.
@@ -58,11 +61,43 @@ class SessionManager @Inject constructor(
     suspend fun fetchAuthToken(): String? = authTokenFlow.first()
 
     /**
-     * Remove o token de autenticação.
+     * Remove o token de autenticação e as credenciais.
      */
     suspend fun clearAuthToken() {
         dataStore.edit { preferences ->
             preferences.remove(keyToken)
+            preferences.remove(keyLogin)
+            preferences.remove(keyPass)
+        }
+    }
+
+    /**
+     * Salva as credenciais do usuário para Silent Login.
+     */
+    suspend fun saveCredentials(login: String, pass: String) {
+        dataStore.edit { preferences ->
+            preferences[keyLogin] = login
+            preferences[keyPass] = pass
+        }
+    }
+
+    /**
+     * Recupera as credenciais do usuário.
+     */
+    suspend fun fetchCredentials(): Pair<String, String>? {
+        val prefs = dataStore.data.first()
+        val login = prefs[keyLogin]
+        val pass = prefs[keyPass]
+        return if (login != null && pass != null) login to pass else null
+    }
+
+    /**
+     * Limpa as credenciais salvas.
+     */
+    suspend fun clearCredentials() {
+        dataStore.edit { preferences ->
+            preferences.remove(keyLogin)
+            preferences.remove(keyPass)
         }
     }
 

@@ -23,6 +23,8 @@ import java.io.IOException
  * Esta classe valida o fluxo de autenticação, persistência de tokens e gestão de sessão.
  * Garante que o estado de login do usuário seja refletido corretamente com base na
  * presença de tokens válidos e que erros de rede ou credenciais sejam tratados.
+ * 
+ * Além disso, valida o salvamento de credenciais para o fluxo de Silent Login.
  */
 class AuthRepositoryImplTest {
 
@@ -39,12 +41,13 @@ class AuthRepositoryImplTest {
     // region Login Tests
 
     /**
-     * Objetivo: Validar o sucesso do login.
-     * Entradas: LoginRequest válido, API retornando 200 OK com LoginResponse.
-     * Critério de Aceitação: Retornar Result.Success com os dados e salvar o token no SessionManager.
+     * Objetivo: Validar o sucesso do login e o salvamento de credenciais para Silent Login.
+     * Entradas: LoginRequest válido ("user", "pass"), API retornando 200 OK com LoginResponse.
+     * Critério de Aceitação: Retornar Result.Success com os dados e invocar saveAuthToken 
+     * e saveCredentials no SessionManager com os parâmetros corretos.
      */
     @Test
-    fun `login should return Success and save token when API call is successful`() = runTest {
+    fun `login should return Success and save token and credentials when API call is successful`() = runTest {
         // Arrange
         val request = LoginRequest("user", "pass")
         val responseDto = LoginResponse(
@@ -61,12 +64,13 @@ class AuthRepositoryImplTest {
         assertTrue(result is Result.Success)
         assertEquals(responseDto, (result as Result.Success).data)
         coVerify { sessionManager.saveAuthToken("jwt_token") }
+        coVerify { sessionManager.saveCredentials("user", "pass") }
     }
 
     /**
      * Objetivo: Validar erro de autenticação (401 Unauthorized).
      * Entradas: LoginRequest, API retornando 401 com JSON de erro.
-     * Critério de Aceitação: Retornar Result.Error com a mensagem da API e não salvar o token.
+     * Critério de Aceitação: Retornar Result.Error com a mensagem da API e não salvar o token nem credenciais.
      */
     @Test
     fun `login should return Error and not save token when API returns 401`() = runTest {
@@ -83,6 +87,7 @@ class AuthRepositoryImplTest {
         assertTrue(result is Result.Error)
         assertEquals("Credenciais inválidas", (result as Result.Error).exception.message)
         coVerify(exactly = 0) { sessionManager.saveAuthToken(any()) }
+        coVerify(exactly = 0) { sessionManager.saveCredentials(any(), any()) }
     }
 
     /**
@@ -109,12 +114,12 @@ class AuthRepositoryImplTest {
     // region Logout Tests
 
     /**
-     * Objetivo: Validar o encerramento da sessão.
+     * Objetivo: Validar o encerramento da sessão e limpeza de credenciais.
      * Entradas: Chamada para logout().
-     * Critério de Aceitação: Invocar clearAuthToken no SessionManager para remover credenciais.
+     * Critério de Aceitação: Invocar clearAuthToken no SessionManager, que deve remover token e credenciais.
      */
     @Test
-    fun `logout should clear token from session manager`() = runTest {
+    fun `logout should clear session from session manager`() = runTest {
         // Act
         repository.logout()
 

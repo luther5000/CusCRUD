@@ -15,8 +15,9 @@ import org.junit.rules.TemporaryFolder
  * Suite de testes unitários para o [SessionManager].
  * 
  * Esta classe valida a persistência de dados sensíveis e de estado da aplicação utilizando 
- * o Jetpack DataStore. Garante que tokens de autenticação e o contexto do inventário ativo 
- * (ID e Nível de Acesso) sejam armazenados e recuperados de forma íntegra entre sessões.
+ * o Jetpack DataStore. Garante que tokens de autenticação, credenciais de usuário para 
+ * Silent Login e o contexto do inventário ativo (ID e Nível de Acesso) sejam armazenados 
+ * e recuperados de forma íntegra entre sessões.
  * 
  * Utiliza uma instância real do DataStore apontando para um arquivo temporário para
  * máxima fidelidade ao comportamento em runtime.
@@ -38,12 +39,12 @@ class SessionManagerTest {
 
     private val sessionManager = SessionManager(dataStore)
 
-    // region Bloco: Gestão de Token de Autenticação
+    // region Bloco: Gestão de Token de Autenticação e Credenciais
 
     /**
      * Objetivo: Persistir o token JWT após o login.
-     * Entradas: Uma string de token válida.
-     * Critério de Aceitação: O valor recuperado deve ser idêntico ao valor salvo.
+     * Entradas: Uma string de token válida ("test_token").
+     * Critério de Aceitação: O valor recuperado via fetchAuthToken deve ser idêntico ao valor salvo.
      */
     @Test
     fun `saveAuthToken should store token correctly`() = runTest {
@@ -56,18 +57,61 @@ class SessionManagerTest {
     }
 
     /**
-     * Objetivo: Remover as credenciais do dispositivo durante o logout.
-     * Entradas: Token previamente salvo.
-     * Critério de Aceitação: Após a limpeza, a recuperação do token deve retornar null.
+     * Objetivo: Garantir que o login e senha sejam salvos de forma segura para Silent Login.
+     * Entradas: Login "user@test.com" e senha "password123".
+     * Critério de Aceitação: fetchCredentials() deve retornar o Pair contendo exatamente os valores salvos.
      */
     @Test
-    fun `clearAuthToken should remove stored token`() = runTest {
+    fun `saveCredentials should store login and password correctly`() = runTest {
+        val login = "user@test.com"
+        val pass = "password123"
+
+        sessionManager.saveCredentials(login, pass)
+
+        val stored = sessionManager.fetchCredentials()
+        assertEquals(login, stored?.first)
+        assertEquals(pass, stored?.second)
+    }
+
+    /**
+     * Objetivo: Validar a recuperação de credenciais quando não há dados salvos.
+     * Entradas: DataStore vazio.
+     * Critério de Aceitação: fetchCredentials() deve retornar null.
+     */
+    @Test
+    fun `fetchCredentials should return null when no credentials stored`() = runTest {
+        val stored = sessionManager.fetchCredentials()
+        assertNull(stored)
+    }
+
+    /**
+     * Objetivo: Remover as credenciais e o token do dispositivo durante o logout.
+     * Entradas: Token e credenciais previamente salvos.
+     * Critério de Aceitação: Após clearAuthToken(), a recuperação do token e das credenciais deve retornar null.
+     */
+    @Test
+    fun `clearAuthToken should remove stored token and credentials`() = runTest {
         sessionManager.saveAuthToken("token_to_clear")
+        sessionManager.saveCredentials("user", "pass")
         
         sessionManager.clearAuthToken()
         
-        val storedToken = sessionManager.fetchAuthToken()
-        assertNull(storedToken)
+        assertNull(sessionManager.fetchAuthToken())
+        assertNull(sessionManager.fetchCredentials())
+    }
+
+    /**
+     * Objetivo: Limpar especificamente as credenciais de login.
+     * Entradas: Credenciais salvas.
+     * Critério de Aceitação: fetchCredentials() retorna null após a limpeza.
+     */
+    @Test
+    fun `clearCredentials should remove stored login and password`() = runTest {
+        sessionManager.saveCredentials("user", "pass")
+        
+        sessionManager.clearCredentials()
+        
+        assertNull(sessionManager.fetchCredentials())
     }
 
     // endregion
@@ -76,8 +120,8 @@ class SessionManagerTest {
 
     /**
      * Objetivo: Armazenar qual inventário o usuário está visualizando no momento.
-     * Entradas: UUID de um inventário.
-     * Critério de Aceitação: O ID recuperado deve ser persistente.
+     * Entradas: UUID de um inventário ("123-abc").
+     * Critério de Aceitação: O ID recuperado deve ser persistente e idêntico ao salvo.
      */
     @Test
     fun `saveActiveInventoryId should store ID correctly`() = runTest {
@@ -92,7 +136,7 @@ class SessionManagerTest {
     /**
      * Objetivo: Limpar a seleção de inventário.
      * Entradas: ID de inventário previamente selecionado.
-     * Critério de Aceitação: Retornar null ao buscar o ID ativo.
+     * Critério de Aceitação: Retornar null ao buscar o ID ativo após a limpeza.
      */
     @Test
     fun `clearActiveInventoryId should remove stored ID`() = runTest {
@@ -107,7 +151,7 @@ class SessionManagerTest {
     /**
      * Objetivo: Persistir o nível de permissão (Role) do usuário no inventário atual.
      * Entradas: Inteiro representando a Role (ex: 1 para EDITOR).
-     * Critério de Aceitação: O valor recuperado deve refletir a permissão correta para controle de UI.
+     * Critério de Aceitação: O valor recuperado deve refletir a permissão correta (-1 se não existir).
      */
     @Test
     fun `saveActiveInventoryRole should store role correctly`() = runTest {
