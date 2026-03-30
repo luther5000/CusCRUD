@@ -7,7 +7,7 @@ import java.util.Date
  * Essa classe é utilizada pelo backend e UI.
  */
 data class Produto(
-    val id: Int,
+    val id: Long,
     val tipo: Tipo,
     val marca: String,
     val dataValidade: Date,

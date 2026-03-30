@@ -1,54 +1,49 @@
 package com.cuscrud.domain.repository
 
 import com.cuscrud.domain.model.Tipo
-import kotlinx.coroutines.flow.Flow
+import com.cuscrud.domain.util.Result
 
 /**
  * Interface de repositório para operações relacionadas a [Tipo].
- *
- * ### Visão Geral de Coroutines e Flow:
- * Este repositório utiliza Kotlin Coroutines e Flow para gerenciar operações de dados assíncronas de forma eficiente.
- *
- * **Coroutines (funções `suspend`):**
- * - Usadas para operações únicas ("one-shot") como [insertTipo], [removeTipo] ou [editTipo].
- * - A palavra-chave `suspend` indica que a função pode pausar a sua execução sem bloquear a thread principal,
- *   esperando a conclusão de uma operação de banco de dados ou rede e, em seguida, retomando de onde parou.
- * - Isso evita que a interface do usuário (UI) trave ou apresente lentidão durante operações pesadas.
- *
- * **Flow (`Flow<T>`):**
- * - Usado para operações de fluxo ("stream") como [getAllTipos].
- * - Um `Flow` é um fluxo reativo que pode emitir múltiplos valores ao longo do tempo (como uma torneira aberta).
- * - Neste projeto, o banco de dados Room usa Flow para notificar automaticamente a UI sempre que os dados mudam.
- *   Se você inserir uma nova categoria, [getAllTipos] emitirá automaticamente uma lista nova e atualizada para todos os seus observadores.
- *
- * ### Operadores Úteis de Flow:
- * - `map`: Transforma cada lista emitida (ex: para ordenar os itens ou converter tipos).
- * - `filter`: Filtra as emissões para que a UI receba apenas o que é relevante.
- * - `combine`: Permite unir este fluxo com outro (ex: unir Tipos e Produtos) para gerar um novo resultado.
- * - `stateIn`: Converte o fluxo em um `StateFlow` dentro do ViewModel, garantindo que a UI tenha sempre o dado mais recente de forma segura.
- * - `collect`: O comando que efetivamente "abre a torneira" e começa a receber os dados para processá-los.
+ * Refatorada para suportar chamadas assíncronas (one-shot) via API REST conforme architecture.md.
  */
 interface TipoRepository {
     /**
-     * Retorna todos os tipos como um [Flow] de uma [List] de [Tipo].
-     * Esse fluxo emite novos valores sempre que os dados subjacentes mudam.
+     * Retorna uma lista paginada de tipos.
+     * @param limit Limite de itens por página.
+     * @param offset Deslocamento para paginação.
+     * @return [Result] contendo a lista de [Tipo] ou erro.
      */
-    fun getAllTipos(): Flow<List<Tipo>>
+    suspend fun getTipos(limit: Int = 20, offset: Int = 0): Result<List<Tipo>>
 
     /**
-     * Insere um novo [Tipo] no repositório.
+     * Busca um tipo específico pelo seu identificador.
+     * @param id Identificador único do tipo.
+     * @return [Result] contendo o [Tipo] encontrado ou erro.
      */
-    suspend fun insertTipo(tipo: Tipo)
+    suspend fun getTipoById(id: Long): Result<Tipo>
+
+    /**
+     * Insere um novo [Tipo].
+     * @param nome Nome do tipo.
+     * @param imagemBase64 Imagem opcional em formato Base64.
+     * @return [Result] contendo o [Tipo] criado ou erro.
+     */
+    suspend fun insertTipo(nome: String, imagemBase64: String? = null): Result<Tipo>
 
     /**
      * Remove um tipo por meio do seu [id].
-     * @return O [Tipo] removido ou null se nenhum tipo foi encontrado com aquele [id].
+     * @param id Identificador do tipo a ser removido.
+     * @return [Result] indicando sucesso ou erro (ex: 409 se houver produtos vinculados).
      */
-    suspend fun removeTipo(id: Long): Tipo?
+    suspend fun removeTipo(id: Long): Result<Unit>
 
     /**
-     * Atualiza um tipo existente identificado por um [id] com os dados do [tipo].
-     * @return O [Tipo] atualizado ou null se não houver tipo com o id especificado.
+     * Atualiza um tipo existente.
+     * @param id Identificador do tipo.
+     * @param nome Novo nome opcional.
+     * @param imagemBase64 Nova imagem opcional em formato Base64.
+     * @return [Result] contendo o [Tipo] atualizado ou erro.
      */
-    suspend fun editTipo(id: Long, tipo: Tipo): Tipo?
+    suspend fun editTipo(id: Long, nome: String? = null, imagemBase64: String? = null): Result<Tipo>
 }

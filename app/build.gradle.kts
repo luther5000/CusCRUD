@@ -14,12 +14,25 @@
  * limitations under the License.
  */
 
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
+}
+
+// Função para ler propriedades do arquivo local.properties
+fun getLocalProperty(key: String): String {
+    val properties = Properties()
+    val localPropertiesFile = project.rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        properties.load(localPropertiesFile.inputStream())
+    }
+    return properties.getProperty(key) ?: ""
 }
 
 android {
@@ -33,7 +46,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Corrigido para sintaxe KTS e Runner correto
         testInstrumentationRunner = "com.cuscrud.CustomTestRunner"
 
         javaCompileOptions {
@@ -49,6 +61,10 @@ android {
             isTestCoverageEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
             testProguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguardTest-rules.pro")
+            
+            // Lê do local.properties. Se não existir, usa um fallback seguro.
+            val baseUrl = getLocalProperty("API_BASE_URL").ifEmpty { "http://localhost/api/v1/" }
+            buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
         }
 
         getByName("release") {
@@ -56,36 +72,20 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
             testProguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguardTest-rules.pro")
+            
+            // Em release, você pode manter fixo ou ler de uma variável de ambiente do CI/CD
+            buildConfigField("String", "BASE_URL", "\"https://api.cuscrud.com/v1/\"")
         }
     }
 
     sourceSets {
         val sharedTestDir = "src/sharedTest/java"
         getByName("test") {
-            java.srcDirs(sharedTestDir)
+            java.srcDirs("src/test/java", sharedTestDir)
         }
         getByName("androidTest") {
-            java.srcDirs(sharedTestDir)
+            java.srcDirs("src/androidTest/java", sharedTestDir)
             assets.srcDirs("src/androidTest/assets")
-        }
-    }
-
-    // Always show the result of every unit test, even if it passes.
-    testOptions.unitTests {
-        isIncludeAndroidResources = true
-
-        all { test ->
-            with(test) {
-                testLogging {
-                    events = setOf(
-                        org.gradle.api.tasks.testing.logging.TestLogEvent.PASSED,
-                        org.gradle.api.tasks.testing.logging.TestLogEvent.SKIPPED,
-                        org.gradle.api.tasks.testing.logging.TestLogEvent.FAILED,
-                        org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_OUT,
-                        org.gradle.api.tasks.testing.logging.TestLogEvent.STANDARD_ERROR,
-                    )
-                }
-            }
         }
     }
 
@@ -110,26 +110,18 @@ android {
             excludes += "/META-INF/LICENSE-notice.md"
         }
     }
-
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        kotlinOptions {
-            freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
-            freeCompilerArgs += "-opt-in=kotlin.Experimental"
-        }
-    }
 }
 
-/*
- Dependency versions are defined in the top level build.gradle file. This helps keeping track of
- all versions in a single place. This improves readability and helps managing project complexity.
- */
 dependencies {
-
     // App dependencies
     implementation(libs.androidx.annotation)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.timber)
     implementation(libs.androidx.test.espresso.idling.resources)
+    implementation(libs.androidx.security.crypto)
+
+    // DataStore
+    implementation(libs.androidx.dataStore.preferences)
 
     // Architecture Components
     implementation(libs.room.runtime)
@@ -143,9 +135,14 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
 
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofitKotlinxSerializationJson)
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
+
     // Jetpack Compose
     val composeBom = platform(libs.androidx.compose.bom)
-
     implementation(libs.androidx.activity.compose)
     implementation(composeBom)
     implementation(libs.androidx.compose.foundation.core)
@@ -155,61 +152,16 @@ dependencies {
     implementation(libs.androidx.compose.material.iconsExtended)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.androidx.lifecycle.runtimeCompose)
-    implementation(libs.androidx.lifecycle.viewModelCompose)
     implementation(libs.accompanist.appcompat.theme)
     implementation(libs.accompanist.swiperefresh)
 
-    debugImplementation(composeBom)
-    debugImplementation(libs.androidx.compose.ui.tooling.core)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
-
-    // Dependencies for local unit tests
-    testImplementation(composeBom)
+    // Test dependencies
     testImplementation(libs.junit4)
-    testImplementation(libs.androidx.archcore.testing)
-    testImplementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.androidx.navigation.testing)
-    testImplementation(libs.androidx.test.espresso.core)
-    testImplementation(libs.androidx.test.espresso.contrib)
-    testImplementation(libs.androidx.test.espresso.intents)
-    testImplementation(libs.google.truth)
-    testImplementation(libs.androidx.compose.ui.test.junit)
+    testImplementation(libs.okhttp.mockwebserver)
     testImplementation("io.mockk:mockk:1.13.12")
-
-    // JVM tests - Hilt
-    testImplementation(libs.hilt.android.testing)
-    kspTest(libs.hilt.compiler)
-
-    // Dependencies for Android unit tests
-    androidTestImplementation(composeBom)
-    androidTestImplementation(libs.junit4)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.androidx.compose.ui.test.junit)
-
-    // AndroidX Test - JVM testing
-    testImplementation(libs.androidx.test.core.ktx)
-    testImplementation(libs.androidx.test.ext)
-    testImplementation(libs.androidx.test.rules)
-    testImplementation(project(":shared-test"))
-
-    // AndroidX Test - Instrumented testing
-    androidTestImplementation(libs.androidx.test.core.ktx)
-    androidTestImplementation(libs.androidx.test.ext)
-    androidTestImplementation(libs.androidx.test.rules)
-    androidTestImplementation(libs.room.testing)
-    androidTestImplementation(libs.androidx.archcore.testing)
-    androidTestImplementation(libs.androidx.navigation.testing)
-    androidTestImplementation(libs.androidx.test.espresso.core)
-    androidTestImplementation(libs.androidx.test.espresso.contrib)
-    androidTestImplementation(libs.androidx.test.espresso.intents)
-    androidTestImplementation(libs.androidx.test.espresso.idling.resources)
-    androidTestImplementation(libs.androidx.test.espresso.idling.concurrent)
-    androidTestImplementation("io.mockk:mockk-android:1.13.12")
-    androidTestImplementation(project(":shared-test"))
-
-    // AndroidX Test - Hilt testing
+    
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
+    androidTestImplementation(project(":shared-test"))
 }

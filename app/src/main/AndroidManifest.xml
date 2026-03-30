@@ -16,11 +16,14 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" >
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".InventarioApp"
         android:allowBackup="false"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CusCrud">
+        android:theme="@style/Theme.CusCrud"
+        android:usesCleartextTraffic="true">
         <activity
             android:name="com.cuscrud.MainActivity"
             android:windowSoftInputMode="adjustResize"

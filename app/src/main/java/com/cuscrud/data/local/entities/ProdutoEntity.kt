@@ -20,7 +20,7 @@ import androidx.room.PrimaryKey
     ]
 )
 data class ProdutoEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val tipo: Long,
     val marca: String,
     val dataValidade: Long, // miliseconds

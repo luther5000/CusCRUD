@@ -4,28 +4,23 @@ import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
 import com.cuscrud.domain.repository.ProdutoRepository
 import com.cuscrud.domain.util.Result
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
  * Interactor para visualizar o inventário geral agrupado por tipo.
- * Modificado para garantir que todas as categorias apareçam, mesmo as vazias.
+ * Refatorado para retornar [Result] (One-shot).
  */
 class GetInventarioAgrupadoInteractor @Inject constructor(
     private val repository: ProdutoRepository
 ) {
-    operator fun invoke(): Flow<Result<Map<Tipo, List<Produto>>>> {
-        return repository.getAllProdutos()
-            .map { produtos ->
-                val agrupado = produtos.groupBy { it.tipo }
-                Result.Success(agrupado) as Result<Map<Tipo, List<Produto>>>
+    suspend operator fun invoke(): Result<Map<Tipo, List<Produto>>> {
+        return when (val result = repository.getProdutos()) {
+            is Result.Success -> {
+                val agrupado = result.data.groupBy { it.tipo }
+                Result.Success(agrupado)
             }
-            .catch {
-                // Mensagem de erro conforme Cenário 4: "não foi possível carregá-lo"
-                emit(Result.Error(Exception("não foi possível carregá-lo")))
-
-            }
+            is Result.Error -> result
+            Result.Loading -> Result.Loading
+        }
     }
 }

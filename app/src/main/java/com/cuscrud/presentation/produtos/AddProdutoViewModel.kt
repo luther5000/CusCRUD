@@ -29,7 +29,7 @@ class AddProdutoViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val tipoId: Long? = savedStateHandle.get<Long>("tipoId")
-    private val produtoId: Int? = savedStateHandle.get<Int>("produtoId")
+    private val produtoId: Long? = savedStateHandle.get<Long>("produtoId")
 
     private val _uiState = MutableStateFlow(AddProdutoUiState())
     val uiState: StateFlow<AddProdutoUiState> = _uiState.asStateFlow()
@@ -37,8 +37,6 @@ class AddProdutoViewModel @Inject constructor(
     init {
         loadTipos()
 
-        // No Room, IDs auto-gerados costumam começar em 1. 
-        // Se produtoId for > 0, entramos em modo de edição.
         if (produtoId != null && produtoId > 0) {
             _uiState.update { it.copy(isEditMode = true) }
             loadProduto(produtoId)
@@ -47,55 +45,50 @@ class AddProdutoViewModel @Inject constructor(
 
     private fun loadTipos() {
         viewModelScope.launch {
-            getTiposInteractor().collect { result ->
-                when (result) {
-                    is Result.Success -> {
-                        val tipos = result.data
-                        _uiState.update { it.copy(tipos = tipos) }
-                        
-                        // Se houver um tipoId passado pela navegação, seleciona ele
-                        // apenas se não estivermos editando um produto existente
-                        if (tipoId != null && tipoId > 0L && !uiState.value.isEditMode) {
-                            val tipoPreSelecionado = tipos.find { it.id == tipoId }
-                            if (tipoPreSelecionado != null) {
-                                _uiState.update { it.copy(tipoSelecionado = tipoPreSelecionado) }
-                            }
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = getTiposInteractor()) {
+                is Result.Success -> {
+                    val tipos = result.data
+                    _uiState.update { it.copy(tipos = tipos, isLoading = false) }
+                    
+                    if (tipoId != null && tipoId > 0L && !uiState.value.isEditMode) {
+                        val tipoPreSelecionado = tipos.find { it.id == tipoId }
+                        if (tipoPreSelecionado != null) {
+                            _uiState.update { it.copy(tipoSelecionado = tipoPreSelecionado) }
                         }
                     }
-                    is Result.Error -> {
-                        _uiState.update { it.copy(userMessage = result.exception.message) }
-                    }
-                    is Result.Loading -> {}
                 }
+                is Result.Error -> {
+                    _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
+                }
+                is Result.Loading -> {}
             }
         }
     }
 
-    private fun loadProduto(id: Int) {
+    private fun loadProduto(id: Long) {
         viewModelScope.launch {
-            getProdutoDetalhesInteractor(id).collect { result ->
-                when (result) {
-                    is Result.Success -> {
-                        result.data?.let { produto ->
-                            _uiState.update {
-                                it.copy(
-                                    marca = produto.marca,
-                                    unidade = produto.unidade.toString(),
-                                    unidadeMedida = produto.unidadeMedida,
-                                    quantidade = produto.quantidade.toString(),
-                                    dataValidade = produto.dataValidade,
-                                    tipoSelecionado = produto.tipo,
-                                    isLoading = false
-                                )
-                            }
-                        }
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = getProdutoDetalhesInteractor(id)) {
+                is Result.Success -> {
+                    val produto = result.data
+                    _uiState.update {
+                        it.copy(
+                            marca = produto.marca,
+                            unidade = produto.unidade.toString(),
+                            unidadeMedida = produto.unidadeMedida,
+                            quantidade = produto.quantidade.toString(),
+                            dataValidade = produto.dataValidade,
+                            tipoSelecionado = produto.tipo,
+                            isLoading = false
+                        )
                     }
-                    is Result.Error -> {
-                        _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
-                    }
-                    is Result.Loading -> {
-                        _uiState.update { it.copy(isLoading = true) }
-                    }
+                }
+                is Result.Error -> {
+                    _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
+                }
+                Result.Loading -> {
+                    _uiState.update { it.copy(isLoading = true) }
                 }
             }
         }

@@ -7,13 +7,13 @@ import javax.inject.Inject
 
 /**
  * Interactor para editar um produto existente no inventário.
- * Implementa as regras de negócio de validação de campos e quantidade.
+ * Refatorado para lidar com o retorno [Result] do repositório.
  */
 class EditProdutoInteractor @Inject constructor(
     private val repository: ProdutoRepository
 ) {
-    suspend operator fun invoke(id: Int, produto: Produto): Result<Unit> {
-        // Validação de campos obrigatórios (Cenário: Campos obrigatórios deixados em branco)
+    suspend operator fun invoke(id: Long, produto: Produto): Result<Unit> {
+        // Validação de campos obrigatórios
         if (produto.marca.isBlank() || produto.unidadeMedida.isBlank()) {
             return Result.Error(IllegalArgumentException("é necessário preencher todos os campos obrigatórios para fazer a edição"))
         }
@@ -23,21 +23,15 @@ class EditProdutoInteractor @Inject constructor(
             return Result.Error(IllegalArgumentException("unidade inválida"))
         }
 
-        // Validação de quantidade (Cenário: Quantidade negativa)
+        // Validação de quantidade
         if (produto.quantidade < 0) {
             return Result.Error(IllegalArgumentException("é necessário informar uma quantidade positiva para fazer a adição"))
         }
 
-        return try {
-            val updated = repository.editProduto(id, produto)
-            if (updated != null) {
-                Result.Success(Unit)
-            } else {
-                Result.Error(Exception("não foi possível realizar a alteração"))
-            }
-        } catch (e: Exception) {
-            // Cenário: Erro interno do sistema
-            Result.Error(Exception("não foi possível realizar a alteração"))
+        return when (val result = repository.editProduto(id, produto)) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> result
+            Result.Loading -> Result.Loading
         }
     }
 }
