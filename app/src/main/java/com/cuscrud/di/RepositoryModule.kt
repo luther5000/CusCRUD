@@ -41,14 +41,4 @@ abstract class RepositoryModule {
     abstract fun bindTipoRepository(
         remoteTipoRepository: RemoteTipoRepository
     ): TipoRepository
-
-    /*
-     * Repositórios Offline (Room) desativados para migração 100% Cloud.
-     * 
-     * @Binds
-     * abstract fun bindOfflineProdutoRepository(impl: OfflineProdutoRepository): ProdutoRepository
-     * 
-     * @Binds
-     * abstract fun bindOfflineTipoRepository(impl: OfflineTipoRepository): TipoRepository
-     */
 }
