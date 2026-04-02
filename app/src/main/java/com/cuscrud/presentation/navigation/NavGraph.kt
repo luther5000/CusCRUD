@@ -8,6 +8,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.cuscrud.MainActivity
+import com.cuscrud.presentation.auth.LoginScreen
+import com.cuscrud.presentation.auth.LoginViewModel
+import com.cuscrud.presentation.auth.RegisterScreen
+import com.cuscrud.presentation.auth.RegisterViewModel
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesScreen
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesViewModel
 import com.cuscrud.presentation.inventario.InventarioScreen
@@ -24,8 +28,39 @@ fun CusCrudNavGraph(
 ) {
     NavHost(
         navController = navController,
-        startDestination = "inventario"
+        startDestination = "login"
     ) {
+        // Cenário 0: Login
+        composable("login") {
+            val viewModel = hiltViewModel<LoginViewModel>()
+            LoginScreen(
+                viewModel = viewModel,
+                onLoginSuccess = {
+                    navController.navigate("inventario") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onRegisterClick = {
+                    navController.navigate("register")
+                }
+            )
+        }
+
+        composable("register") {
+            val viewModel = hiltViewModel<RegisterViewModel>()
+            RegisterScreen(
+                viewModel = viewModel,
+                onRegisterSuccess = {
+                    navController.navigate("inventario") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
         // Cenário 1: Inventário Geral
         composable("inventario") {
             val viewModel = hiltViewModel<InventarioViewModel>()
