@@ -18,6 +18,8 @@ import com.cuscrud.presentation.ong.CreateOngScreen
 import com.cuscrud.presentation.ong.CreateOngViewModel
 import com.cuscrud.presentation.ong.SelectOngScreen
 import com.cuscrud.presentation.ong.SelectOngViewModel
+import com.cuscrud.presentation.ong.OngSettingsScreen
+import com.cuscrud.presentation.ong.OngSettingsViewModel
 import com.cuscrud.presentation.produtos.AddProdutoScreen
 import com.cuscrud.presentation.produtos.AddProdutoViewModel
 import com.cuscrud.presentation.produtos.ProdutosPorTipoScreen
@@ -69,11 +71,19 @@ fun CusCrudNavGraph(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStack() },
                 onOngCreated = {
-                    // Após criar, a ONG já é definida como ativa pelo repositório
                     navController.navigate("inventario") {
                         popUpTo("select_ong") { inclusive = true }
                     }
                 }
+            )
+        }
+
+        // Cenário: Definições da ONG
+        composable("ong_settings") {
+            val viewModel = hiltViewModel<OngSettingsViewModel>()
+            OngSettingsScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() }
             )
         }
 
@@ -92,6 +102,9 @@ fun CusCrudNavGraph(
                 onAddSampleData = { mainActivity.viewModel.addSampleProduct() },
                 onChangeOngClick = {
                     navController.navigate("select_ong")
+                },
+                onSettingsClick = {
+                    navController.navigate("ong_settings")
                 }
             )
         }

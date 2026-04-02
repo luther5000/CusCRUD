@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,7 +28,8 @@ fun InventarioScreen(
     onTipoSelected: (Long) -> Unit,
     onAddProdutoClick: () -> Unit,
     onAddSampleData: () -> Unit,
-    onChangeOngClick: () -> Unit
+    onChangeOngClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -56,6 +58,13 @@ fun InventarioScreen(
                         Icon(
                             imageVector = Icons.Default.Business,
                             contentDescription = "Trocar ONG"
+                        )
+                    }
+                    // Botão para definições da ONG
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Configurações da ONG"
                         )
                     }
                 },
