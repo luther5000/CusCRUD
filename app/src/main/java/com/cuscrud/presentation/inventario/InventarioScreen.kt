@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,7 +26,8 @@ fun InventarioScreen(
     navController: NavController,
     onTipoSelected: (Long) -> Unit,
     onAddProdutoClick: () -> Unit,
-    onAddSampleData: () -> Unit
+    onAddSampleData: () -> Unit,
+    onChangeOngClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -48,6 +50,15 @@ fun InventarioScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Inventário Geral") },
+                actions = {
+                    // Botão para alternar entre ONGs (Contexto)
+                    IconButton(onClick = onChangeOngClick) {
+                        Icon(
+                            imageVector = Icons.Default.Business,
+                            contentDescription = "Trocar ONG"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -79,6 +90,9 @@ fun InventarioScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                        Button(onClick = { viewModel.fetchInventario() }) {
+                            Text("Tentar Novamente")
+                        }
                     }
                 }
                 is InventarioUiState.Success -> {
@@ -103,7 +117,7 @@ fun InventarioList(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Você não possui produtos salvos, adicione um clicando no botão '+'.",
+                text = "Você não possui produtos salvos nesta ONG.\nAdicione um clicando no botão '+'.",
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
@@ -115,14 +129,13 @@ fun InventarioList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             inventario.forEach { (tipo, produtos) ->
-                //Soma de (unidade * quantidade) para obter o peso/volume total
-                val totalEstoque = produtos.sumOf { it.unidade * it.quantidade }
+                val totalQuantidade = produtos.sumOf { it.quantidade }
                 val unidadeMedida = produtos.firstOrNull()?.unidadeMedida ?: ""
 
                 item {
                     TipoSummaryItem(
                         tipo = tipo,
-                        totalEstoque = totalEstoque,
+                        totalQuantidade = totalQuantidade,
                         unidadeMedida = unidadeMedida,
                         quantidadeLotes = produtos.size
                     ) {
@@ -137,7 +150,7 @@ fun InventarioList(
 @Composable
 fun TipoSummaryItem(
     tipo: Tipo,
-    totalEstoque: Long,
+    totalQuantidade: Long,
     unidadeMedida: String,
     quantidadeLotes: Int,
     onClick: () -> Unit
@@ -162,12 +175,12 @@ fun TipoSummaryItem(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Total em estoque: $totalEstoque $unidadeMedida",
+                    text = "Total em estoque: $totalQuantidade $unidadeMedida",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "$quantidadeLotes lote(s) cadastrado(s)",
+                    text = "$quantidadeLotes produtos(s) cadastrado(s)",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

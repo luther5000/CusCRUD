@@ -10,12 +10,12 @@ import androidx.navigation.navArgument
 import com.cuscrud.MainActivity
 import com.cuscrud.presentation.auth.LoginScreen
 import com.cuscrud.presentation.auth.LoginViewModel
-import com.cuscrud.presentation.auth.RegisterScreen
-import com.cuscrud.presentation.auth.RegisterViewModel
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesScreen
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesViewModel
 import com.cuscrud.presentation.inventario.InventarioScreen
 import com.cuscrud.presentation.inventario.InventarioViewModel
+import com.cuscrud.presentation.ong.SelectOngScreen
+import com.cuscrud.presentation.ong.SelectOngViewModel
 import com.cuscrud.presentation.produtos.AddProdutoScreen
 import com.cuscrud.presentation.produtos.AddProdutoViewModel
 import com.cuscrud.presentation.produtos.ProdutosPorTipoScreen
@@ -30,38 +30,34 @@ fun CusCrudNavGraph(
         navController = navController,
         startDestination = "login"
     ) {
-        // Cenário 0: Login
+        // Cenário: Login
         composable("login") {
             val viewModel = hiltViewModel<LoginViewModel>()
             LoginScreen(
                 viewModel = viewModel,
                 onLoginSuccess = {
-                    navController.navigate("inventario") {
+                    navController.navigate("select_ong") {
                         popUpTo("login") { inclusive = true }
                     }
                 },
-                onRegisterClick = {
-                    navController.navigate("register")
-                }
+                onRegisterClick = { /* Redirecionar para Registro se existir */ }
             )
         }
 
-        composable("register") {
-            val viewModel = hiltViewModel<RegisterViewModel>()
-            RegisterScreen(
+        // Cenário: Seleção de ONG (Contexto ativo)
+        composable("select_ong") {
+            val viewModel = hiltViewModel<SelectOngViewModel>()
+            SelectOngScreen(
                 viewModel = viewModel,
-                onRegisterSuccess = {
+                onOngSelected = {
                     navController.navigate("inventario") {
-                        popUpTo("login") { inclusive = true }
+                        popUpTo("select_ong") { inclusive = true }
                     }
-                },
-                onBackClick = {
-                    navController.popBackStack()
                 }
             )
         }
 
-        // Cenário 1: Inventário Geral
+        // Cenário 1: Inventário Geral (da ONG selecionada)
         composable("inventario") {
             val viewModel = hiltViewModel<InventarioViewModel>()
             InventarioScreen(
@@ -73,7 +69,10 @@ fun CusCrudNavGraph(
                 onAddProdutoClick = {
                     navController.navigate("add_produto")
                 },
-                onAddSampleData = { mainActivity.viewModel.addSampleProduct() }
+                onAddSampleData = { mainActivity.viewModel.addSampleProduct() },
+                onChangeOngClick = {
+                    navController.navigate("select_ong")
+                }
             )
         }
 
@@ -114,15 +113,12 @@ fun CusCrudNavGraph(
                 viewModel = viewModel,
                 onBackClick = { message ->
                     if (message != null) {
-                        // Se a mensagem contém "editado", voltamos para o inventário
                         if (message.contains("editado", ignoreCase = true)) {
-                            // Entrega a mensagem especificamente para a entrada do Inventário
                             navController.getBackStackEntry("inventario")
                                 .savedStateHandle
                                 .set("success_message", message)
                             navController.popBackStack("inventario", inclusive = false)
                         } else {
-                            // Se for adição, volta para a tela anterior imediata (Categorias ou Inventário)
                             navController.previousBackStackEntry
                                 ?.savedStateHandle
                                 ?.set("success_message", message)
