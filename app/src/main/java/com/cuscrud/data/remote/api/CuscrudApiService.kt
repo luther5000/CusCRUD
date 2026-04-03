@@ -26,7 +26,7 @@ interface CuscrudApiService {
     suspend fun register(@Body request: RegisterRequest): Response<RegisterResponse>
 
     @GET("auth/validate")
-    suspend fun validateToken(): Response<UserDto>
+    suspend fun validateToken(): Response<ValidateTokenResponse>
 
     // endregion
 
@@ -41,13 +41,13 @@ interface CuscrudApiService {
     @POST("inventories")
     suspend fun createInventory(
         @Body request: CreateInventoryRequest
-    ): Response<InventoryDto>
+    ): Response<InventoryResponse>
 
     @PATCH("inventories/{inv_id}")
     suspend fun updateInventory(
         @Path("inv_id") invId: String,
         @Body request: UpdateInventoryRequest
-    ): Response<InventoryDto>
+    ): Response<InventoryResponse>
 
     @DELETE("inventories/{inv_id}")
     suspend fun deleteInventory(
@@ -69,14 +69,14 @@ interface CuscrudApiService {
     suspend fun addInventoryUser(
         @Path("inv_id") invId: String,
         @Body request: AddUserAccessRequest
-    ): Response<UserAccessDto>
+    ): Response<UserAccessResponse>
 
     @PATCH("inventories/{inv_id}/users/{user_id}")
     suspend fun updateInventoryUserRole(
         @Path("inv_id") invId: String,
         @Path("user_id") userId: String,
         @Body request: UpdateUserAccessRequest
-    ): Response<UserAccessDto>
+    ): Response<UserAccessResponse>
 
     @DELETE("inventories/{inv_id}/users/{user_id}")
     suspend fun removeInventoryUser(
@@ -145,7 +145,21 @@ interface CuscrudApiService {
         @Path("inv_id") invId: String,
         @Query("limit") limit: Int = 20,
         @Query("offset") offset: Int = 0
-    ): Response<List<ProdutoResponseDto>>
+    ): Response<ProdutoListResponse>
+
+    @GET("inventories/{inv_id}/products/{product_id}")
+    suspend fun getProductById(
+        @Path("inv_id") invId: String,
+        @Path("product_id") productId: Long
+    ): Response<ProdutoResponseDto>
+
+    @GET("inventories/{inv_id}/types/{type_id}/products")
+    suspend fun getProductsByType(
+        @Path("inv_id") invId: String,
+        @Path("type_id") typeId: Long,
+        @Query("limit") limit: Int = 20,
+        @Query("offset") offset: Int = 0
+    ): Response<ProdutoListResponse>
 
     @POST("inventories/{inv_id}/products")
     suspend fun addProduct(

@@ -59,7 +59,8 @@ class AccessRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.addInventoryUser(invId, AddUserAccessRequest(login, role.value))
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                // Desembrulha o UserAccessDto de dentro do UserAccessResponse
+                Result.Success(response.body()!!.user)
             } else {
                 handleError(response)
             }
@@ -78,7 +79,8 @@ class AccessRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.updateInventoryUserRole(invId, userId, UpdateUserAccessRequest(role.value))
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                // Desembrulha o UserAccessDto de dentro do UserAccessResponse
+                Result.Success(response.body()!!.user)
             } else {
                 handleError(response)
             }
@@ -115,7 +117,7 @@ class AccessRepositoryImpl @Inject constructor(
             val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
             Result.Error(Exception(errorResponse.error.message))
         } catch (e: Exception) {
-            Timber.e(e, "Erro ao processar corpo de erro: ${'$'}errorBody")
+            Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
             val friendlyMessage = when (response.code()) {
                 400 -> "Dados inválidos. Verifique as informações preenchidas."
                 401 -> "Sessão expirada. Por favor, faça login novamente."
@@ -123,7 +125,7 @@ class AccessRepositoryImpl @Inject constructor(
                 404 -> "O recurso solicitado não foi encontrado."
                 409 -> "Conflito de dados ou operação não permitida."
                 500 -> "Erro interno no servidor. Tente novamente em instantes."
-                else -> "Ocorreu um erro inesperado no servidor (${'$'}{response.code()})."
+                else -> "Ocorreu um erro inesperado no servidor (${response.code()})."
             }
             Result.Error(Exception(friendlyMessage))
         }

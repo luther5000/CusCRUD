@@ -71,9 +71,14 @@ class InventoryRepositoryImpl @Inject constructor(
                 
                 _activeInventoryId.value?.let { activeId ->
                     inventories.find { it.invId == activeId }?.let { activeInv ->
-                        val newRole = Role.fromInt(activeInv.role)
-                        if (newRole != _activeInventoryRole.value) {
-                            newRole?.let { sessionManager.saveActiveInventoryRole(it.value) }
+                        // Correção do erro de Argument type mismatch:
+                        // activeInv.role pode ser nulo no DTO, mas o enum Role.fromInt espera Int.
+                        // Usamos o operador elvis para prover um valor padrão ou tratamos a nulidade.
+                        activeInv.role?.let { roleInt ->
+                            val newRole = Role.fromInt(roleInt)
+                            if (newRole != _activeInventoryRole.value) {
+                                newRole?.let { sessionManager.saveActiveInventoryRole(it.value) }
+                            }
                         }
                     }
                 }
@@ -94,7 +99,7 @@ class InventoryRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.createInventory(CreateInventoryRequest(name))
             if (response.isSuccessful && response.body() != null) {
-                val inventory = response.body()!!
+                val inventory = response.body()!!.inventory
                 setActiveInventory(inventory.invId, Role.OWNER)
                 Result.Success(inventory)
             } else {
@@ -111,7 +116,7 @@ class InventoryRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.updateInventory(invId, UpdateInventoryRequest(name))
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                Result.Success(response.body()!!.inventory)
             } else {
                 handleError(response)
             }

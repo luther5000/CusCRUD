@@ -1,4 +1,3 @@
-
 package com.cuscrud.data.remote.dto
 
 import kotlinx.serialization.SerialName
@@ -22,16 +21,25 @@ import kotlinx.serialization.Serializable
 data class InventoryDto(
     @SerialName("inv_id") val invId: String,
     @SerialName("inv_name") val invName: String,
-    val role: Int
+    val role: Int? = null
 )
 
 /**
- * Resposta para a listagem de inventários.
+ * Resposta para a listagem de inventários (Seção 5.2.4).
  */
 @Serializable
 data class InventoryListResponse(
     val inventories: List<InventoryDto>,
     @SerialName("next_page") val nextPage: String? = null
+)
+
+/**
+ * Resposta para criação e edição de inventário (Seções 5.2.1 e 5.2.2).
+ */
+@Serializable
+data class InventoryResponse(
+    val inventory: InventoryDto,
+    val role: Int
 )
 
 /**
