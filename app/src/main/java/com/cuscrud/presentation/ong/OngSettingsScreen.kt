@@ -1,11 +1,10 @@
 package com.cuscrud.presentation.ong
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.repository.canManageInventory
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,28 +32,73 @@ fun OngSettingsScreen(
         }
     }
 
-    // Redireciona ao selecionar ONG ou remover com sucesso
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             onDeleteSuccess()
         }
     }
 
+    // Diálogo de Remoção de ONG
     if (uiState.showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { viewModel.onCancelDelete() },
             title = { Text("Remover ONG") },
-            text = { Text("Tem certeza que deseja remover permanentemente a ONG '${uiState.ongName}' e todo o seu inventário? Esta ação não pode ser desfeita.") },
+            text = { Text("Tem certeza que deseja remover permanentemente a ONG '${uiState.ongName}'? Esta ação não pode ser desfeita.") },
             confirmButton = {
                 TextButton(
                     onClick = { viewModel.onConfirmDelete() },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Remover") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onCancelDelete() }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    // Diálogo de Adição de Colaborador
+    if (uiState.showAddColaboradorDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissAddColaborador() },
+            title = { Text("Adicionar Colaborador") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.addColaboradorEmail,
+                        onValueChange = { viewModel.onAddColaboradorEmailChanged(it) },
+                        label = { Text("E-mail do usuário") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = !uiState.isAddingColaborador
+                    )
+                    Text("Papel de Acesso:", style = MaterialTheme.typography.labelMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = uiState.addColaboradorRole == Role.EDITOR,
+                            onClick = { viewModel.onAddColaboradorRoleChanged(Role.EDITOR) },
+                            enabled = !uiState.isAddingColaborador
+                        )
+                        Text("Editor")
+                        Spacer(Modifier.width(16.dp))
+                        RadioButton(
+                            selected = uiState.addColaboradorRole == Role.READER,
+                            onClick = { viewModel.onAddColaboradorRoleChanged(Role.READER) },
+                            enabled = !uiState.isAddingColaborador
+                        )
+                        Text("Visualizador")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.onConfirmAddColaborador() },
+                    enabled = !uiState.isAddingColaborador && uiState.addColaboradorEmail.isNotBlank()
                 ) {
-                    Text("Remover")
+                    if (uiState.isAddingColaborador) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)                    else Text("Adicionar")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.onCancelDelete() }) {
+                TextButton(onClick = { viewModel.onDismissAddColaborador() }, enabled = !uiState.isAddingColaborador) {
                     Text("Cancelar")
                 }
             }
@@ -65,20 +110,12 @@ fun OngSettingsScreen(
             TopAppBar(
                 title = { Text("Definições da ONG") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Voltar") }
                 },
                 actions = {
                     if (uiState.userRole.canManageInventory()) {
-                        if (uiState.isEditing) {
-                            IconButton(onClick = { viewModel.onSaveClick() }, enabled = !uiState.isLoading) {
-                                Icon(Icons.Default.Save, contentDescription = "Salvar")
-                            }
-                        } else {
-                            IconButton(onClick = { viewModel.onToggleEdit() }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Editar")
-                            }
+                        IconButton(onClick = { viewModel.onToggleEdit() }) {
+                            Icon(if (uiState.isEditing) Icons.Default.Close else Icons.Default.Edit, "Editar")
                         }
                     }
                 }
@@ -86,95 +123,80 @@ fun OngSettingsScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Box(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (uiState.isLoading && !uiState.isEditing && !uiState.showDeleteConfirmation) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Informações Gerais",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+            item {
+                Text("Informações Gerais", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                if (uiState.isEditing) {
+                    OutlinedTextField(
+                        value = uiState.editName,
+                        onValueChange = { viewModel.onEditNameChanged(it) },
+                        label = { Text("Nome da ONG") },
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        trailingIcon = {
+                            IconButton(onClick = { viewModel.onSaveClick() }) {
+                                Icon(Icons.Default.Check, "Salvar", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
                     )
+                } else {
+                    InfoRow(label = "Nome:", value = uiState.ongName)
+                    InfoRow(label = "Seu Papel:", value = uiState.userRole?.name ?: "N/A")
+                }
+            }
 
-                    if (uiState.isEditing) {
-                        OutlinedTextField(
-                            value = uiState.editName,
-                            onValueChange = { viewModel.onEditNameChanged(it) },
-                            label = { Text("Nome da ONG") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            enabled = !uiState.isLoading
-                        )
-                    } else {
-                        InfoRow(label = "Nome:", value = uiState.ongName)
-                        InfoRow(label = "ID da Organização:", value = uiState.ongId)
-                        InfoRow(label = "Seu Papel:", value = uiState.userRole?.name ?: "N/A")
-                    }
-
-                    if (!uiState.userRole.canManageInventory()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Surface(
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Text(
-                                text = "Apenas o dono pode editar as informações desta ONG.",
-                                modifier = Modifier.padding(8.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
+            // Seção de Colaboradores (Apenas para Dono)
+            if (uiState.userRole.canManageInventory()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Equipe", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        TextButton(onClick = { viewModel.onShowAddColaboradorClick() }) {
+                            Icon(Icons.Default.PersonAdd, null)
+                            Spacer(Modifier.width(4.dp))
+                            Text("Adicionar")
                         }
                     }
-                    
-                    if (uiState.isEditing) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { viewModel.onToggleEdit() },
-                                modifier = Modifier.weight(1f),
-                                enabled = !uiState.isLoading
-                            ) {
-                                Text("Cancelar")
+                }
+
+                if (uiState.isLoadingColaboradores) {
+                    item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
+                }
+
+                items(uiState.colaboradores) { user ->
+                    ListItem(
+                        headlineContent = { Text(user.name) },
+                        supportingContent = { Text(user.login) },
+                        trailingContent = {
+                            Badge(containerColor = if (user.role == Role.OWNER.value) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary) {
+                                Text(Role.fromInt(user.role)?.name ?: "N/A")
                             }
-                            Button(
-                                onClick = { viewModel.onSaveClick() },
-                                modifier = Modifier.weight(1f),
-                                enabled = !uiState.isLoading
-                            ) {
-                                if (uiState.isLoading) {
-                                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                } else {
-                                    Text("Salvar")
-                                }
-                            }
-                        }
-                    }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                    HorizontalDivider(thickness = 0.5.dp)
+                }
+            }
 
-                    // Botão de remoção (Apenas para o Dono)
-                    if (uiState.userRole.canManageInventory() && !uiState.isEditing) {
-                        Spacer(modifier = Modifier.weight(1f))
-                        OutlinedButton(
-                            onClick = { viewModel.onDeleteClick() },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.error))
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Remover Organização")
-                        }
+            item {
+                if (uiState.userRole.canManageInventory() && !uiState.isEditing) {
+                    Spacer(Modifier.height(32.dp))
+                    OutlinedButton(
+                        onClick = { viewModel.onDeleteClick() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Remover Organização")
                     }
                 }
             }
@@ -184,9 +206,8 @@ fun OngSettingsScreen(
 
 @Composable
 fun InfoRow(label: String, value: String) {
-    Column {
-        Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
         Text(text = value, style = MaterialTheme.typography.bodyLarge)
-        HorizontalDivider(modifier = Modifier.padding(top = 4.dp), thickness = 0.5.dp)
     }
 }

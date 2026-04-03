@@ -1,5 +1,6 @@
 package com.cuscrud.presentation.ong
 
+import com.cuscrud.data.remote.dto.UserAccessDto
 import com.cuscrud.domain.model.Role
 
 /**
@@ -14,5 +15,13 @@ data class OngSettingsUiState(
     val editName: String = "",
     val userMessage: String? = null,
     val isSuccess: Boolean = false,
-    val showDeleteConfirmation: Boolean = false
+    val showDeleteConfirmation: Boolean = false,
+    
+    // Gestão de Colaboradores
+    val colaboradores: List<UserAccessDto> = emptyList(),
+    val isLoadingColaboradores: Boolean = false,
+    val showAddColaboradorDialog: Boolean = false,
+    val addColaboradorEmail: String = "",
+    val addColaboradorRole: Role = Role.EDITOR,
+    val isAddingColaborador: Boolean = false
 )

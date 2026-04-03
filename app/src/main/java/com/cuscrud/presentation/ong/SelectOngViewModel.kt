@@ -62,7 +62,11 @@ class SelectOngViewModel @Inject constructor(
      * Define uma ONG específica como ativa e sinaliza para a navegação prosseguir para o inventário.
      */
     fun onOngSelected(ong: InventoryDto) {
-        val role = Role.fromInt(ong.role)
+        // Correção do erro de Argument type mismatch:
+        // ong.role é Int? e Role.fromInt espera Int. Usamos o operador elvis com um valor inválido (-1)
+        // ou let para tratar a nulidade de forma segura.
+        val role = ong.role?.let { Role.fromInt(it) }
+        
         if (role == null) {
             _uiState.update { it.copy(userMessage = "Seu nível de acesso nesta ONG é inválido.") }
             return

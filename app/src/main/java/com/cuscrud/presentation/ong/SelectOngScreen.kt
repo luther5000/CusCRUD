@@ -133,7 +133,7 @@ fun OngItem(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Nível de acesso: ${Role.fromInt(ong.role)?.name ?: "Desconhecido"}",
+                    text = "Nível de acesso: ${ong.role?.let { Role.fromInt(it) }?.name ?: "Desconhecido"}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
