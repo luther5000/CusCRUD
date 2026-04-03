@@ -6,12 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.cuscrud.domain.interactor.GetProdutosPorTipoInteractor
 import com.cuscrud.domain.interactor.RemoveProdutoInteractor
 import com.cuscrud.domain.model.Produto
+import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,6 +17,7 @@ import javax.inject.Inject
 class ProdutosPorTipoViewModel @Inject constructor(
     private val getProdutosPorTipoInteractor: GetProdutosPorTipoInteractor,
     private val removeProdutoInteractor: RemoveProdutoInteractor,
+    private val inventoryRepository: InventoryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -28,7 +27,16 @@ class ProdutosPorTipoViewModel @Inject constructor(
     val uiState: StateFlow<ProdutosPorTipoUiState> = _uiState.asStateFlow()
 
     init {
+        observeUserRole()
         loadProdutos()
+    }
+
+    private fun observeUserRole() {
+        inventoryRepository.activeInventoryRole
+            .onEach { role ->
+                _uiState.update { it.copy(userRole = role) }
+            }
+            .launchIn(viewModelScope)
     }
 
     /**
@@ -44,12 +52,12 @@ class ProdutosPorTipoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false, 
-                            errorMessage = result.exception.message ?: "Erro ao carregar produtos."
-                        ) 
+                    val message = if (result.exception is java.io.IOException) {
+                        "Falha de conexão. Verifique sua internet."
+                    } else {
+                        result.exception.message ?: "Erro ao carregar produtos."
                     }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = message) }
                 }
                 Result.Loading -> {
                     _uiState.update { it.copy(isLoading = true) }
@@ -79,16 +87,15 @@ class ProdutosPorTipoViewModel @Inject constructor(
                             mensagemSucesso = "${produtoParaRemover.marca} removido com sucesso"
                         ) 
                     }
-                    // Refresh manual da lista após sucesso
                     loadProdutos()
                 }
                 is Result.Error -> {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false, 
-                            errorMessage = result.exception.message ?: "Erro ao excluir produto."
-                        ) 
+                    val message = if (result.exception is java.io.IOException) {
+                        "Falha de conexão ao remover produto."
+                    } else {
+                        result.exception.message ?: "Erro ao excluir produto."
                     }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = message) }
                 }
                 Result.Loading -> {}
             }

@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.cuscrud.domain.repository.canEditProducts
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -22,7 +23,6 @@ import java.util.*
 @Composable
 fun AddProdutoScreen(
     viewModel: AddProdutoViewModel,
-    // Alterado para receber a mensagem de sucesso ou null
     onBackClick: (String?) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -31,15 +31,16 @@ fun AddProdutoScreen(
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     var showExitConfirmation by remember { mutableStateOf(false) }
+    
+    // RBAC: Verifica se o usuário tem permissão para editar/adicionar
+    val canEdit = uiState.userRole.canEditProducts()
 
-    // Trata o botão de voltar do sistema
     BackHandler {
-        showExitConfirmation = true
+        if (canEdit) showExitConfirmation = true else onBackClick(null)
     }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
-            // Só exibe o snackbar localmente se NÃO for sucesso (evita que a mensagem suma rápido)
             if (!uiState.isProductSaved) {
                 snackbarHostState.showSnackbar(it)
                 viewModel.snackbarMessageShown()
@@ -49,7 +50,6 @@ fun AddProdutoScreen(
 
     LaunchedEffect(uiState.isProductSaved) {
         if (uiState.isProductSaved) {
-            // Navega de volta enviando a mensagem para a tela anterior
             onBackClick(uiState.userMessage)
         }
     }
@@ -63,14 +63,10 @@ fun AddProdutoScreen(
                 TextButton(onClick = {
                     showExitConfirmation = false
                     onBackClick(null)
-                }) {
-                    Text("Confirmar")
-                }
+                }) { Text("Confirmar") }
             },
             dismissButton = {
-                TextButton(onClick = { showExitConfirmation = false }) {
-                    Text("Continuar editando")
-                }
+                TextButton(onClick = { showExitConfirmation = false }) { Text("Continuar editando") }
             }
         )
     }
@@ -80,7 +76,7 @@ fun AddProdutoScreen(
             TopAppBar(
                 title = { Text(if (uiState.isEditMode) "Editar Produto" else "Adicionar Produto") },
                 navigationIcon = {
-                    IconButton(onClick = { showExitConfirmation = true }) {
+                    IconButton(onClick = { if (canEdit) showExitConfirmation = true else onBackClick(null) }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
                     }
                 }
@@ -88,162 +84,164 @@ fun AddProdutoScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Seleção de Tipo
-            var expandedTipo by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expandedTipo,
-                onExpandedChange = { expandedTipo = !expandedTipo }
-            ) {
-                OutlinedTextField(
-                    value = uiState.tipoSelecionado?.nome ?: "Selecione o Tipo",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Tipo") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipo) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor()
-                )
-                ExposedDropdownMenu(
-                    expanded = expandedTipo,
-                    onDismissRequest = { expandedTipo = false }
-                ) {
-                    uiState.tipos.forEach { tipo ->
-                        DropdownMenuItem(
-                            text = { Text(tipo.nome) },
-                            onClick = {
-                                viewModel.onTipoSelected(tipo)
-                                expandedTipo = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            OutlinedTextField(
-                value = uiState.marca,
-                onValueChange = { viewModel.onMarcaChanged(it) },
-                label = { Text("Marca/Nome") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Data de Validade
-            Box(
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val calendar = Calendar.getInstance()
-                        calendar.time = uiState.dataValidade
-                        DatePickerDialog(
-                            context,
-                            { _, year, month, dayOfMonth ->
-                                val selectedDate = Calendar.getInstance()
-                                selectedDate.set(year, month, dayOfMonth)
-                                viewModel.onDataValidadeChanged(selectedDate.time)
-                            },
-                            calendar.get(Calendar.YEAR),
-                            calendar.get(Calendar.MONTH),
-                            calendar.get(Calendar.DAY_OF_MONTH)
-                        ).show()
-                    }
+                    .padding(16.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                OutlinedTextField(
-                    value = dateFormatter.format(uiState.dataValidade),
-                    onValueChange = {},
-                    readOnly = true,
-                    enabled = false,
-                    label = { Text("Data de Validade") },
-                    trailingIcon = {
-                        Icon(Icons.Default.CalendarToday, contentDescription = "Selecionar Data")
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                        disabledBorderColor = MaterialTheme.colorScheme.outline,
-                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        disabledPlaceholderColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = uiState.unidade,
-                    onValueChange = { viewModel.onUnidadeChanged(it) },
-                    label = { Text("Valor Unidade") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Seleção de Unidade de Medida
-                var expandedMedida by remember { mutableStateOf(false) }
+                // Seleção de Tipo
+                var expandedTipo by remember { mutableStateOf(false) }
                 ExposedDropdownMenuBox(
-                    expanded = expandedMedida,
-                    onExpandedChange = { expandedMedida = !expandedMedida },
-                    modifier = Modifier.weight(1f)
+                    expanded = expandedTipo && canEdit,
+                    onExpandedChange = { if (canEdit) expandedTipo = !expandedTipo }
                 ) {
                     OutlinedTextField(
-                        value = uiState.unidadeMedida,
+                        value = uiState.tipoSelecionado?.nome ?: "Selecione o Tipo",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Medida") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMedida) },
+                        enabled = canEdit,
+                        label = { Text("Tipo") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipo) },
                         modifier = Modifier.fillMaxWidth().menuAnchor()
                     )
                     ExposedDropdownMenu(
-                        expanded = expandedMedida,
-                        onDismissRequest = { expandedMedida = false }
+                        expanded = expandedTipo && canEdit,
+                        onDismissRequest = { expandedTipo = false }
                     ) {
-                        uiState.unidadesMedida.forEach { medida ->
+                        uiState.tipos.forEach { tipo ->
                             DropdownMenuItem(
-                                text = { Text(medida) },
+                                text = { Text(tipo.nome) },
                                 onClick = {
-                                    viewModel.onUnidadeMedidaChanged(medida)
-                                    expandedMedida = false
+                                    viewModel.onTipoSelected(tipo)
+                                    expandedTipo = false
                                 }
                             )
                         }
                     }
                 }
-            }
 
-            OutlinedTextField(
-                value = uiState.quantidade,
-                onValueChange = { viewModel.onQuantidadeChanged(it) },
-                label = { Text("Quantidade no Inventário") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth()
-            )
+                OutlinedTextField(
+                    value = uiState.marca,
+                    onValueChange = { viewModel.onMarcaChanged(it) },
+                    label = { Text("Marca/Nome") },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canEdit
+                )
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { showExitConfirmation = true },
-                    modifier = Modifier.weight(1f)
+                // Data de Validade
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = canEdit) {
+                            val calendar = Calendar.getInstance()
+                            calendar.time = uiState.dataValidade
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, dayOfMonth ->
+                                    val selectedDate = Calendar.getInstance()
+                                    selectedDate.set(year, month, dayOfMonth)
+                                    viewModel.onDataValidadeChanged(selectedDate.time)
+                                },
+                                calendar.get(Calendar.YEAR),
+                                calendar.get(Calendar.MONTH),
+                                calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        }
                 ) {
-                    Text("Cancelar")
+                    OutlinedTextField(
+                        value = dateFormatter.format(uiState.dataValidade),
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,
+                        label = { Text("Data de Validade") },
+                        trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
                 }
-                Button(
-                    onClick = { viewModel.onSaveProduto() },
-                    modifier = Modifier.weight(1f),
-                    enabled = !uiState.isLoading
-                ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    } else {
-                        Text(if (uiState.isEditMode) "Confirmar" else "Adicionar")
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = uiState.unidade,
+                        onValueChange = { viewModel.onUnidadeChanged(it) },
+                        label = { Text("Valor Unidade") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        enabled = canEdit
+                    )
+
+                    var expandedMedida by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = expandedMedida && canEdit,
+                        onExpandedChange = { if (canEdit) expandedMedida = !expandedMedida },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.unidadeMedida,
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = canEdit,
+                            label = { Text("Medida") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMedida) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedMedida && canEdit,
+                            onDismissRequest = { expandedMedida = false }
+                        ) {
+                            uiState.unidadesMedida.forEach { medida ->
+                                DropdownMenuItem(
+                                    text = { Text(medida) },
+                                    onClick = {
+                                        viewModel.onUnidadeMedidaChanged(medida)
+                                        expandedMedida = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
+
+                OutlinedTextField(
+                    value = uiState.quantidade,
+                    onValueChange = { viewModel.onQuantidadeChanged(it) },
+                    label = { Text("Quantidade no Inventário") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = canEdit
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (canEdit) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(onClick = { showExitConfirmation = true }, modifier = Modifier.weight(1f)) {
+                            Text("Cancelar")
+                        }
+                        Button(
+                            onClick = { viewModel.onSaveProduto() },
+                            modifier = Modifier.weight(1f),
+                            enabled = !uiState.isLoading
+                        ) {
+                            if (uiState.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            else Text(if (uiState.isEditMode) "Confirmar" else "Adicionar")
+                        }
+                    }
+                }
+            }
+            
+            if (uiState.isLoading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
         }
     }

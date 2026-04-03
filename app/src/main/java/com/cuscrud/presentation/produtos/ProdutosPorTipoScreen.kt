@@ -1,80 +1,86 @@
 package com.cuscrud.presentation.produtos
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
-import java.text.SimpleDateFormat
-import java.util.*
+import com.cuscrud.domain.repository.canEditProducts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProdutosPorTipoScreen(
     viewModel: ProdutosPorTipoViewModel,
-    navController: NavController,
     onBackClick: () -> Unit,
-    onProdutoClick: (Long) -> Unit,
-    onAddProdutoClick: () -> Unit
+    onAddProdutoClick: () -> Unit,
+    onEditProdutoClick: (Long) -> Unit,
+    onProdutoClick: (Long) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Observa mensagens de sucesso vindas de outras telas através do savedStateHandle
-    val successMessage by navController.currentBackStackEntry
-        ?.savedStateHandle
-        ?.getStateFlow<String?>("success_message", null)
-        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
-
-    LaunchedEffect(successMessage) {
-        successMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            // Limpa a mensagem para evitar que ela apareça novamente ao recompor ou voltar
-            navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
-        }
-    }
-
-    // Exibe snackbars de erro ou sucesso local
-    LaunchedEffect(uiState.errorMessage, uiState.mensagemSucesso) {
+    LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.limparMensagens()
         }
+    }
+
+    LaunchedEffect(uiState.mensagemSucesso) {
         uiState.mensagemSucesso?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.limparMensagens()
         }
     }
 
+    // Alerta de confirmação de remoção
+    uiState.produtoParaRemover?.let { produto ->
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelarRemocao() },
+            title = { Text("Excluir Produto") },
+            text = { Text("Deseja realmente excluir o produto '${produto.marca}'?") },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.confirmarRemocao() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Excluir") }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelarRemocao() }) { Text("Cancelar") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Produtos da Categoria") },
+                title = { Text("Produtos") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
                     }
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddProdutoClick) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+            // RBAC: Oculta o botão de adicionar se for apenas Visualizador
+            if (uiState.userRole.canEditProducts()) {
+                FloatingActionButton(onClick = onAddProdutoClick) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+                }
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -85,8 +91,9 @@ fun ProdutosPorTipoScreen(
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (uiState.produtos.isEmpty()) {
                 Text(
-                    text = "Nenhum produto encontrado nesta categoria.",
-                    modifier = Modifier.align(Alignment.Center)
+                    text = "Nenhum produto cadastrado nesta categoria.",
+                    modifier = Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.bodyLarge
                 )
             } else {
                 LazyColumn(
@@ -94,60 +101,46 @@ fun ProdutosPorTipoScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.produtos, key = { it.id }) { produto ->
-                        ProdutoListItem(
+                    items(uiState.produtos) { produto ->
+                        ProdutoItem(
                             produto = produto,
+                            canEdit = uiState.userRole.canEditProducts(),
                             onClick = { onProdutoClick(produto.id) },
+                            onEditClick = { onEditProdutoClick(produto.id) },
                             onDeleteClick = { viewModel.solicitarRemocao(produto) }
                         )
                     }
                 }
-            }
-
-            if (uiState.isLoading && uiState.produtos.isNotEmpty()) {
-                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
-            }
-        }
-
-        // Diálogo de Confirmação (Double-check)
-        uiState.produtoParaRemover?.let { produto ->
-            AlertDialog(
-                onDismissRequest = { viewModel.cancelarRemocao() },
-                title = { Text("Confirmar Remoção") },
-                text = { Text("Deseja realmente remover ${produto.marca}?") },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.confirmarRemocao() }) {
-                        Text("Sim")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.cancelarRemocao() }) {
-                        Text("Não")
-                    }
+                
+                // Overlay de carregamento para ações de mutação (ex: remoção)
+                if (uiState.isLoading && uiState.produtos.isNotEmpty()) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
-            )
+            }
         }
     }
 }
 
 @Composable
-fun ProdutoListItem(
-    produto: Produto, 
+fun ProdutoItem(
+    produto: Produto,
+    canEdit: Boolean,
     onClick: () -> Unit,
+    onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .padding(16.dp)
                 .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -155,24 +148,22 @@ fun ProdutoListItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "Qtd: ${produto.quantidade} (${produto.unidade} ${produto.unidadeMedida})")
-                    Text(
-                        text = "Validade: ${dateFormatter.format(produto.dataValidade)}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-            IconButton(onClick = onDeleteClick) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remover Produto",
-                    tint = MaterialTheme.colorScheme.error
+                Text(
+                    text = "${produto.quantidade} ${produto.unidadeMedida}",
+                    style = MaterialTheme.typography.bodyMedium
                 )
+            }
+            
+            // RBAC: Oculta botões de edição/remoção se for apenas Visualizador
+            if (canEdit) {
+                Row {
+                    IconButton(onClick = onEditClick) {
+                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = onDeleteClick) {
+                        Icon(Icons.Default.Delete, contentDescription = "Excluir", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         }
     }

@@ -9,12 +9,10 @@ import com.cuscrud.domain.interactor.GetProdutoDetalhesInteractor
 import com.cuscrud.domain.interactor.GetTiposInteractor
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
+import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
@@ -25,6 +23,7 @@ class AddProdutoViewModel @Inject constructor(
     private val editProdutoInteractor: EditProdutoInteractor,
     private val getProdutoDetalhesInteractor: GetProdutoDetalhesInteractor,
     private val getTiposInteractor: GetTiposInteractor,
+    private val inventoryRepository: InventoryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -35,12 +34,21 @@ class AddProdutoViewModel @Inject constructor(
     val uiState: StateFlow<AddProdutoUiState> = _uiState.asStateFlow()
 
     init {
+        observeUserRole()
         loadTipos()
 
         if (produtoId != null && produtoId > 0) {
             _uiState.update { it.copy(isEditMode = true) }
             loadProduto(produtoId)
         }
+    }
+
+    private fun observeUserRole() {
+        inventoryRepository.activeInventoryRole
+            .onEach { role ->
+                _uiState.update { it.copy(userRole = role) }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun loadTipos() {
@@ -59,7 +67,12 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
+                    val message = if (result.exception is java.io.IOException) {
+                        "Falha de conexão. Verifique sua internet."
+                    } else {
+                        result.exception.message ?: "Erro ao carregar categorias."
+                    }
+                    _uiState.update { it.copy(userMessage = message, isLoading = false) }
                 }
                 is Result.Loading -> {}
             }
@@ -85,7 +98,12 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
+                    val message = if (result.exception is java.io.IOException) {
+                        "Falha de conexão ao carregar produto."
+                    } else {
+                        result.exception.message ?: "Erro ao carregar detalhes."
+                    }
+                    _uiState.update { it.copy(userMessage = message, isLoading = false) }
                 }
                 Result.Loading -> {
                     _uiState.update { it.copy(isLoading = true) }
@@ -169,12 +187,12 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false, 
-                            userMessage = result.exception.message 
-                        ) 
+                    val message = if (result.exception is java.io.IOException) {
+                        "Não foi possível comunicar com o servidor. Verifique sua conexão."
+                    } else {
+                        result.exception.message ?: "Erro ao salvar o produto."
                     }
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 is Result.Loading -> {}
             }
