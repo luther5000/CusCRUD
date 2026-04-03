@@ -79,11 +79,11 @@ android {
     sourceSets {
         val sharedTestDir = "src/sharedTest/java"
         getByName("test") {
-            java.srcDir(sharedTestDir) // Adiciona sem substituir o padrão
+            java.srcDirs("src/test/java", sharedTestDir)
         }
         getByName("androidTest") {
-            java.srcDir(sharedTestDir) // Adiciona sem substituir o padrão
-            assets.srcDir("src/androidTest/assets")
+            java.srcDirs("src/androidTest/java", sharedTestDir)
+            assets.srcDirs("src/androidTest/assets")
         }
     }
 
@@ -117,15 +117,23 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.androidx.test.espresso.idling.resources)
     implementation(libs.androidx.security.crypto)
+
+    // DataStore
     implementation(libs.androidx.dataStore.preferences)
+
+    // Architecture Components
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.androidx.lifecycle.viewModelCompose)
+
+    // Hilt
     implementation(libs.hilt.android.core)
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
+
+    // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofitKotlinxSerializationJson)
     implementation(libs.okhttp)
@@ -157,8 +165,11 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.espresso.core) // Adicionado para closeSoftKeyboard
+    
     androidTestImplementation(libs.androidx.compose.ui.test.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(project(":shared-test"))
