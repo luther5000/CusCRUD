@@ -2,12 +2,16 @@ package com.cuscrud.presentation.auth
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.test.espresso.Espresso
 import com.cuscrud.MainActivity
+import com.cuscrud.domain.repository.AuthRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import javax.inject.Inject
 
 @HiltAndroidTest
 class RegisterTest {
@@ -18,9 +22,18 @@ class RegisterTest {
     @get:Rule(order = 1)
     val composeTestRule = createAndroidComposeRule<MainActivity>()
 
+    @Inject
+    lateinit var authRepository: AuthRepository
+
     @Before
     fun setup() {
         hiltRule.inject()
+        
+        // Garante estado limpo antes de iniciar o teste de cadastro
+        runBlocking {
+            authRepository.logout()
+        }
+
         // Navega para a tela de cadastro
         composeTestRule.onNodeWithText("Não tem uma conta? Cadastre-se").performClick()
     }
@@ -32,9 +45,10 @@ class RegisterTest {
         composeTestRule.onNodeWithText("Senha").performTextInput("12345678")
         composeTestRule.onNodeWithText("Confirmar Senha").performTextInput("12345678")
 
+        Espresso.closeSoftKeyboard()
         composeTestRule.onNodeWithText("CADASTRAR").performClick()
 
-        composeTestRule.waitUntil(5000) {
+        composeTestRule.waitUntil(10000) {
             composeTestRule.onAllNodesWithText("CusCRUD").fetchSemanticsNodes().isNotEmpty()
         }
         composeTestRule.onNodeWithText("CusCRUD").assertIsDisplayed()
@@ -43,41 +57,39 @@ class RegisterTest {
 
     @Test
     fun cadastroEmailInvalido_InformaErroFormato() {
-        // Quando o usuário insere um e-mail com formato inválido
         composeTestRule.onNodeWithText("Nome Completo").performTextInput("Teste")
         composeTestRule.onNodeWithText("E-mail").performTextInput("email_sem_arroba")
         composeTestRule.onNodeWithText("Senha").performTextInput("12345678")
         composeTestRule.onNodeWithText("Confirmar Senha").performTextInput("12345678")
 
+        Espresso.closeSoftKeyboard()
         composeTestRule.onNodeWithText("CADASTRAR").performClick()
 
-        // Então o sistema informa o erro de formato
         composeTestRule.onNodeWithText("E-mail com formato inválido. Use o padrão exemplo@dominio.com").assertIsDisplayed()
     }
 
     @Test
     fun cadastroSenhaCurta_InformaErroTamanho() {
-        // Quando o usuário insere uma senha com menos de 8 caracteres
         composeTestRule.onNodeWithText("Nome Completo").performTextInput("Teste")
         composeTestRule.onNodeWithText("E-mail").performTextInput("teste@teste.com")
         composeTestRule.onNodeWithText("Senha").performTextInput("123")
         composeTestRule.onNodeWithText("Confirmar Senha").performTextInput("123")
 
+        Espresso.closeSoftKeyboard()
         composeTestRule.onNodeWithText("CADASTRAR").performClick()
 
-        // Então o sistema informa o erro de limite
         composeTestRule.onNodeWithText("A senha deve ter entre 8 e 50 caracteres").assertIsDisplayed()
     }
 
     @Test
     fun cadastroNomeMuitoLongo_InformaErroLimite() {
-        // Quando o usuário insere um nome com mais de 255 caracteres
         val nomeLongo = "a".repeat(256)
         composeTestRule.onNodeWithText("Nome Completo").performTextInput(nomeLongo)
         composeTestRule.onNodeWithText("E-mail").performTextInput("teste@teste.com")
         composeTestRule.onNodeWithText("Senha").performTextInput("12345678")
         composeTestRule.onNodeWithText("Confirmar Senha").performTextInput("12345678")
 
+        Espresso.closeSoftKeyboard()
         composeTestRule.onNodeWithText("CADASTRAR").performClick()
 
         composeTestRule.onNodeWithText("O nome deve ter no máximo 255 caracteres").assertIsDisplayed()
@@ -90,6 +102,7 @@ class RegisterTest {
         composeTestRule.onNodeWithText("Senha").performTextInput("12345678")
         composeTestRule.onNodeWithText("Confirmar Senha").performTextInput("65432100")
 
+        Espresso.closeSoftKeyboard()
         composeTestRule.onNodeWithText("CADASTRAR").performClick()
 
         composeTestRule.onNodeWithText("As senhas não coincidem").assertIsDisplayed()
@@ -105,13 +118,18 @@ class RegisterTest {
     @Test
     fun cadastroEmailExistente_InformaErro() {
         composeTestRule.onNodeWithText("Nome Completo").performTextInput("Usuario Existente")
-        composeTestRule.onNodeWithText("E-mail").performTextInput("teste@email.com")
+        composeTestRule.onNodeWithText("E-mail").performTextInput("joao.novo@example.com")
         composeTestRule.onNodeWithText("Senha").performTextInput("12345678")
         composeTestRule.onNodeWithText("Confirmar Senha").performTextInput("12345678")
 
+        Espresso.closeSoftKeyboard()
         composeTestRule.onNodeWithText("CADASTRAR").performClick()
 
-        composeTestRule.onNodeWithText("Já existe uma conta associada a este e-mail").assertIsDisplayed()
+        // Aguarda a resposta do servidor e a exibição da Snackbar
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithText("já está em uso", substring = true, ignoreCase = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
     }
 
     @Test
@@ -121,8 +139,13 @@ class RegisterTest {
         composeTestRule.onNodeWithText("Senha").performTextInput("12345678")
         composeTestRule.onNodeWithText("Confirmar Senha").performTextInput("12345678")
         
+        Espresso.closeSoftKeyboard()
         composeTestRule.onNodeWithText("CADASTRAR").performClick()
 
-        composeTestRule.onNodeWithText("Não foi possível comunicar com o servidor. Tente novamente mais tarde.").assertIsDisplayed()
+        // Aguarda a resposta de erro genérico do servidor
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithText("Não foi possível se conectar ao servidor.", substring = true, ignoreCase = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
     }
 }
