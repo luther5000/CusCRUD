@@ -1,5 +1,6 @@
 package com.cuscrud.presentation.ong
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -94,11 +95,54 @@ fun OngSettingsScreen(
                     onClick = { viewModel.onConfirmAddColaborador() },
                     enabled = !uiState.isAddingColaborador && uiState.addColaboradorEmail.isNotBlank()
                 ) {
-                    if (uiState.isAddingColaborador) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)                    else Text("Adicionar")
+                    if (uiState.isAddingColaborador) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Text("Adicionar")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onDismissAddColaborador() }, enabled = !uiState.isAddingColaborador) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo de Edição de Papel de Colaborador
+    if (uiState.showEditColaboradorDialog && uiState.selectedColaborador != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onDismissEditColaborador() },
+            title = { Text("Editar Permissão") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Alterar papel de ${uiState.selectedColaborador?.name}:", style = MaterialTheme.typography.bodyMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = uiState.editColaboradorRole == Role.EDITOR,
+                            onClick = { viewModel.onEditColaboradorRoleChanged(Role.EDITOR) },
+                            enabled = !uiState.isUpdatingColaborador
+                        )
+                        Text("Editor")
+                        Spacer(Modifier.width(16.dp))
+                        RadioButton(
+                            selected = uiState.editColaboradorRole == Role.READER,
+                            onClick = { viewModel.onEditColaboradorRoleChanged(Role.READER) },
+                            enabled = !uiState.isUpdatingColaborador
+                        )
+                        Text("Visualizador")
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.onConfirmUpdateColaborador() },
+                    enabled = !uiState.isUpdatingColaborador
+                ) {
+                    if (uiState.isUpdatingColaborador) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    else Text("Salvar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onDismissEditColaborador() }, enabled = !uiState.isUpdatingColaborador) {
                     Text("Cancelar")
                 }
             }
@@ -173,6 +217,10 @@ fun OngSettingsScreen(
 
                 items(uiState.colaboradores) { user ->
                     ListItem(
+                        modifier = Modifier.clickable(
+                            enabled = user.role != Role.OWNER.value,
+                            onClick = { viewModel.onEditColaboradorClick(user) }
+                        ),
                         headlineContent = { Text(user.name) },
                         supportingContent = { Text(user.login) },
                         trailingContent = {
