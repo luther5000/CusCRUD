@@ -5,12 +5,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cuscrud.domain.model.Role
@@ -25,6 +27,7 @@ fun OngSettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
@@ -92,7 +95,10 @@ fun OngSettingsScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.onConfirmAddColaborador() },
+                    onClick = { 
+                        keyboardController?.hide()
+                        viewModel.onConfirmAddColaborador() 
+                    },
                     enabled = !uiState.isAddingColaborador && uiState.addColaboradorEmail.isNotBlank()
                 ) {
                     if (uiState.isAddingColaborador) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -148,7 +154,10 @@ fun OngSettingsScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = { viewModel.onConfirmUpdateColaborador() },
+                    onClick = { 
+                        keyboardController?.hide()
+                        viewModel.onConfirmUpdateColaborador() 
+                    },
                     enabled = !uiState.isUpdatingColaborador
                 ) {
                     if (uiState.isUpdatingColaborador) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -192,7 +201,7 @@ fun OngSettingsScreen(
             TopAppBar(
                 title = { Text("Definições da ONG") },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, "Voltar") }
+                    IconButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") }
                 },
                 actions = {
                     if (uiState.userRole.canManageInventory()) {
@@ -221,7 +230,10 @@ fun OngSettingsScreen(
                         label = { Text("Nome da ONG") },
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         trailingIcon = {
-                            IconButton(onClick = { viewModel.onSaveClick() }) {
+                            IconButton(onClick = { 
+                                keyboardController?.hide()
+                                viewModel.onSaveClick() 
+                            }) {
                                 Icon(Icons.Default.Check, "Salvar", tint = MaterialTheme.colorScheme.primary)
                             }
                         }

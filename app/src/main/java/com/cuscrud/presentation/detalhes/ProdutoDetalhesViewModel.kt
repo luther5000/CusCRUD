@@ -72,7 +72,7 @@ class ProdutoDetalhesViewModel @Inject constructor(
                 is Result.Success -> {
                     _uiState.update { 
                         it.copy(
-                            produto = result.data, 
+                            produto = produtoAtualizado, 
                             isUpdatingQuantity = false,
                             userMessage = "Estoque atualizado!"
                         ) 

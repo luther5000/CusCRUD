@@ -143,12 +143,14 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<ProdutosPorTipoViewModel>()
             ProdutosPorTipoScreen(
                 viewModel = viewModel,
-                navController = navController,
                 onBackClick = { navController.popBackStack() },
                 onProdutoClick = { produtoId ->
                     navController.navigate("detalhes/$produtoId")
                 },
-                onAddProdutoClick = { navController.navigate("add_produto?tipoId=$tipoId") }
+                onAddProdutoClick = { navController.navigate("add_produto?tipoId=$tipoId") },
+                onEditProdutoClick = { produtoId ->
+                    navController.navigate("add_produto?produtoId=$produtoId")
+                }
             )
         }
 
@@ -161,8 +163,8 @@ fun CusCrudNavGraph(
                     defaultValue = -1L
                 },
                 navArgument("produtoId") {
-                    type = NavType.IntType
-                    defaultValue = -1
+                    type = NavType.LongType
+                    defaultValue = -1L
                 }
             )
         ) {
@@ -192,7 +194,7 @@ fun CusCrudNavGraph(
         // Cenário 3: Detalhes do Produto
         composable(
             route = "detalhes/{produtoId}",
-            arguments = listOf(navArgument("produtoId") { type = NavType.IntType })
+            arguments = listOf(navArgument("produtoId") { type = NavType.LongType })
         ) {
             val viewModel = hiltViewModel<ProdutoDetalhesViewModel>()
             ProdutoDetalhesScreen(
