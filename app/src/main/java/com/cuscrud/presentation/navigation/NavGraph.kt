@@ -10,6 +10,8 @@ import androidx.navigation.navArgument
 import com.cuscrud.MainActivity
 import com.cuscrud.presentation.auth.LoginScreen
 import com.cuscrud.presentation.auth.LoginViewModel
+import com.cuscrud.presentation.auth.RegisterScreen
+import com.cuscrud.presentation.auth.RegisterViewModel
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesScreen
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesViewModel
 import com.cuscrud.presentation.inventario.InventarioScreen
@@ -44,7 +46,25 @@ fun CusCrudNavGraph(
                         popUpTo("login") { inclusive = true }
                     }
                 },
-                onRegisterClick = { /* Redirecionar para Registro se existir */ }
+                onRegisterClick = {
+                    navController.navigate("register")
+                }
+            )
+        }
+
+        // Cenário: Registro
+        composable("register") {
+            val viewModel = hiltViewModel<RegisterViewModel>()
+            RegisterScreen(
+                viewModel = viewModel,
+                onRegisterSuccess = {
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
+                    }
+                },
+                onBackClick = {
+                    navController.popBackStack()
+                }
             )
         }
 
@@ -83,7 +103,12 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<OngSettingsViewModel>()
             OngSettingsScreen(
                 viewModel = viewModel,
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onDeleteSuccess = {
+                    navController.navigate("select_ong") {
+                        popUpTo("inventario") { inclusive = true }
+                    }
+                }
             )
         }
 

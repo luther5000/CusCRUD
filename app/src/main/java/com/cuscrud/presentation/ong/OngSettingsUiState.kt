@@ -13,5 +13,6 @@ data class OngSettingsUiState(
     val isEditing: Boolean = false,
     val editName: String = "",
     val userMessage: String? = null,
-    val isSuccess: Boolean = false
+    val isSuccess: Boolean = false,
+    val showDeleteConfirmation: Boolean = false
 )

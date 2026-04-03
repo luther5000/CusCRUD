@@ -2,6 +2,7 @@ package com.cuscrud.presentation.ong
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cuscrud.domain.interactor.DeleteOngInteractor
 import com.cuscrud.domain.interactor.UpdateOngInteractor
 import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.repository.InventoryRepository
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OngSettingsViewModel @Inject constructor(
     private val repository: InventoryRepository,
-    private val updateOngInteractor: UpdateOngInteractor
+    private val updateOngInteractor: UpdateOngInteractor,
+    private val deleteOngInteractor: DeleteOngInteractor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OngSettingsUiState())
@@ -33,8 +35,6 @@ class OngSettingsViewModel @Inject constructor(
             id to role
         }.onEach { (id, role) ->
             if (id != null) {
-                // Em um cenário real, buscaríamos o nome da ONG do cache ou API aqui
-                // Por simplificação, vamos assumir que o repositório ou um GetOngByIdInteractor proveria isso
                 _uiState.update { it.copy(ongId = id, userRole = role) }
                 loadOngDetails(id)
             }
@@ -87,8 +87,7 @@ class OngSettingsViewModel @Inject constructor(
                             ongName = result.data.invName,
                             isEditing = false,
                             isLoading = false,
-                            userMessage = "Nome da ONG atualizado com sucesso!",
-                            isSuccess = true
+                            userMessage = "Nome da ONG atualizado com sucesso!"
                         ) 
                     }
                 }
@@ -97,6 +96,45 @@ class OngSettingsViewModel @Inject constructor(
                         "Não foi possível comunicar com o servidor. Tente novamente mais tarde."
                     } else {
                         result.exception.message ?: "Erro ao atualizar ONG."
+                    }
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun onDeleteClick() {
+        if (!_uiState.value.userRole.canManageInventory()) {
+            _uiState.update { it.copy(userMessage = "Apenas o dono pode realizar esta ação.") }
+            return
+        }
+        _uiState.update { it.copy(showDeleteConfirmation = true) }
+    }
+
+    fun onCancelDelete() {
+        _uiState.update { it.copy(showDeleteConfirmation = false) }
+    }
+
+    fun onConfirmDelete() {
+        val state = _uiState.value
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, showDeleteConfirmation = false) }
+            when (val result = deleteOngInteractor(state.ongId)) {
+                is Result.Success -> {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            isSuccess = true,
+                            userMessage = "ONG removida com sucesso!"
+                        ) 
+                    }
+                }
+                is Result.Error -> {
+                    val message = if (result.exception is java.io.IOException) {
+                        "Não foi possível comunicar com o servidor. Tente novamente mais tarde."
+                    } else {
+                        result.exception.message ?: "Erro ao remover ONG."
                     }
                     _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }

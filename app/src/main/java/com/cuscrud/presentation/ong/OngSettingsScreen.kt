@@ -3,12 +3,14 @@ package com.cuscrud.presentation.ong
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cuscrud.domain.repository.canManageInventory
@@ -17,7 +19,8 @@ import com.cuscrud.domain.repository.canManageInventory
 @Composable
 fun OngSettingsScreen(
     viewModel: OngSettingsViewModel,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onDeleteSuccess: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -27,6 +30,34 @@ fun OngSettingsScreen(
             snackbarHostState.showSnackbar(it)
             viewModel.snackbarMessageShown()
         }
+    }
+
+    // Redireciona ao selecionar ONG ou remover com sucesso
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            onDeleteSuccess()
+        }
+    }
+
+    if (uiState.showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onCancelDelete() },
+            title = { Text("Remover ONG") },
+            text = { Text("Tem certeza que deseja remover permanentemente a ONG '${uiState.ongName}' e todo o seu inventário? Esta ação não pode ser desfeita.") },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.onConfirmDelete() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Remover")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onCancelDelete() }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -60,7 +91,7 @@ fun OngSettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (uiState.isLoading && !uiState.isEditing) {
+            if (uiState.isLoading && !uiState.isEditing && !uiState.showDeleteConfirmation) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else {
                 Column(
@@ -128,6 +159,21 @@ fun OngSettingsScreen(
                                     Text("Salvar")
                                 }
                             }
+                        }
+                    }
+
+                    // Botão de remoção (Apenas para o Dono)
+                    if (uiState.userRole.canManageInventory() && !uiState.isEditing) {
+                        Spacer(modifier = Modifier.weight(1f))
+                        OutlinedButton(
+                            onClick = { viewModel.onDeleteClick() },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            border = ButtonDefaults.outlinedButtonBorder.copy(brush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.error))
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Remover Organização")
                         }
                     }
                 }
