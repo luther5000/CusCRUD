@@ -130,6 +130,20 @@ fun OngSettingsScreen(
                         )
                         Text("Visualizador")
                     }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Botão para disparar a remoção
+                    TextButton(
+                        onClick = { viewModel.onRemoveColaboradorClick() },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        enabled = !uiState.isUpdatingColaborador
+                    ) {
+                        Icon(Icons.Default.PersonRemove, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Remover Colaborador")
+                    }
                 }
             },
             confirmButton = {
@@ -143,6 +157,30 @@ fun OngSettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onDismissEditColaborador() }, enabled = !uiState.isUpdatingColaborador) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Diálogo de Confirmação de Remoção de Colaborador
+    if (uiState.showRemoveColaboradorConfirmation) {
+        AlertDialog(
+            onDismissRequest = { viewModel.onCancelRemoveColaborador() },
+            title = { Text("Confirmar Remoção") },
+            text = { Text("Deseja realmente remover o acesso de ${uiState.selectedColaborador?.name} a este inventário?") },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.onConfirmRemoveColaborador() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    enabled = !uiState.isRemovingColaborador
+                ) {
+                    if (uiState.isRemovingColaborador) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color.White)
+                    else Text("Remover")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.onCancelRemoveColaborador() }, enabled = !uiState.isRemovingColaborador) {
                     Text("Cancelar")
                 }
             }

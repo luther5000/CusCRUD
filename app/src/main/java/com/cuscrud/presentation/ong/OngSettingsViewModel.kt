@@ -23,7 +23,8 @@ class OngSettingsViewModel @Inject constructor(
     private val deleteOngInteractor: DeleteOngInteractor,
     private val getColaboradoresInteractor: GetColaboradoresInteractor,
     private val addColaboradorInteractor: AddColaboradorInteractor,
-    private val updateColaboradorRoleInteractor: UpdateColaboradorRoleInteractor
+    private val updateColaboradorRoleInteractor: UpdateColaboradorRoleInteractor,
+    private val removeColaboradorInteractor: RemoveColaboradorInteractor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OngSettingsUiState())
@@ -114,7 +115,7 @@ class OngSettingsViewModel @Inject constructor(
         }
     }
 
-    // region Gestão de Colaboradores (Adição e Edição)
+    // region Gestão de Colaboradores (Adição, Edição e Remoção)
     
     fun onShowAddColaboradorClick() {
         _uiState.update { it.copy(showAddColaboradorDialog = true) }
@@ -152,7 +153,7 @@ class OngSettingsViewModel @Inject constructor(
 
     // Edição de Papel
     fun onEditColaboradorClick(user: UserAccessDto) {
-        if (user.role == Role.OWNER.value) return // Não edita o dono
+        if (user.role == Role.OWNER.value) return
         _uiState.update { 
             it.copy(
                 selectedColaborador = user,
@@ -183,14 +184,51 @@ class OngSettingsViewModel @Inject constructor(
                             isUpdatingColaborador = false,
                             showEditColaboradorDialog = false,
                             selectedColaborador = null,
-                            userMessage = "Permissão atualizada com sucesso!"
+                            userMessage = "Permissão atualizada!"
                         ) 
                     }
                     loadColaboradores()
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) "Não foi possível comunicar com o servidor. Tente novamente mais tarde." else result.exception.message ?: "Erro ao atualizar permissão."
+                    val message = if (result.exception is java.io.IOException) "Não foi possível comunicar com o servidor." else result.exception.message ?: "Erro ao atualizar."
                     _uiState.update { it.copy(isUpdatingColaborador = false, userMessage = message) }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    // Remoção de Colaborador
+    fun onRemoveColaboradorClick() {
+        // Acionado de dentro do diálogo de edição para mostrar confirmação secundária
+        _uiState.update { it.copy(showRemoveColaboradorConfirmation = true) }
+    }
+
+    fun onCancelRemoveColaborador() {
+        _uiState.update { it.copy(showRemoveColaboradorConfirmation = false) }
+    }
+
+    fun onConfirmRemoveColaborador() {
+        val state = _uiState.value
+        val userId = state.selectedColaborador?.userId ?: return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRemovingColaborador = true, showRemoveColaboradorConfirmation = false) }
+            when (val result = removeColaboradorInteractor(userId)) {
+                is Result.Success -> {
+                    _uiState.update { 
+                        it.copy(
+                            isRemovingColaborador = false,
+                            showEditColaboradorDialog = false,
+                            selectedColaborador = null,
+                            userMessage = "Colaborador removido com sucesso!"
+                        ) 
+                    }
+                    loadColaboradores()
+                }
+                is Result.Error -> {
+                    val message = if (result.exception is java.io.IOException) "Não foi possível comunicar com o servidor. Tente novamente mais tarde." else result.exception.message ?: "Erro ao remover colaborador."
+                    _uiState.update { it.copy(isRemovingColaborador = false, userMessage = message) }
                 }
                 else -> {}
             }

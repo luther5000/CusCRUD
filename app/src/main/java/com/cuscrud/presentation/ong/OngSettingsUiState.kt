@@ -25,9 +25,12 @@ data class OngSettingsUiState(
     val addColaboradorRole: Role = Role.EDITOR,
     val isAddingColaborador: Boolean = false,
 
-    // Edição de Colaborador
+    // Edição e Remoção de Colaborador
     val showEditColaboradorDialog: Boolean = false,
     val selectedColaborador: UserAccessDto? = null,
     val editColaboradorRole: Role = Role.READER,
-    val isUpdatingColaborador: Boolean = false
+    val isUpdatingColaborador: Boolean = false,
+    
+    val showRemoveColaboradorConfirmation: Boolean = false,
+    val isRemovingColaborador: Boolean = false
 )
