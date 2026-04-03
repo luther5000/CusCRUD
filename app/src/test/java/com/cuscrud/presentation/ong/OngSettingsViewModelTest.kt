@@ -1,11 +1,13 @@
 package com.cuscrud.presentation.ong
 
 import com.cuscrud.data.remote.dto.InventoryDto
+import com.cuscrud.domain.interactor.DeleteOngInteractor
 import com.cuscrud.domain.interactor.UpdateOngInteractor
 import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -22,6 +24,7 @@ class OngSettingsViewModelTest {
 
     private val repository: InventoryRepository = mockk()
     private val updateOngInteractor: UpdateOngInteractor = mockk()
+    private val deleteOngInteractor: DeleteOngInteractor = mockk()
     private lateinit var viewModel: OngSettingsViewModel
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -37,7 +40,7 @@ class OngSettingsViewModelTest {
         coEvery { repository.activeInventoryRole } returns activeInventoryRoleFlow
         coEvery { repository.getInventories() } returns Result.Success(emptyList())
 
-        viewModel = OngSettingsViewModel(repository, updateOngInteractor)
+        viewModel = OngSettingsViewModel(repository, updateOngInteractor, deleteOngInteractor)
     }
 
     @After
@@ -117,5 +120,78 @@ class OngSettingsViewModelTest {
         // Então
         assertEquals("Não foi possível comunicar com o servidor. Tente novamente mais tarde.", viewModel.uiState.value.userMessage)
         assertFalse(viewModel.uiState.value.isSuccess)
+    }
+
+    // --- Testes de Remoção de ONG ---
+
+    @Test
+    fun `quando o dono confirma a remocao com sucesso, deve atualizar para sucesso`() = runTest {
+        // Dado (Cenário: Remover a ONG com sucesso)
+        val ongId = "123"
+        activeInventoryIdFlow.value = ongId
+        activeInventoryRoleFlow.value = Role.OWNER
+        coEvery { deleteOngInteractor(ongId) } returns Result.Success(Unit)
+
+        // Quando
+        viewModel.onDeleteClick() // Abre o alerta
+        assertTrue(viewModel.uiState.value.showDeleteConfirmation)
+        
+        viewModel.onConfirmDelete() // Confirma no alerta
+
+        // Então
+        assertEquals("ONG removida com sucesso!", viewModel.uiState.value.userMessage)
+        assertTrue(viewModel.uiState.value.isSuccess)
+        assertFalse(viewModel.uiState.value.showDeleteConfirmation)
+        coVerify { deleteOngInteractor(ongId) }
+    }
+
+    @Test
+    fun `quando o dono cancela a remocao, nao deve chamar o interactor nem remover nada`() = runTest {
+        // Dado (Cenário: Cancelar a remoção da ONG)
+        val ongId = "123"
+        activeInventoryIdFlow.value = ongId
+        activeInventoryRoleFlow.value = Role.OWNER
+
+        // Quando
+        viewModel.onDeleteClick()
+        assertTrue(viewModel.uiState.value.showDeleteConfirmation)
+        
+        viewModel.onCancelDelete()
+
+        // Então
+        assertFalse(viewModel.uiState.value.showDeleteConfirmation)
+        assertFalse(viewModel.uiState.value.isSuccess)
+        coVerify(exactly = 0) { deleteOngInteractor(any()) }
+    }
+
+    @Test
+    fun `quando um editor tenta remover, deve exibir mensagem de bloqueio e nao abrir o alerta`() = runTest {
+        // Dado (Cenário: Bloqueio de remoção para utilizadores sem permissão)
+        activeInventoryRoleFlow.value = Role.EDITOR
+
+        // Quando
+        viewModel.onDeleteClick()
+
+        // Então
+        assertEquals("Apenas o dono pode realizar esta ação.", viewModel.uiState.value.userMessage)
+        assertFalse(viewModel.uiState.value.showDeleteConfirmation)
+    }
+
+    @Test
+    fun `quando ocorre falha de conexao ao remover, deve exibir mensagem amigavel e manter a ong`() = runTest {
+        // Dado (Cenário: Falha de ligação ao remover a ONG)
+        val ongId = "123"
+        activeInventoryIdFlow.value = ongId
+        activeInventoryRoleFlow.value = Role.OWNER
+        coEvery { deleteOngInteractor(ongId) } returns Result.Error(IOException())
+
+        // Quando
+        viewModel.onDeleteClick()
+        viewModel.onConfirmDelete()
+
+        // Então
+        assertEquals("Não foi possível comunicar com o servidor. Tente novamente mais tarde.", viewModel.uiState.value.userMessage)
+        assertFalse(viewModel.uiState.value.isSuccess)
+        assertFalse(viewModel.uiState.value.isLoading)
     }
 }
