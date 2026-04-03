@@ -57,10 +57,7 @@ class LoginViewModel @Inject constructor(
                     _uiEvent.send(LoginUiEvent.LoginSuccess)
                 }
                 is Result.Error -> {
-                    val message = when {
-                        result.exception.message?.contains("401") == true -> "Credenciais inválidas"
-                        else -> "Não foi possível comunicar com o servidor. Tente novamente mais tarde."
-                    }
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
                     _uiEvent.send(LoginUiEvent.ShowError(message))
                 }
                 is Result.Loading -> { /* Já tratado pelo isLoading */ }

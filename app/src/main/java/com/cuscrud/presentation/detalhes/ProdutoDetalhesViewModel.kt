@@ -46,11 +46,7 @@ class ProdutoDetalhesViewModel @Inject constructor(
                     _uiState.update { it.copy(produto = result.data, isLoading = false) }
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) {
-                        "Falha de conexão ao carregar produto."
-                    } else {
-                        result.exception.message ?: "Erro ao carregar detalhes."
-                    }
+                    val message = result.exception.message ?: "Erro ao carregar detalhes."
                     _uiState.update { it.copy(userMessage = message, isLoading = false) }
                 }
                 Result.Loading -> {
@@ -79,11 +75,7 @@ class ProdutoDetalhesViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) {
-                        "Erro de conexão ao atualizar estoque."
-                    } else {
-                        result.exception.message ?: "Erro ao atualizar estoque."
-                    }
+                    val message = result.exception.message ?: "Erro ao atualizar estoque."
                     _uiState.update { it.copy(isUpdatingQuantity = false, userMessage = message) }
                 }
                 else -> {}

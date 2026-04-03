@@ -67,11 +67,7 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) {
-                        "Falha de conexão. Verifique sua internet."
-                    } else {
-                        result.exception.message ?: "Erro ao carregar categorias."
-                    }
+                    val message = result.exception.message ?: "Erro ao carregar categorias."
                     _uiState.update { it.copy(userMessage = message, isLoading = false) }
                 }
                 is Result.Loading -> {}
@@ -98,11 +94,7 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) {
-                        "Falha de conexão ao carregar produto."
-                    } else {
-                        result.exception.message ?: "Erro ao carregar detalhes."
-                    }
+                    val message = result.exception.message ?: "Erro ao carregar detalhes do produto."
                     _uiState.update { it.copy(userMessage = message, isLoading = false) }
                 }
                 Result.Loading -> {
@@ -187,11 +179,7 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) {
-                        "Não foi possível comunicar com o servidor. Verifique sua conexão."
-                    } else {
-                        result.exception.message ?: "Erro ao salvar o produto."
-                    }
+                    val message = result.exception.message ?: "Erro ao salvar o produto."
                     _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 is Result.Loading -> {}
