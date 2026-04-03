@@ -162,22 +162,29 @@ class RemoteTipoRepository @Inject constructor(
      * definido no architecture.md.
      */
     private fun handleError(response: Response<*>): Result.Error {
+        // Prioridade 1: Mapeamento Estilizado por Contexto (Repositório de Inventário)
+        val friendlyMessage = when (response.code()) {
+            400 -> "Dados inválidos. Verifique as informações do inventário."
+            401 -> "Sessão expirada. Por favor, faça login novamente."
+            403 -> "Você não tem permissão para esta ação."
+            404 -> "A categoria não foi encontrada."
+            409 -> "Não é possível excluir este tipo pois existem produtos vinculados a ele."
+            500 -> "Erro interno no servidor. Tente novamente em instantes."
+            else -> null
+        }
+
+        if (friendlyMessage != null) {
+            return Result.Error(Exception(friendlyMessage))
+        }
+
+        // Prioridade 2: Fallback para a mensagem do servidor
         val errorBody = response.errorBody()?.string()
         return try {
             val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
             Result.Error(Exception(errorResponse.error.message))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
-            val friendlyMessage = when (response.code()) {
-                400 -> "Dados inválidos. Verifique as informações preenchidas."
-                401 -> "Sessão expirada. Por favor, faça login novamente."
-                403 -> "Você não tem permissão para esta ação."
-                404 -> "A categoria não foi encontrada."
-                409 -> "Não é possível excluir este tipo pois existem produtos vinculados a ele."
-                500 -> "Erro interno no servidor. Tente novamente em instantes."
-                else -> "Ocorreu um erro inesperado (Código: ${response.code()})"
-            }
-            Result.Error(Exception(friendlyMessage))
+            Result.Error(Exception("Ocorreu um erro inesperado (Código: ${response.code()})"))
         }
     }
 }

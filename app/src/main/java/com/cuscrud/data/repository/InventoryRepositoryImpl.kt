@@ -1,4 +1,3 @@
-
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.local.SessionManager
@@ -71,9 +70,7 @@ class InventoryRepositoryImpl @Inject constructor(
                 
                 _activeInventoryId.value?.let { activeId ->
                     inventories.find { it.invId == activeId }?.let { activeInv ->
-                        // Correção do erro de Argument type mismatch:
                         // activeInv.role pode ser nulo no DTO, mas o enum Role.fromInt espera Int.
-                        // Usamos o operador elvis para prover um valor padrão ou tratamos a nulidade.
                         activeInv.role?.let { roleInt ->
                             val newRole = Role.fromInt(roleInt)
                             if (newRole != _activeInventoryRole.value) {
@@ -160,22 +157,29 @@ class InventoryRepositoryImpl @Inject constructor(
      * definido no architecture.md.
      */
     private fun handleError(response: Response<*>): Result.Error {
+        // Prioridade 1: Mapeamento Estilizado por Contexto (Repositório de Inventário)
+        val friendlyMessage = when (response.code()) {
+            400 -> "Dados inválidos. Verifique as informações do inventário."
+            401 -> "Sessão expirada. Por favor, faça login novamente."
+            403 -> "Você não tem permissão para esta ação."
+            404 -> "O inventário solicitado não foi encontrado."
+            409 -> "Já existe um inventário com este nome."
+            500 -> "Erro interno no servidor. Tente novamente em instantes."
+            else -> null
+        }
+
+        if (friendlyMessage != null) {
+            return Result.Error(Exception(friendlyMessage))
+        }
+
+        // Prioridade 2: Fallback para a mensagem do servidor
         val errorBody = response.errorBody()?.string()
         return try {
             val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
             Result.Error(Exception(errorResponse.error.message))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
-            val friendlyMessage = when (response.code()) {
-                400 -> "Dados inválidos. Verifique as informações preenchidas."
-                401 -> "Sessão expirada. Por favor, faça login novamente."
-                403 -> "Você não tem permissão para esta ação."
-                404 -> "O inventário ou recurso não foi encontrado."
-                409 -> "Conflito de dados. Talvez este nome já esteja em uso."
-                500 -> "Erro interno no servidor. Tente novamente em instantes."
-                else -> "Ocorreu um erro inesperado (Código: ${response.code()})"
-            }
-            Result.Error(Exception(friendlyMessage))
+            Result.Error(Exception("Ocorreu um erro inesperado (Código: ${response.code()})"))
         }
     }
 }
