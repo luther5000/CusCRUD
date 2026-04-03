@@ -58,11 +58,11 @@ android {
     buildTypes {
         getByName("debug") {
             isMinifyEnabled = false
-            isTestCoverageEnabled = true
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
             testProguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguardTest-rules.pro")
             
-            // Lê do local.properties. Se não existir, usa um fallback seguro.
             val baseUrl = getLocalProperty("API_BASE_URL").ifEmpty { "http://localhost/api/v1/" }
             buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
         }
@@ -72,8 +72,6 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
             testProguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguardTest-rules.pro")
-            
-            // Em release, você pode manter fixo ou ler de uma variável de ambiente do CI/CD
             buildConfigField("String", "BASE_URL", "\"https://api.cuscrud.com/v1/\"")
         }
     }
@@ -81,11 +79,11 @@ android {
     sourceSets {
         val sharedTestDir = "src/sharedTest/java"
         getByName("test") {
-            java.srcDirs("src/test/java", sharedTestDir)
+            java.srcDir(sharedTestDir) // Adiciona sem substituir o padrão
         }
         getByName("androidTest") {
-            java.srcDirs("src/androidTest/java", sharedTestDir)
-            assets.srcDirs("src/androidTest/assets")
+            java.srcDir(sharedTestDir) // Adiciona sem substituir o padrão
+            assets.srcDir("src/androidTest/assets")
         }
     }
 
@@ -119,23 +117,15 @@ dependencies {
     implementation(libs.timber)
     implementation(libs.androidx.test.espresso.idling.resources)
     implementation(libs.androidx.security.crypto)
-
-    // DataStore
     implementation(libs.androidx.dataStore.preferences)
-
-    // Architecture Components
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.androidx.lifecycle.viewModelCompose)
-
-    // Hilt
     implementation(libs.hilt.android.core)
     implementation(libs.androidx.hilt.navigation.compose)
     ksp(libs.hilt.compiler)
-
-    // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofitKotlinxSerializationJson)
     implementation(libs.okhttp)
@@ -161,6 +151,14 @@ dependencies {
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation("io.mockk:mockk:1.13.12")
     
+    // Android Test dependencies
+    androidTestImplementation(composeBom)
+    androidTestImplementation(libs.androidx.test.core.ktx)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.compose.ui.test.junit)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(project(":shared-test"))
