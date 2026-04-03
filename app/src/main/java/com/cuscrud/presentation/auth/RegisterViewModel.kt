@@ -50,9 +50,25 @@ class RegisterViewModel @Inject constructor(
             return
         }
 
-        // Validação: Formato de e-mail
+        // Validação: Tamanho do Nome (1-255)
+        if (name.length > 255) {
+            sendError("O nome deve ter no máximo 255 caracteres")
+            return
+        }
+
+        // Validação: Formato e Tamanho de e-mail (1-255)
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             sendError("E-mail com formato inválido. Use o padrão exemplo@dominio.com")
+            return
+        }
+        if (email.length > 255) {
+            sendError("O e-mail deve ter no máximo 255 caracteres")
+            return
+        }
+
+        // Validação: Tamanho da Senha (8-50)
+        if (password.length < 8 || password.length > 50) {
+            sendError("A senha deve ter entre 8 e 50 caracteres")
             return
         }
 
