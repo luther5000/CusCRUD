@@ -4,8 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -52,14 +52,16 @@ fun InventarioScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Inventário Geral") },
-                actions = {
-                    // Botão para alternar entre ONGs (Contexto)
+                navigationIcon = {
+                    // Botão para retornar à seleção de ONGs
                     IconButton(onClick = onChangeOngClick) {
                         Icon(
-                            imageVector = Icons.Default.Business,
-                            contentDescription = "Trocar ONG"
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar para ONGs"
                         )
                     }
+                },
+                actions = {
                     // Botão para definições da ONG
                     IconButton(onClick = onSettingsClick) {
                         Icon(
