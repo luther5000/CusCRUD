@@ -48,7 +48,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar produtos")
             Result.Error(Exception("Não foi possível carregar os produtos."))
@@ -65,7 +65,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Não foi possível salvar o produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor.."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao inserir produto")
             Result.Error(Exception("Erro ao salvar o produto."))
@@ -82,7 +82,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao excluir produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao remover produto")
             Result.Error(Exception("Erro ao excluir produto."))
@@ -101,7 +101,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao carregar produtos por categoria. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar produtos por tipo")
             Result.Error(Exception("Erro ao carregar produtos da categoria."))
@@ -120,7 +120,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao atualizar produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao editar produto")
             Result.Error(Exception("Não foi possível atualizar o produto."))
@@ -140,7 +140,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao buscar detalhes do produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar produto")
             Result.Error(Exception("Erro ao carregar detalhes do produto."))

@@ -85,7 +85,7 @@ class InventoryRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao buscar inventários."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao buscar inventários")
             Result.Error(Exception("Não foi possível carregar a lista de inventários."))
@@ -103,7 +103,7 @@ class InventoryRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao criar inventário."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (_: Exception) {
             Result.Error(Exception("Erro ao criar inventário."))
         }
@@ -118,7 +118,7 @@ class InventoryRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao atualizar."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (_: Exception) {
             Result.Error(Exception("Erro ao atualizar inventário."))
         }
@@ -136,7 +136,7 @@ class InventoryRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao excluir."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor.."))
         } catch (_: Exception) {
             Result.Error(Exception("Erro ao excluir inventário."))
         }

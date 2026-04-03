@@ -46,7 +46,7 @@ class AuthRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor.."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao realizar login")
             Result.Error(Exception("Não foi possível realizar o login. Tente novamente mais tarde."))
@@ -64,7 +64,7 @@ class AuthRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao realizar registro")
             Result.Error(Exception("Não foi possível realizar o cadastro no momento."))

@@ -45,7 +45,7 @@ class AccessRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao buscar colaboradores")
             Result.Error(e)
@@ -65,7 +65,7 @@ class AccessRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao adicionar colaborador."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao adicionar colaborador")
             Result.Error(e)
@@ -85,7 +85,7 @@ class AccessRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao atualizar papel."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor.."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao atualizar papel")
             Result.Error(e)
@@ -104,7 +104,7 @@ class AccessRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao remover colaborador."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao remover colaborador")
             Result.Error(e)

@@ -57,7 +57,7 @@ class RemoteTipoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao buscar categorias. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar tipos")
             Result.Error(Exception("Não foi possível carregar as categorias."))
@@ -80,7 +80,7 @@ class RemoteTipoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar tipo por id: $id")
             Result.Error(Exception("Não foi possível carregar os detalhes da categoria."))
@@ -104,7 +104,7 @@ class RemoteTipoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao criar categoria."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao criar tipo")
             Result.Error(Exception("Ocorreu um erro ao tentar salvar a categoria."))
@@ -128,7 +128,7 @@ class RemoteTipoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao atualizar categoria."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao editar tipo id: $id")
             Result.Error(Exception("Não foi possível atualizar a categoria."))
@@ -150,7 +150,7 @@ class RemoteTipoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao excluir categoria."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao remover tipo id: $id")
             Result.Error(Exception("Ocorreu um erro ao tentar excluir a categoria."))
