@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
@@ -31,6 +32,7 @@ fun AddProdutoScreen(
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     var showExitConfirmation by remember { mutableStateOf(false) }
+    var showAddTipoDialog by remember { mutableStateOf(false) }
     
     // RBAC: Verifica se o usuário tem permissão para editar/adicionar
     val canEdit = uiState.userRole.canEditProducts()
@@ -67,6 +69,36 @@ fun AddProdutoScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showExitConfirmation = false }) { Text("Continuar editando") }
+            }
+        )
+    }
+
+    if (showAddTipoDialog) {
+        var novoTipoNome by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showAddTipoDialog = false },
+            title = { Text("Nova Categoria") },
+            text = {
+                Column {
+                    Text("Informe o nome da nova categoria de produtos.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = novoTipoNome,
+                        onValueChange = { novoTipoNome = it },
+                        label = { Text("Nome da Categoria") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.onAddNovoTipo(novoTipoNome)
+                    showAddTipoDialog = false
+                }) { Text("Criar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddTipoDialog = false }) { Text("Cancelar") }
             }
         )
     }
@@ -119,6 +151,20 @@ fun AddProdutoScreen(
                                 }
                             )
                         }
+                        Divider()
+                        DropdownMenuItem(
+                            text = { 
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Add, contentDescription = null)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Adicionar Nova Categoria") 
+                                }
+                            },
+                            onClick = {
+                                showAddTipoDialog = true
+                                expandedTipo = false
+                            }
+                        )
                     }
                 }
 
