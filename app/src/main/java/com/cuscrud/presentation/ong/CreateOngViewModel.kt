@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -28,9 +29,17 @@ class CreateOngViewModel @Inject constructor(
     }
 
     fun onCreateClick() {
-        val name = _uiState.value.name
+        val name = _uiState.value.name.trim()
+        
+        // Validação local: Obrigatório
         if (name.isBlank()) {
             _uiState.update { it.copy(userMessage = "O preenchimento do nome é obrigatório.") }
+            return
+        }
+
+        // Validação local: Limite de caracteres (1-255)
+        if (name.length > 255) {
+            _uiState.update { it.copy(userMessage = "O nome da ONG deve ter no máximo 255 caracteres.") }
             return
         }
 
@@ -41,10 +50,10 @@ class CreateOngViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, isOngCreated = true) }
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) {
-                        "Não foi possível comunicar com o servidor. Tente novamente mais tarde."
+                    val message = if (result.exception is IOException) {
+                        "Não foi possível se conectar ao servidor."
                     } else {
-                        result.exception.message ?: "Erro ao criar ONG."
+                        result.exception.message ?: "Não foi possível comunicar com o servidor. Tente novamente mais tarde."
                     }
                     _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
