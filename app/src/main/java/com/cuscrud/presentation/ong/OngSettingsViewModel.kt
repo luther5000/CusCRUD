@@ -1,5 +1,6 @@
 package com.cuscrud.presentation.ong
 
+import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cuscrud.data.remote.dto.UserAccessDto
@@ -11,6 +12,7 @@ import com.cuscrud.domain.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 
 /**
@@ -54,12 +56,18 @@ class OngSettingsViewModel @Inject constructor(
     private fun loadOngDetails(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            val result = repository.getInventories()
-            if (result is Result.Success) {
-                val currentOng = result.data.find { it.invId == id }
-                _uiState.update { it.copy(ongName = currentOng?.invName ?: "", isLoading = false) }
-            } else {
-                _uiState.update { it.copy(isLoading = false) }
+            when (val result = repository.getInventories()) {
+                is Result.Success -> {
+                    val currentOng = result.data.find { it.invId == id }
+                    _uiState.update { it.copy(ongName = currentOng?.invName ?: "", isLoading = false) }
+                }
+                is Result.Error -> {
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
+                }
+                else -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
             }
         }
     }
@@ -72,7 +80,8 @@ class OngSettingsViewModel @Inject constructor(
                     _uiState.update { it.copy(colaboradores = result.data, isLoadingColaboradores = false) }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(isLoadingColaboradores = false) }
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
+                    _uiState.update { it.copy(isLoadingColaboradores = false, userMessage = message) }
                 }
                 else -> {}
             }
@@ -107,7 +116,7 @@ class OngSettingsViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) "Não foi possível comunicar com o servidor." else result.exception.message ?: "Erro ao atualizar."
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
                     _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 else -> {}
@@ -134,16 +143,29 @@ class OngSettingsViewModel @Inject constructor(
     }
 
     fun onConfirmAddColaborador() {
-        val state = _uiState.value
+        val email = _uiState.value.addColaboradorEmail.trim()
+        val role = _uiState.value.addColaboradorRole
+
+        // Validação local
+        if (email.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O preenchimento do e-mail é obrigatório.") }
+            return
+        }
+
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches() || email.length > 255) {
+            _uiState.update { it.copy(userMessage = "E-mail com formato inválido ou muito longo.") }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isAddingColaborador = true) }
-            when (val result = addColaboradorInteractor(state.addColaboradorEmail, state.addColaboradorRole)) {
+            when (val result = addColaboradorInteractor(email, role)) {
                 is Result.Success -> {
-                    _uiState.update { it.copy(isAddingColaborador = false, showAddColaboradorDialog = false, addColaboradorEmail = "", userMessage = "Colaborador adicionado!") }
+                    _uiState.update { it.copy(isAddingColaborador = false, showAddColaboradorDialog = false, addColaboradorEmail = "", userMessage = "Colaborador adicionado com sucesso!") }
                     loadColaboradores()
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) "Erro de conexão." else result.exception.message ?: "Erro ao adicionar."
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
                     _uiState.update { it.copy(isAddingColaborador = false, userMessage = message) }
                 }
                 else -> {}
@@ -184,13 +206,13 @@ class OngSettingsViewModel @Inject constructor(
                             isUpdatingColaborador = false,
                             showEditColaboradorDialog = false,
                             selectedColaborador = null,
-                            userMessage = "Permissão atualizada!"
+                            userMessage = "Permissão atualizada com sucesso!"
                         ) 
                     }
                     loadColaboradores()
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) "Não foi possível comunicar com o servidor." else result.exception.message ?: "Erro ao atualizar."
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
                     _uiState.update { it.copy(isUpdatingColaborador = false, userMessage = message) }
                 }
                 else -> {}
@@ -200,7 +222,6 @@ class OngSettingsViewModel @Inject constructor(
 
     // Remoção de Colaborador
     fun onRemoveColaboradorClick() {
-        // Acionado de dentro do diálogo de edição para mostrar confirmação secundária
         _uiState.update { it.copy(showRemoveColaboradorConfirmation = true) }
     }
 
@@ -227,7 +248,7 @@ class OngSettingsViewModel @Inject constructor(
                     loadColaboradores()
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) "Não foi possível comunicar com o servidor. Tente novamente mais tarde." else result.exception.message ?: "Erro ao remover colaborador."
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
                     _uiState.update { it.copy(isRemovingColaborador = false, userMessage = message) }
                 }
                 else -> {}
@@ -250,10 +271,11 @@ class OngSettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, showDeleteConfirmation = false) }
             when (val result = deleteOngInteractor(state.ongId)) {
                 is Result.Success -> {
-                    _uiState.update { it.copy(isLoading = false, isSuccess = true, userMessage = "ONG removida!") }
+                    _uiState.update { it.copy(isLoading = false, isSuccess = true, userMessage = "ONG removida com sucesso!") }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(isLoading = false, userMessage = result.exception.message ?: "Erro ao remover.") }
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 else -> {}
             }
