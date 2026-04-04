@@ -54,7 +54,7 @@ class RemoteTipoRepository @Inject constructor(
                 val types = response.body()?.types?.map { it.toDomain() } ?: emptyList()
                 Result.Success(types)
             } else {
-                handleError(response)
+                handleError(response, "GET")
             }
         } catch (_: IOException) {
             Result.Error(Exception("Não foi possível se conectar ao servidor."))
@@ -77,7 +77,7 @@ class RemoteTipoRepository @Inject constructor(
                     Result.Success(it.toDomain())
                 } ?: Result.Error(Exception("Categoria não encontrada."))
             } else {
-                handleError(response)
+                handleError(response, "GET")
             }
         } catch (_: IOException) {
             Result.Error(Exception("Não foi possível se conectar ao servidor."))
@@ -101,7 +101,7 @@ class RemoteTipoRepository @Inject constructor(
                     Result.Success(it.toDomain())
                 } ?: Result.Error(Exception("Erro ao processar a criação da categoria."))
             } else {
-                handleError(response)
+                handleError(response, "ADD")
             }
         } catch (_: IOException) {
             Result.Error(Exception("Não foi possível se conectar ao servidor."))
@@ -125,7 +125,7 @@ class RemoteTipoRepository @Inject constructor(
                     Result.Success(it.toDomain())
                 } ?: Result.Error(Exception("Erro ao processar a atualização da categoria."))
             } else {
-                handleError(response)
+                handleError(response, "EDIT")
             }
         } catch (_: IOException) {
             Result.Error(Exception("Não foi possível se conectar ao servidor."))
@@ -147,7 +147,7 @@ class RemoteTipoRepository @Inject constructor(
             if (response.isSuccessful) {
                 Result.Success(Unit)
             } else {
-                handleError(response)
+                handleError(response, "REMOVE")
             }
         } catch (_: IOException) {
             Result.Error(Exception("Não foi possível se conectar ao servidor."))
@@ -161,14 +161,17 @@ class RemoteTipoRepository @Inject constructor(
      * Realiza o parse de erros vindos da API seguindo o padrão { "error": { "code": "...", "message": "..." } }
      * definido no architecture.md.
      */
-    private fun handleError(response: Response<*>): Result.Error {
+    private fun handleError(response: Response<*>, context: String): Result.Error {
         // Prioridade 1: Mapeamento Estilizado por Contexto (Repositório de Inventário)
         val friendlyMessage = when (response.code()) {
             400 -> "Dados inválidos. Verifique as informações do inventário."
             401 -> "Sessão expirada. Por favor, faça login novamente."
             403 -> "Você não tem permissão para esta ação."
             404 -> "A categoria não foi encontrada."
-            409 -> "Não é possível excluir este tipo pois existem produtos vinculados a ele."
+            409 -> when(context){
+                "ADD", "EDIT" -> "Já existe uma categoria com este nome."
+                else -> "Não é possível excluir este tipo pois existem produtos vinculados a ele."
+            }
             500 -> "Erro interno no servidor. Tente novamente em instantes."
             else -> null
         }
