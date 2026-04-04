@@ -52,9 +52,9 @@ CREATE TABLE products (
     type_id INT8 NOT NULL,
     marca VARCHAR(255) NULL,
     dataValidade TIMESTAMP WITH TIME ZONE NULL,
-    unidade INT8 NULL,
+    unidade INT8 NULL CHECK (unidade IS NULL OR unidade BETWEEN 0 AND 999999999999999999),
     unidadeMedida VARCHAR(255) NULL,
-    quantidade INT8 NOT NULL DEFAULT 0,
+    quantidade INT8 NOT NULL DEFAULT 0 CHECK (quantidade BETWEEN 0 AND 999999999999999999),
     inv_id UUID NOT NULL REFERENCES inventories(inv_id) ON DELETE CASCADE,
     FOREIGN KEY (inv_id, type_id) REFERENCES types(inv_id, type_id) ON DELETE RESTRICT
 );

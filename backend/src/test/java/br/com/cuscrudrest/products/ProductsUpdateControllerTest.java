@@ -311,6 +311,66 @@ class ProductsUpdateControllerTest {
     }
 
     /**
+     * Verifica que PATCH /api/v1/inventories/{inv_id}/products/{product_id} rejeita `quantidade` acima do teto aceito.
+     * Entrada: JWT valido e `quantidade` maior que `999999999999999999`.
+     * Esperado: status 400 no formato padrao de erro com campo `quantidade`.
+     *
+     * @throws Exception quando a execucao do request de teste falha.
+     */
+    @Test
+    void shouldReturnBadRequestWhenQuantidadeExceedsMaximum() throws Exception {
+        UUID userId = insertUser("Joao Novo", "joao.novo@example.com", "senhaforte456");
+        UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        insertInventory(inventoryId, "Estoque da Loja");
+        insertInventoryAccess(userId, inventoryId, 1);
+        insertType(1L, "Bebidas", inventoryId);
+        insertProduct(301L, 1L, "Acme", null, null, null, 50L, inventoryId);
+        IssuedJwtToken issuedJwtToken = jwtService.issueToken(userId);
+
+        mockMvc.perform(patch("/inventories/{inv_id}/products/{product_id}", inventoryId, 301L)
+                        .header("Authorization", "Bearer " + issuedJwtToken.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "quantidade": 1000000000000000000
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details.campo").value("quantidade"));
+    }
+
+    /**
+     * Verifica que PATCH /api/v1/inventories/{inv_id}/products/{product_id} rejeita `unidade` acima do teto aceito.
+     * Entrada: JWT valido e `unidade` maior que `999999999999999999`.
+     * Esperado: status 400 no formato padrao de erro com campo `unidade`.
+     *
+     * @throws Exception quando a execucao do request de teste falha.
+     */
+    @Test
+    void shouldReturnBadRequestWhenUnidadeExceedsMaximum() throws Exception {
+        UUID userId = insertUser("Joao Novo", "joao.novo@example.com", "senhaforte456");
+        UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        insertInventory(inventoryId, "Estoque da Loja");
+        insertInventoryAccess(userId, inventoryId, 1);
+        insertType(1L, "Bebidas", inventoryId);
+        insertProduct(301L, 1L, "Acme", null, null, null, 50L, inventoryId);
+        IssuedJwtToken issuedJwtToken = jwtService.issueToken(userId);
+
+        mockMvc.perform(patch("/inventories/{inv_id}/products/{product_id}", inventoryId, 301L)
+                        .header("Authorization", "Bearer " + issuedJwtToken.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "unidade": 1000000000000000000
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details.campo").value("unidade"));
+    }
+
+    /**
      * Verifica que PATCH /api/v1/inventories/{inv_id}/products/{product_id} rejeita formato invalido de campo.
      * Entrada: JWT valido e `dataValidade` nao parseavel.
      * Esperado: status 400 no formato padrao de erro com campo `dataValidade`.

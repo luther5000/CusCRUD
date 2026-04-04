@@ -274,6 +274,66 @@ class ProductsCreateControllerTest {
     }
 
     /**
+     * Verifica que POST /api/v1/inventories/{inv_id}/products retorna 400 quando `quantidade` excede o teto aceito.
+     * Entrada: JWT valido para usuario owner e `quantidade` acima de `999999999999999999`.
+     * Esperado: status 400 no formato padrao de erro.
+     *
+     * @throws Exception quando a execucao do request de teste falha.
+     */
+    @Test
+    void shouldReturnBadRequestWhenQuantidadeExceedsMaximum() throws Exception {
+        UUID userId = insertUser("Joao Novo", "joao.novo@example.com", "senhaforte456");
+        UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        insertInventory(inventoryId, "Estoque da Loja");
+        insertInventoryAccess(userId, inventoryId, 0);
+        insertType(1L, "Bebidas", inventoryId);
+        IssuedJwtToken issuedJwtToken = jwtService.issueToken(userId);
+
+        mockMvc.perform(post("/inventories/{inv_id}/products", inventoryId)
+                        .header("Authorization", "Bearer " + issuedJwtToken.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type_id": 1,
+                                  "quantidade": 1000000000000000000
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details.campo").value("quantidade"));
+    }
+
+    /**
+     * Verifica que POST /api/v1/inventories/{inv_id}/products retorna 400 quando `unidade` excede o teto aceito.
+     * Entrada: JWT valido para usuario owner e `unidade` acima de `999999999999999999`.
+     * Esperado: status 400 no formato padrao de erro.
+     *
+     * @throws Exception quando a execucao do request de teste falha.
+     */
+    @Test
+    void shouldReturnBadRequestWhenUnidadeExceedsMaximum() throws Exception {
+        UUID userId = insertUser("Joao Novo", "joao.novo@example.com", "senhaforte456");
+        UUID inventoryId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        insertInventory(inventoryId, "Estoque da Loja");
+        insertInventoryAccess(userId, inventoryId, 0);
+        insertType(1L, "Bebidas", inventoryId);
+        IssuedJwtToken issuedJwtToken = jwtService.issueToken(userId);
+
+        mockMvc.perform(post("/inventories/{inv_id}/products", inventoryId)
+                        .header("Authorization", "Bearer " + issuedJwtToken.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "type_id": 1,
+                                  "unidade": 1000000000000000000
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.error.details.campo").value("unidade"));
+    }
+
+    /**
      * Verifica que POST /api/v1/inventories/{inv_id}/products retorna 400 quando o corpo possui formato invalido.
      * Entrada: JWT valido para usuario owner e `dataValidade` nao parseavel.
      * Esperado: status 400 no formato padrao de erro com campo `dataValidade`.

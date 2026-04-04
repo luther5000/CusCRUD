@@ -5,6 +5,7 @@ import br.com.cuscrudrest.common.error.NotFoundException;
 import br.com.cuscrudrest.common.error.ValidationException;
 import br.com.cuscrudrest.config.DatabaseConfiguredCondition;
 import br.com.cuscrudrest.inventories.InventoryAccessService;
+import br.com.cuscrudrest.products.ProductNumericConstraints;
 import br.com.cuscrudrest.products.ProductRepository;
 import br.com.cuscrudrest.products.ProductSummary;
 import br.com.cuscrudrest.types.TypeRepository;
@@ -233,7 +234,7 @@ public class UpdateProductService {
             throw new ValidationException(
                     "Campo invalido.",
                     campo,
-                    "must be greater than or equal to 0"
+                    ProductNumericConstraints.MIN_PRODUCT_AMOUNT_MESSAGE
             );
         }
 
@@ -242,7 +243,15 @@ public class UpdateProductService {
             throw new ValidationException(
                     "Campo invalido.",
                     campo,
-                    "must be greater than or equal to 0"
+                    ProductNumericConstraints.MIN_PRODUCT_AMOUNT_MESSAGE
+            );
+        }
+
+        if (value > ProductNumericConstraints.MAX_PRODUCT_AMOUNT) {
+            throw new ValidationException(
+                    "Campo invalido.",
+                    campo,
+                    ProductNumericConstraints.MAX_PRODUCT_AMOUNT_MESSAGE
             );
         }
 

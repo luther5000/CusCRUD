@@ -1,6 +1,8 @@
 package br.com.cuscrudrest.products.create;
 
+import br.com.cuscrudrest.products.ProductNumericConstraints;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -26,11 +28,13 @@ public record CreateProductRequest(
         @Size(max = 255, message = "must have at most 255 characters")
         String marca,
         OffsetDateTime dataValidade,
-        @PositiveOrZero(message = "must be greater than or equal to 0")
+        @PositiveOrZero(message = ProductNumericConstraints.MIN_PRODUCT_AMOUNT_MESSAGE)
+        @Max(value = ProductNumericConstraints.MAX_PRODUCT_AMOUNT, message = ProductNumericConstraints.MAX_PRODUCT_AMOUNT_MESSAGE)
         Long unidade,
         @Size(max = 255, message = "must have at most 255 characters")
         String unidadeMedida,
-        @PositiveOrZero(message = "must be greater than or equal to 0")
+        @PositiveOrZero(message = ProductNumericConstraints.MIN_PRODUCT_AMOUNT_MESSAGE)
+        @Max(value = ProductNumericConstraints.MAX_PRODUCT_AMOUNT, message = ProductNumericConstraints.MAX_PRODUCT_AMOUNT_MESSAGE)
         Long quantidade
 ) {
 }

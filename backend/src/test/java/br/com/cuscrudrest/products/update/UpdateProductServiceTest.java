@@ -256,6 +256,76 @@ class UpdateProductServiceTest {
     }
 
     /**
+     * Verifica que o servico rejeita quantidade acima do teto permitido no patch.
+     * Entrada: produto existente e payload com `quantidade > 999999999999999999`.
+     * Esperado: ValidationException associada ao campo `quantidade`.
+     */
+    @Test
+    void shouldRejectQuantidadeAboveMaximum() {
+        AuthenticatedUserPrincipal authenticatedUser = authenticatedUser();
+        UUID inventoryId = UUID.randomUUID();
+        ProductSummary existingProduct = new ProductSummary(301L, 1L, "Acme", null, null, null, 50L, inventoryId);
+
+        when(inventoryAccessService.requireWriteAccess(inventoryId, authenticatedUser.userId()))
+                .thenReturn(new InventoryAccessContext(inventoryId, "Loja", 1));
+        when(productRepository.findProductById(inventoryId, 301L)).thenReturn(Optional.of(existingProduct));
+
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> updateProductService.updateProduct(
+                        authenticatedUser,
+                        inventoryId,
+                        301L,
+                        new UpdateProductRequest(
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                objectMapper.getNodeFactory().numberNode(1_000_000_000_000_000_000L)
+                        )
+                )
+        );
+
+        assertEquals("quantidade", exception.getCampo());
+    }
+
+    /**
+     * Verifica que o servico rejeita unidade acima do teto permitido no patch.
+     * Entrada: produto existente e payload com `unidade > 999999999999999999`.
+     * Esperado: ValidationException associada ao campo `unidade`.
+     */
+    @Test
+    void shouldRejectUnidadeAboveMaximum() {
+        AuthenticatedUserPrincipal authenticatedUser = authenticatedUser();
+        UUID inventoryId = UUID.randomUUID();
+        ProductSummary existingProduct = new ProductSummary(301L, 1L, "Acme", null, null, null, 50L, inventoryId);
+
+        when(inventoryAccessService.requireWriteAccess(inventoryId, authenticatedUser.userId()))
+                .thenReturn(new InventoryAccessContext(inventoryId, "Loja", 1));
+        when(productRepository.findProductById(inventoryId, 301L)).thenReturn(Optional.of(existingProduct));
+
+        ValidationException exception = assertThrows(
+                ValidationException.class,
+                () -> updateProductService.updateProduct(
+                        authenticatedUser,
+                        inventoryId,
+                        301L,
+                        new UpdateProductRequest(
+                                null,
+                                null,
+                                null,
+                                objectMapper.getNodeFactory().numberNode(1_000_000_000_000_000_000L),
+                                null,
+                                null
+                        )
+                )
+        );
+
+        assertEquals("unidade", exception.getCampo());
+    }
+
+    /**
      * Verifica que o servico propaga a falha de autorizacao quando o usuario nao possui escrita no inventario.
      * Entrada: usuario autenticado sem `role = 0` ou `role = 1` para o inventario.
      * Esperado: ForbiddenException do servico de acesso.
