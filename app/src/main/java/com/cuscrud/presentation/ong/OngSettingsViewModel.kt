@@ -102,24 +102,48 @@ class OngSettingsViewModel @Inject constructor(
 
     fun onSaveClick() {
         val state = _uiState.value
+        val newName = state.editName.trim()
+
+        // 1. Validação: Nome em branco
+        if (newName.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O preenchimento do nome é obrigatório.") }
+            return
+        }
+
+        // 2. Validação: Limite de caracteres (Spec 5.2.2)
+        if (newName.length > 255) {
+            _uiState.update { it.copy(userMessage = "O nome da ONG não pode ultrapassar 255 caracteres.") }
+            return
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            when (val result = updateOngInteractor(state.ongId, state.editName)) {
-                is Result.Success -> {
-                    _uiState.update { 
-                        it.copy(
-                            ongName = result.data.invName,
-                            isEditing = false,
-                            isLoading = false,
-                            userMessage = "Nome da ONG atualizado com sucesso!"
-                        ) 
+            // Nota: Adicionado try/catch para IOExceptions (Cenário de falha de conexão)
+            try {
+                when (val result = updateOngInteractor(state.ongId, newName)) {
+                    is Result.Success -> {
+                        _uiState.update {
+                            it.copy(
+                                ongName = result.data.invName,
+                                isEditing = false,
+                                isLoading = false,
+                                userMessage = "Nome da ONG atualizado com sucesso!"
+                            )
+                        }
                     }
+                    is Result.Error -> {
+                        val message = result.exception.message ?: "Ocorreu um erro inesperado."
+                        _uiState.update { it.copy(isLoading = false, userMessage = message) }
+                    }
+                    else -> {}
                 }
-                is Result.Error -> {
-                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
-                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
+            } catch (e: IOException) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        userMessage = "Não foi possível comunicar com o servidor. Tente novamente mais tarde."
+                    )
                 }
-                else -> {}
             }
         }
     }
