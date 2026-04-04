@@ -295,7 +295,8 @@ class OngSettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, showDeleteConfirmation = false) }
             when (val result = deleteOngInteractor(state.ongId)) {
                 is Result.Success -> {
-                    _uiState.update { it.copy(isLoading = false, isSuccess = true, userMessage = "ONG removida com sucesso!") }
+                    // Removido o userMessage daqui para ser exibido na tela de destino (SelectOng)
+                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
                 }
                 is Result.Error -> {
                     val message = result.exception.message ?: "Ocorreu um erro inesperado."

@@ -75,7 +75,7 @@ fun CusCrudNavGraph(
                 viewModel = viewModel,
                 onOngSelected = {
                     navController.navigate("inventario") {
-                        popUpTo("select_ong") { inclusive = true }
+                        popUpTo("select_ong") { inclusive = false }
                     }
                 },
                 onCreateOngClick = {
@@ -92,7 +92,7 @@ fun CusCrudNavGraph(
                 onBackClick = { navController.popBackStack() },
                 onOngCreated = {
                     navController.navigate("inventario") {
-                        popUpTo("select_ong") { inclusive = true }
+                        popUpTo("select_ong") { inclusive = false }
                     }
                 }
             )
@@ -105,9 +105,17 @@ fun CusCrudNavGraph(
                 viewModel = viewModel,
                 onBackClick = { navController.popBackStack() },
                 onDeleteSuccess = {
-                    navController.navigate("select_ong") {
-                        popUpTo("inventario") { inclusive = true }
+                    // Busca a entrada de SelectOng explicitamente para injetar a mensagem
+                    try {
+                        navController.getBackStackEntry("select_ong")
+                            .savedStateHandle
+                            .set("success_message", "ONG removida com sucesso!")
+                    } catch (e: Exception) {
+                        // Fallback caso a entrada não seja encontrada
                     }
+                    
+                    // Volta para a tela de seleção removendo o inventário
+                    navController.popBackStack("select_ong", inclusive = false)
                 }
             )
         }
@@ -126,7 +134,9 @@ fun CusCrudNavGraph(
                 },
                 onAddSampleData = { mainActivity.viewModel.addSampleProduct() },
                 onChangeOngClick = {
-                    navController.navigate("select_ong")
+                    navController.navigate("select_ong") {
+                        popUpTo("select_ong") { inclusive = true }
+                    }
                 },
                 onSettingsClick = {
                     navController.navigate("ong_settings")

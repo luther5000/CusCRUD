@@ -37,6 +37,7 @@ fun SelectOngScreen(
     LaunchedEffect(uiState.isOngSelected) {
         if (uiState.isOngSelected) {
             onOngSelected()
+            viewModel.onNavigated() // Reseta o estado após disparar a navegação
         }
     }
 

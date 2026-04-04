@@ -1,5 +1,6 @@
 package com.cuscrud.presentation.ong
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cuscrud.data.remote.dto.InventoryDto
@@ -21,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SelectOngViewModel @Inject constructor(
     private val getOngsInteractor: GetOngsInteractor,
-    private val setActiveOngInteractor: SetActiveOngInteractor
+    private val setActiveOngInteractor: SetActiveOngInteractor,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SelectOngUiState())
@@ -29,6 +31,24 @@ class SelectOngViewModel @Inject constructor(
 
     init {
         loadOngs()
+        observeSavedStateMessages()
+    }
+
+    private fun observeSavedStateMessages() {
+        viewModelScope.launch {
+            savedStateHandle.getStateFlow<String?>("success_message", null).collect { message ->
+                if (message != null) {
+                    _uiState.update { 
+                        it.copy(
+                            userMessage = message, 
+                            isOngSelected = false 
+                        ) 
+                    }
+                    // Força o recarregamento da lista para refletir a remoção
+                    loadOngs()
+                }
+            }
+        }
     }
 
     /**
@@ -62,9 +82,6 @@ class SelectOngViewModel @Inject constructor(
      * Define uma ONG específica como ativa e sinaliza para a navegação prosseguir para o inventário.
      */
     fun onOngSelected(ong: InventoryDto) {
-        // Correção do erro de Argument type mismatch:
-        // ong.role é Int? e Role.fromInt espera Int. Usamos o operador elvis com um valor inválido (-1)
-        // ou let para tratar a nulidade de forma segura.
         val role = ong.role?.let { Role.fromInt(it) }
         
         if (role == null) {
@@ -74,7 +91,6 @@ class SelectOngViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
-                // Definir a ONG como ativa no contexto global (DataStore + StateFlow do Repositório)
                 setActiveOngInteractor(ong.invId, role)
                 _uiState.update { it.copy(isOngSelected = true) }
             } catch (e: Exception) {
@@ -84,9 +100,17 @@ class SelectOngViewModel @Inject constructor(
     }
 
     /**
-     * Limpa a mensagem do Snackbar após ser exibida.
+     * Chamado após a navegação ser concluída para resetar o estado de gatilho.
+     */
+    fun onNavigated() {
+        _uiState.update { it.copy(isOngSelected = false) }
+    }
+
+    /**
+     * Limpa a mensagem do Snackbar após ser exibida e limpa a origem no SavedStateHandle.
      */
     fun snackbarMessageShown() {
         _uiState.update { it.copy(userMessage = null) }
+        savedStateHandle["success_message"] = null
     }
 }

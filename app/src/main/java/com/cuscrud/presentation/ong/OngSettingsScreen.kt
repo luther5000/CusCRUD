@@ -292,9 +292,9 @@ fun OngSettingsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Icon(Icons.Default.Delete, null)
+                        Icon(Icons.Default.Delete, "Remover ONG")
                         Spacer(Modifier.width(8.dp))
-                        Text("Remover Organização")
+                        Text("Remover ONG")
                     }
                 }
             }
