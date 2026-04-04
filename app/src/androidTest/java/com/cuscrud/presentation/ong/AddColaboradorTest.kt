@@ -133,6 +133,48 @@ class AddColaboradorTest {
         }
     }
 
+    @Test
+    fun teste06_adicionarColaboradorComoEditor() {
+        Espresso.pressBack()
+        Espresso.pressBack()
+
+        composeTestRule.onNodeWithContentDescription("Voltar para ONGs").performClick()
+
+
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithText("Selecione sua ONG").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("ONG B", substring = true).performClick()
+
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithText("Inventário Geral").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithContentDescription("Configurações da ONG").performClick()
+
+        composeTestRule.onNodeWithText("Adicionar").assertDoesNotExist()
+    }
+
+    @Test
+    fun teste07_adicionarColaboradorComoVisualizador() {
+        Espresso.pressBack()
+        Espresso.pressBack()
+
+        composeTestRule.onNodeWithContentDescription("Voltar para ONGs").performClick()
+
+
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithText("Selecione sua ONG").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithText("ONG C", substring = true).performClick()
+
+        composeTestRule.waitUntil(10000) {
+            composeTestRule.onAllNodesWithText("Inventário Geral").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeTestRule.onNodeWithContentDescription("Configurações da ONG").performClick()
+
+        composeTestRule.onNodeWithText("Adicionar").assertDoesNotExist()
+    }
+
     /*@Test
     fun falhaConexaoAoAdicionarColaborador_InformaErroPadronizado() {
         composeTestRule.onNodeWithText("E-mail do usuário").performTextInput("timeout@teste.com")
