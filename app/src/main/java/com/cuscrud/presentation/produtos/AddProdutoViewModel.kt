@@ -181,12 +181,11 @@ class AddProdutoViewModel @Inject constructor(
         }
 
         val unidadeLong = currentState.unidade.toLongOrNull()
-        if (unidadeLong == null || unidadeLong < 0 ) {
+        if (unidadeLong == null || unidadeLong < 0) {
             _uiState.update { it.copy(userMessage = "Valor unitário inválido.") }
             return
         }
-
-        if (unidadeLong >= MAX_VALUE){
+        if (unidadeLong >= MAX_VALUE) {
             _uiState.update { it.copy(userMessage = "Valor unitário muito grande.") }
             return
         }
@@ -196,8 +195,7 @@ class AddProdutoViewModel @Inject constructor(
             _uiState.update { it.copy(userMessage = "Quantidade inválida.") }
             return
         }
-
-        if (quantidadeLong >= MAX_VALUE){
+        if (quantidadeLong >= MAX_VALUE) {
             _uiState.update { it.copy(userMessage = "Quantidade muito grande.") }
             return
         }
