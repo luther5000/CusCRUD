@@ -24,7 +24,8 @@ class ProdutoDetalhesViewModel @Inject constructor(
 
     private val produtoId: Long = checkNotNull(savedStateHandle["produtoId"])
 
-    private val _uiState = MutableStateFlow(ProdutoDetalhesUiState())
+    // Inicializa com isLoading = true e produto = null para evitar flicker de dados antigos
+    private val _uiState = MutableStateFlow(ProdutoDetalhesUiState(isLoading = true))
     val uiState: StateFlow<ProdutoDetalhesUiState> = _uiState.asStateFlow()
 
     init {
@@ -42,7 +43,9 @@ class ProdutoDetalhesViewModel @Inject constructor(
 
     fun loadProduto() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            // Limpa o produto atual e define loading para garantir que nada antigo seja exibido
+            _uiState.update { it.copy(isLoading = true, produto = null) }
+            
             when (val result = getProdutoDetalhesInteractor(produtoId)) {
                 is Result.Success -> {
                     _uiState.update { it.copy(produto = result.data, isLoading = false) }

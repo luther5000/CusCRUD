@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -34,7 +35,6 @@ fun ProdutoDetalhesScreen(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Força o refresh sempre que a tela volta ao primeiro plano (RESUME)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -47,7 +47,6 @@ fun ProdutoDetalhesScreen(
         }
     }
 
-    // Observa mensagens de sucesso vindas do AddProdutoScreen através do savedStateHandle
     val successMessage by navController.currentBackStackEntry
         ?.savedStateHandle
         ?.getStateFlow<String?>("success_message", null)
@@ -56,7 +55,6 @@ fun ProdutoDetalhesScreen(
     LaunchedEffect(successMessage) {
         successMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
-            // Limpa para não disparar novamente
             navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
         }
     }
@@ -132,9 +130,13 @@ fun ProdutoDetalhesScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (uiState.isLoading && uiState.produto == null) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (uiState.produto == null && !uiState.isLoading) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .testTag("loading_indicator")
+                )
+            } else if (uiState.produto == null) {
                 Text(
                     text = "Produto não encontrado.",
                     modifier = Modifier.align(Alignment.Center)
@@ -142,7 +144,7 @@ fun ProdutoDetalhesScreen(
             } else {
                 uiState.produto?.let { produto ->
                     Column {
-                        if (uiState.isLoading || uiState.isUpdatingQuantity) {
+                        if (uiState.isUpdatingQuantity) {
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                         }
                         
