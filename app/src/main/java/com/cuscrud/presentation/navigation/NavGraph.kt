@@ -153,6 +153,7 @@ fun CusCrudNavGraph(
             val viewModel = hiltViewModel<ProdutosPorTipoViewModel>()
             ProdutosPorTipoScreen(
                 viewModel = viewModel,
+                navController = navController,
                 onBackClick = { navController.popBackStack() },
                 onProdutoClick = { produtoId ->
                     navController.navigate("detalhes/$produtoId")

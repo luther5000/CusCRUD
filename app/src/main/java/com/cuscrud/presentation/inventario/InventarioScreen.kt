@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
@@ -34,6 +37,20 @@ fun InventarioScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Força o refresh sempre que a tela volta ao primeiro plano (RESUME)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchInventario()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // RBAC: Verifica se o usuário pode adicionar produtos
     val canAdd = when (val state = uiState) {
@@ -50,7 +67,6 @@ fun InventarioScreen(
     LaunchedEffect(successMessage) {
         successMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
-            // Limpa a mensagem para evitar que ela apareça novamente ao recompor ou voltar
             navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
         }
     }
@@ -60,7 +76,6 @@ fun InventarioScreen(
             TopAppBar(
                 title = { Text("Inventário Geral") },
                 navigationIcon = {
-                    // Botão para retornar à seleção de ONGs
                     IconButton(onClick = onChangeOngClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -69,7 +84,6 @@ fun InventarioScreen(
                     }
                 },
                 actions = {
-                    // Botão para definições da ONG
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
@@ -85,7 +99,6 @@ fun InventarioScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            // RBAC: Oculta o botão de adicionar se for apenas Visualizador
             if (canAdd) {
                 FloatingActionButton(
                     onClick = onAddProdutoClick,

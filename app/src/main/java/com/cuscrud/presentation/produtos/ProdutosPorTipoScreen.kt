@@ -15,6 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.canEditProducts
 
@@ -22,6 +27,7 @@ import com.cuscrud.domain.repository.canEditProducts
 @Composable
 fun ProdutosPorTipoScreen(
     viewModel: ProdutosPorTipoViewModel,
+    navController: NavController,
     onBackClick: () -> Unit,
     onAddProdutoClick: () -> Unit,
     onEditProdutoClick: (Long) -> Unit,
@@ -29,6 +35,37 @@ fun ProdutosPorTipoScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Força o refresh sempre que a tela volta ao primeiro plano (RESUME)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadProdutos()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Observa mensagens de sucesso vindas do AddProdutoScreen
+    val successMessage by navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow<String?>("success_message", null)
+        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            // Força o recarregamento dos produtos desta categoria
+            viewModel.loadProdutos()
+            
+            snackbarHostState.showSnackbar(message)
+            // Limpa para não disparar novamente
+            navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
+        }
+    }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
