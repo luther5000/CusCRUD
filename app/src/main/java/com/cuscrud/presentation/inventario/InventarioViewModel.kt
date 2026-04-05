@@ -22,8 +22,10 @@ class InventarioViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<InventarioUiState>(InventarioUiState.Loading)
     val uiState: StateFlow<InventarioUiState> = _uiState.asStateFlow()
 
+    // Flag para controlar carregamento silencioso (evita flicker)
+    private var isFetchingSilently = false
+
     init {
-        fetchInventario()
         observeRole()
     }
 
@@ -31,41 +33,46 @@ class InventarioViewModel @Inject constructor(
         viewModelScope.launch {
             inventoryRepository.activeInventoryRole.collect { role ->
                 _uiState.update { state ->
-                    if (state is InventarioUiState.Success) {
-                        state.copy(userRole = role)
-                    } else {
-                        state
-                    }
+                    if (state is InventarioUiState.Success) state.copy(userRole = role) else state
                 }
             }
         }
     }
 
-    /**
-     * Busca o inventário agrupado da API remota.
-     * Como não há mais SSOT local, esta função deve ser chamada manualmente para refresh.
-     */
     fun fetchInventario() {
+        if (isFetchingSilently) return
+        
         viewModelScope.launch {
-            val currentRole = (uiState.value as? InventarioUiState.Success)?.userRole
+            val currentState = _uiState.value
+            val currentRole = (currentState as? InventarioUiState.Success)?.userRole ?: inventoryRepository.activeInventoryRole.value
             
-            _uiState.value = InventarioUiState.Loading
+            // Se já temos dados, fazemos um carregamento "silencioso" (não mudamos para Loading)
+            val shouldShowFullLoading = currentState !is InventarioUiState.Success
+            
+            if (shouldShowFullLoading) {
+                _uiState.value = InventarioUiState.Loading
+            } else {
+                isFetchingSilently = true
+            }
+            
             when (val result = getInventarioAgrupadoInteractor()) {
                 is Result.Success -> {
                     _uiState.value = InventarioUiState.Success(
                         inventario = result.data,
-                        userRole = currentRole ?: inventoryRepository.activeInventoryRole.value
+                        userRole = currentRole
                     )
                 }
                 is Result.Error -> {
-                    _uiState.value = InventarioUiState.Error(
-                        result.exception.message ?: "Erro: Não foi possível carregar os dados do inventário."
-                    )
+                    // Só mostramos erro total se não houver dados anteriores
+                    if (shouldShowFullLoading) {
+                        _uiState.value = InventarioUiState.Error(
+                            result.exception.message ?: "Erro ao carregar o inventário."
+                        )
+                    }
                 }
-                Result.Loading -> {
-                    _uiState.value = InventarioUiState.Loading
-                }
+                else -> {}
             }
+            isFetchingSilently = false
         }
     }
 }

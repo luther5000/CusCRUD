@@ -24,13 +24,13 @@ class ProdutoDetalhesViewModel @Inject constructor(
 
     private val produtoId: Long = checkNotNull(savedStateHandle["produtoId"])
 
-    // Inicializa com isLoading = true e produto = null para evitar flicker de dados antigos
     private val _uiState = MutableStateFlow(ProdutoDetalhesUiState(isLoading = true))
     val uiState: StateFlow<ProdutoDetalhesUiState> = _uiState.asStateFlow()
 
+    private var isRefreshing = false
+
     init {
         observeUserRole()
-        loadProduto()
     }
 
     private fun observeUserRole() {
@@ -42,22 +42,34 @@ class ProdutoDetalhesViewModel @Inject constructor(
     }
 
     fun loadProduto() {
+        if (isRefreshing) return
+
         viewModelScope.launch {
-            // Limpa o produto atual e define loading para garantir que nada antigo seja exibido
-            _uiState.update { it.copy(isLoading = true, produto = null) }
+            val currentState = _uiState.value
+            // Só mostra o loading total se não houver produto carregado
+            val shouldShowFullLoading = currentState.produto == null
+
+            if (shouldShowFullLoading) {
+                _uiState.update { it.copy(isLoading = true) }
+            } else {
+                isRefreshing = true
+            }
             
             when (val result = getProdutoDetalhesInteractor(produtoId)) {
                 is Result.Success -> {
                     _uiState.update { it.copy(produto = result.data, isLoading = false) }
                 }
                 is Result.Error -> {
-                    val message = result.exception.message ?: "Erro ao carregar detalhes."
-                    _uiState.update { it.copy(userMessage = message, isLoading = false) }
+                    if (shouldShowFullLoading) {
+                        val message = result.exception.message ?: "Erro ao carregar detalhes."
+                        _uiState.update { it.copy(userMessage = message, isLoading = false) }
+                    }
                 }
                 Result.Loading -> {
-                    _uiState.update { it.copy(isLoading = true) }
+                    if (shouldShowFullLoading) _uiState.update { it.copy(isLoading = true) }
                 }
             }
+            isRefreshing = false
         }
     }
 

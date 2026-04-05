@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,7 +40,6 @@ fun InventarioScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Força o refresh sempre que a tela volta ao primeiro plano (RESUME)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -52,13 +52,11 @@ fun InventarioScreen(
         }
     }
 
-    // RBAC: Verifica se o usuário pode adicionar produtos
     val canAdd = when (val state = uiState) {
         is InventarioUiState.Success -> state.userRole.canEditProducts()
         else -> false
     }
 
-    // Observa mensagens de sucesso vindas de outras telas através do savedStateHandle
     val successMessage by navController.currentBackStackEntry
         ?.savedStateHandle
         ?.getStateFlow<String?>("success_message", null)
@@ -116,7 +114,11 @@ fun InventarioScreen(
         ) {
             when (val state = uiState) {
                 is InventarioUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .testTag("loading_indicator")
+                    )
                 }
                 is InventarioUiState.Error -> {
                     Column(

@@ -39,7 +39,6 @@ fun ProdutosPorTipoScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
-    // Força o refresh sempre que a tela volta ao primeiro plano (RESUME)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -52,7 +51,6 @@ fun ProdutosPorTipoScreen(
         }
     }
 
-    // Observa mensagens de sucesso vindas do AddProdutoScreen
     val successMessage by navController.currentBackStackEntry
         ?.savedStateHandle
         ?.getStateFlow<String?>("success_message", null)
@@ -98,8 +96,12 @@ fun ProdutosPorTipoScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (uiState.isLoading && uiState.produtos.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .testTag("loading_indicator")
+                )
             } else if (uiState.produtos.isEmpty()) {
                 Text(
                     text = "Nenhum produto cadastrado nesta categoria.",
@@ -122,10 +124,6 @@ fun ProdutosPorTipoScreen(
                             onDiminuirQuantidade = { viewModel.alterarQuantidade(produto, -1) }
                         )
                     }
-                }
-                
-                if (uiState.isLoading && uiState.produtos.isNotEmpty()) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
         }

@@ -23,16 +23,17 @@ class ProdutosPorTipoViewModel @Inject constructor(
 
     private val tipoId: Long = checkNotNull(savedStateHandle["tipoId"])
 
-    private val _uiState = MutableStateFlow(ProdutosPorTipoUiState())
+    private val _uiState = MutableStateFlow(ProdutosPorTipoUiState(isLoading = true))
     val uiState: StateFlow<ProdutosPorTipoUiState> = _uiState.asStateFlow()
 
     companion object {
         const val MAX_VALUE = 999999999999999999L
     }
 
+    private var isRefreshing = false
+
     init {
         observeUserRole()
-        loadProdutos()
     }
 
     private fun observeUserRole() {
@@ -43,12 +44,20 @@ class ProdutosPorTipoViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    /**
-     * Carrega a lista de produtos do tipo especificado via API.
-     */
     fun loadProdutos() {
+        if (isRefreshing) return
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            val currentState = _uiState.value
+            // Só mostra o loading de tela cheia se a lista estiver vazia
+            val shouldShowFullLoading = currentState.produtos.isEmpty()
+
+            if (shouldShowFullLoading) {
+                _uiState.update { it.copy(isLoading = true) }
+            } else {
+                isRefreshing = true
+            }
+            
             when (val result = getProdutosPorTipoInteractor(tipoId)) {
                 is Result.Success -> {
                     _uiState.update { 
@@ -61,17 +70,17 @@ class ProdutosPorTipoViewModel @Inject constructor(
                     } else {
                         result.exception.message ?: "Erro ao carregar produtos."
                     }
-                    _uiState.update { it.copy(isLoading = false, errorMessage = message) }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = if (shouldShowFullLoading) message else null) }
                 }
                 Result.Loading -> {
-                    _uiState.update { it.copy(isLoading = true) }
+                    if (shouldShowFullLoading) _uiState.update { it.copy(isLoading = true) }
                 }
             }
+            isRefreshing = false
         }
     }
 
     fun alterarQuantidade(produto: Produto, delta: Long) {
-        // Busca a versão mais recente do produto no estado para evitar race conditions
         val produtoAtual = _uiState.value.produtos.find { it.id == produto.id } ?: produto
         val novaQuantidade = produtoAtual.quantidade + delta
         
@@ -87,7 +96,6 @@ class ProdutosPorTipoViewModel @Inject constructor(
 
         val produtoAtualizado = produtoAtual.copy(quantidade = novaQuantidade)
         
-        // Otimismo na UI: atualiza localmente antes da chamada de rede
         _uiState.update { state ->
             state.copy(
                 produtos = state.produtos.map { 
@@ -97,14 +105,11 @@ class ProdutosPorTipoViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
             when (val result = editProdutoInteractor(produto.id, produtoAtualizado)) {
-                is Result.Success -> {
-                    _uiState.update { it.copy(isLoading = false) }
-                }
+                is Result.Success -> {}
                 is Result.Error -> {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = result.exception.message) }
-                    loadProdutos() // Reverte/Sincroniza em caso de erro
+                    _uiState.update { it.copy(errorMessage = result.exception.message) }
+                    loadProdutos()
                 }
                 Result.Loading -> {}
             }
