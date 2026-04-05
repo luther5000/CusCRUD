@@ -19,6 +19,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
+import com.cuscrud.domain.repository.canEditProducts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,12 @@ fun InventarioScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // RBAC: Verifica se o usuário pode adicionar produtos
+    val canAdd = when (val state = uiState) {
+        is InventarioUiState.Success -> state.userRole.canEditProducts()
+        else -> false
+    }
 
     // Observa mensagens de sucesso vindas de outras telas através do savedStateHandle
     val successMessage by navController.currentBackStackEntry
@@ -78,11 +85,14 @@ fun InventarioScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddProdutoClick,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+            // RBAC: Oculta o botão de adicionar se for apenas Visualizador
+            if (canAdd) {
+                FloatingActionButton(
+                    onClick = onAddProdutoClick,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+                }
             }
         }
     ) { padding ->
