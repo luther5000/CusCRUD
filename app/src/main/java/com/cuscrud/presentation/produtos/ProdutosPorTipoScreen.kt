@@ -7,16 +7,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
+import com.cuscrud.domain.repository.canEditProducts
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -26,13 +31,26 @@ fun ProdutosPorTipoScreen(
     viewModel: ProdutosPorTipoViewModel,
     navController: NavController,
     onBackClick: () -> Unit,
-    onProdutoClick: (Long) -> Unit,
-    onAddProdutoClick: () -> Unit
+    onAddProdutoClick: () -> Unit,
+    onProdutoClick: (Long) -> Unit
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
-    // Observa mensagens de sucesso vindas de outras telas através do savedStateHandle
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadProdutos()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     val successMessage by navController.currentBackStackEntry
         ?.savedStateHandle
         ?.getStateFlow<String?>("success_message", null)
@@ -40,19 +58,14 @@ fun ProdutosPorTipoScreen(
 
     LaunchedEffect(successMessage) {
         successMessage?.let { message ->
+            viewModel.loadProdutos()
             snackbarHostState.showSnackbar(message)
-            // Limpa a mensagem para evitar que ela apareça novamente ao recompor ou voltar
             navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
         }
     }
 
-    // Exibe snackbars de erro ou sucesso local
-    LaunchedEffect(uiState.errorMessage, uiState.mensagemSucesso) {
+    LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.limparMensagens()
-        }
-        uiState.mensagemSucesso?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.limparMensagens()
         }
@@ -61,7 +74,7 @@ fun ProdutosPorTipoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Produtos da Categoria") },
+                title = { Text("Produtos") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
@@ -69,24 +82,31 @@ fun ProdutosPorTipoScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddProdutoClick) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+            if (uiState.userRole.canEditProducts()) {
+                FloatingActionButton(onClick = onAddProdutoClick) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+                }
             }
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (uiState.isLoading && uiState.produtos.isEmpty()) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .testTag("loading_indicator")
+                )
             } else if (uiState.produtos.isEmpty()) {
                 Text(
-                    text = "Nenhum produto encontrado nesta categoria.",
-                    modifier = Modifier.align(Alignment.Center)
+                    text = "Nenhum produto cadastrado nesta categoria.",
+                    modifier = Modifier.align(Alignment.Center),
+                    style = MaterialTheme.typography.bodyLarge
                 )
             } else {
                 LazyColumn(
@@ -94,60 +114,44 @@ fun ProdutosPorTipoScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.produtos, key = { it.id }) { produto ->
-                        ProdutoListItem(
+                    items(uiState.produtos) { produto ->
+                        ProdutoItem(
                             produto = produto,
+                            canEdit = uiState.userRole.canEditProducts(),
+                            dateFormatter = dateFormatter,
                             onClick = { onProdutoClick(produto.id) },
-                            onDeleteClick = { viewModel.solicitarRemocao(produto) }
+                            onAumentarQuantidade = { viewModel.alterarQuantidade(produto, 1) },
+                            onDiminuirQuantidade = { viewModel.alterarQuantidade(produto, -1) }
                         )
                     }
                 }
             }
-
-            if (uiState.isLoading && uiState.produtos.isNotEmpty()) {
-                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
-            }
-        }
-
-        // Diálogo de Confirmação (Double-check)
-        uiState.produtoParaRemover?.let { produto ->
-            AlertDialog(
-                onDismissRequest = { viewModel.cancelarRemocao() },
-                title = { Text("Confirmar Remoção") },
-                text = { Text("Deseja realmente remover ${produto.marca}?") },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.confirmarRemocao() }) {
-                        Text("Sim")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.cancelarRemocao() }) {
-                        Text("Não")
-                    }
-                }
-            )
         }
     }
 }
 
 @Composable
-fun ProdutoListItem(
-    produto: Produto, 
+fun ProdutoItem(
+    produto: Produto,
+    canEdit: Boolean,
+    dateFormatter: SimpleDateFormat,
     onClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onAumentarQuantidade: () -> Unit,
+    onDiminuirQuantidade: () -> Unit
 ) {
-    val dateFormatter = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .testTag("produto_item")
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .padding(16.dp)
                 .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -155,23 +159,36 @@ fun ProdutoListItem(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = "Qtd: ${produto.quantidade} (${produto.unidade} ${produto.unidadeMedida})")
-                    Text(
-                        text = "Validade: ${dateFormatter.format(produto.dataValidade)}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
+                Text(
+                    text = "Vencimento: ${dateFormatter.format(produto.dataValidade)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "${produto.unidade} ${produto.unidadeMedida}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
-            IconButton(onClick = onDeleteClick) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Remover Produto",
-                    tint = MaterialTheme.colorScheme.error
+            
+            if (canEdit) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDiminuirQuantidade) {
+                        Icon(Icons.Default.Remove, contentDescription = "Diminuir")
+                    }
+                    Text(
+                        text = produto.quantidade.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    IconButton(onClick = onAumentarQuantidade) {
+                        Icon(Icons.Default.Add, contentDescription = "Aumentar")
+                    }
+                }
+            } else {
+                Text(
+                    text = "Qtd: ${produto.quantidade}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

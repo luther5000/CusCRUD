@@ -4,29 +4,44 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Este arquivo contém os Data Transfer Objects (DTOs) para o gerenciamento de produtos e seus tipos.
- * Define a estrutura de dados para as operações de:
- * - **Criação (ProdutoRequestDto)**: Dados necessários para adicionar um novo produto.
- * - **Atualização Parcial (ProdutoUpdateDto)**: Campos opcionais para requisições PATCH.
- * - **Resposta (ProdutoResponseDto)**: Dados retornados pela API ao consultar produtos.
- * - **Tipos de Produto (TipoResponseDto)**: Informações sobre a categoria/tipo do produto, incluindo imagem em Base64.
- *
- * Utiliza kotlinx.serialization para mapeamento JSON e segue o padrão ISO 8601 para datas.
+ * DTO para requisição de criação de produto (Seção 5.5.4)
  */
-
 @Serializable
 data class ProdutoRequestDto(
     @SerialName("type_id") val typeId: Long,
-    val marca: String,
-    val dataValidade: String, // ISO 8601
-    val unidade: Long,
-    val unidadeMedida: String,
-    val quantidade: Long
+    val marca: String? = null,
+    val dataValidade: String? = null, // ISO 8601
+    val unidade: Long? = null,
+    val unidadeMedida: String? = null,
+    val quantidade: Long = 0
 )
 
 /**
- * DTO para atualizações parciais (PATCH).
- * Todos os campos são opcionais.
+ * DTO para resposta de produto (Seção 5.5.1 / 5.5.2)
+ */
+@Serializable
+data class ProdutoResponseDto(
+    @SerialName("product_id") val productId: Long,
+    @SerialName("type_id") val typeId: Long,
+    val marca: String? = null,
+    val dataValidade: String? = null,
+    val unidade: Long? = null,
+    val unidadeMedida: String? = null,
+    val quantidade: Long,
+    @SerialName("inv_id") val invId: String
+)
+
+/**
+ * DTO para resposta de listagem de produtos (Seção 5.5.1)
+ */
+@Serializable
+data class ProdutoListResponse(
+    val products: List<ProdutoResponseDto>,
+    @SerialName("next_page") val nextPage: String? = null
+)
+
+/**
+ * DTO para atualização parcial (Seção 5.5.5)
  */
 @Serializable
 data class ProdutoUpdateDto(
@@ -36,22 +51,4 @@ data class ProdutoUpdateDto(
     val unidade: Long? = null,
     val unidadeMedida: String? = null,
     val quantidade: Long? = null
-)
-
-@Serializable
-data class ProdutoResponseDto(
-    val id: Long,
-    val type: TipoResponseDto,
-    val marca: String,
-    @SerialName("data_validade") val dataValidade: String,
-    val unidade: Long,
-    @SerialName("unidade_medida") val unidadeMedida: String,
-    val quantidade: Long
-)
-
-@Serializable
-data class TipoResponseDto(
-    val id: Long,
-    val nome: String,
-    val imagem: String // Base64
 )

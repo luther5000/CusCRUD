@@ -36,6 +36,15 @@ data class UserAccessListResponse(
 )
 
 /**
+ * Resposta para adição e atualização de colaborador (Seções 5.3.2 e 5.3.3).
+ */
+@Serializable
+data class UserAccessResponse(
+    val inventory: InventoryDto,
+    val user: UserAccessDto
+)
+
+/**
  * Request para adicionar um novo usuário ao inventário.
  */
 @Serializable

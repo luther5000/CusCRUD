@@ -3,18 +3,13 @@ package com.cuscrud.presentation.produtos
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.cuscrud.domain.interactor.AddProdutoInteractor
-import com.cuscrud.domain.interactor.EditProdutoInteractor
-import com.cuscrud.domain.interactor.GetProdutoDetalhesInteractor
-import com.cuscrud.domain.interactor.GetTiposInteractor
+import com.cuscrud.domain.interactor.*
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
+import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
@@ -24,7 +19,9 @@ class AddProdutoViewModel @Inject constructor(
     private val addProdutoInteractor: AddProdutoInteractor,
     private val editProdutoInteractor: EditProdutoInteractor,
     private val getProdutoDetalhesInteractor: GetProdutoDetalhesInteractor,
+    private val addTipoInteractor: AddTipoInteractor,
     private val getTiposInteractor: GetTiposInteractor,
+    private val inventoryRepository: InventoryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -34,13 +31,27 @@ class AddProdutoViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AddProdutoUiState())
     val uiState: StateFlow<AddProdutoUiState> = _uiState.asStateFlow()
 
+    companion object {
+        const val MAX_NAME_LENGTH = 255
+        const val MAX_VALUE = 999999999999999999L
+    }
+
     init {
+        observeUserRole()
         loadTipos()
 
         if (produtoId != null && produtoId > 0) {
             _uiState.update { it.copy(isEditMode = true) }
             loadProduto(produtoId)
         }
+    }
+
+    private fun observeUserRole() {
+        inventoryRepository.activeInventoryRole
+            .onEach { role ->
+                _uiState.update { it.copy(userRole = role) }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun loadTipos() {
@@ -59,7 +70,8 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
+                    val message = result.exception.message ?: "Erro ao carregar categorias."
+                    _uiState.update { it.copy(userMessage = message, isLoading = false) }
                 }
                 is Result.Loading -> {}
             }
@@ -85,7 +97,8 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { it.copy(userMessage = result.exception.message, isLoading = false) }
+                    val message = result.exception.message ?: "Erro ao carregar detalhes do produto."
+                    _uiState.update { it.copy(userMessage = message, isLoading = false) }
                 }
                 Result.Loading -> {
                     _uiState.update { it.copy(isLoading = true) }
@@ -118,25 +131,82 @@ class AddProdutoViewModel @Inject constructor(
         _uiState.update { it.copy(tipoSelecionado = tipo) }
     }
 
+    fun onAddNovoTipo(nome: String) {
+        if (nome.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O nome da categoria é obrigatório.") }
+            return
+        }
+        if (nome.length > MAX_NAME_LENGTH) {
+            _uiState.update { it.copy(userMessage = "O nome da categoria é muito longo.") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = addTipoInteractor(nome)) {
+                is Result.Success -> {
+                    val novoTipo = result.data
+                    _uiState.update { 
+                        it.copy(
+                            tipos = it.tipos + novoTipo,
+                            tipoSelecionado = novoTipo,
+                            isLoading = false,
+                            userMessage = "Categoria '${nome}' criada com sucesso!"
+                        ) 
+                    }
+                }
+                is Result.Error -> {
+                    val message = result.exception.message ?: "Erro ao criar nova categoria."
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
+                }
+                is Result.Loading -> {}
+            }
+        }
+    }
+
     fun onSaveProduto() {
         val currentState = _uiState.value
         
         val tipo = currentState.tipoSelecionado
         if (tipo == null) {
-            _uiState.update { it.copy(userMessage = "Selecione um tipo de produto") }
+            _uiState.update { it.copy(userMessage = "Selecionar um tipo de produto é obrigatório.") }
             return
         }
 
+        if (currentState.marca.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O preenchimento da marca é obrigatório.") }
+            return
+        }
+        if (currentState.marca.length > MAX_NAME_LENGTH) {
+            _uiState.update { it.copy(userMessage = "O nome da marca é muito longo.") }
+            return
+        }
+
+        if (currentState.unidade.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O preenchimento da unidade é obrigatório.") }
+            return
+        }
         val unidadeLong = currentState.unidade.toLongOrNull()
-        if (unidadeLong == null || unidadeLong < 0) {
-            _uiState.update { it.copy(userMessage = "unidade inválida") }
+        if (unidadeLong == null || unidadeLong > MAX_VALUE) {
+            _uiState.update { it.copy(userMessage = "Valor unitário muito grande.") }
+            return
+        }
+        if (unidadeLong < 0) {
+            _uiState.update { it.copy(userMessage = "Valor unitário inválido.") }
             return
         }
 
+        if (currentState.quantidade.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O preenchimento da quantidade é obrigatório.") }
+            return
+        }
         val quantidadeLong = currentState.quantidade.toLongOrNull()
-        if (quantidadeLong == null || quantidadeLong < 0) {
-            val msg = "é necessário informar uma quantidade positiva para fazer a adição"
-            _uiState.update { it.copy(userMessage = msg) }
+        if (quantidadeLong == null || quantidadeLong > MAX_VALUE) {
+            _uiState.update { it.copy(userMessage = "Quantidade muito grande.") }
+            return
+        }
+        if (quantidadeLong < 0) {
+            _uiState.update { it.copy(userMessage = "Quantidade inválida.") }
             return
         }
 
@@ -169,12 +239,8 @@ class AddProdutoViewModel @Inject constructor(
                     }
                 }
                 is Result.Error -> {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false, 
-                            userMessage = result.exception.message 
-                        ) 
-                    }
+                    val message = result.exception.message ?: "Erro ao salvar o produto."
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 is Result.Loading -> {}
             }

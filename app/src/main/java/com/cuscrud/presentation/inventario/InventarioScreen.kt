@@ -4,19 +4,26 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
+import com.cuscrud.domain.repository.canEditProducts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,12 +32,31 @@ fun InventarioScreen(
     navController: NavController,
     onTipoSelected: (Long) -> Unit,
     onAddProdutoClick: () -> Unit,
-    onAddSampleData: () -> Unit
+    onAddSampleData: () -> Unit,
+    onChangeOngClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Observa mensagens de sucesso vindas de outras telas através do savedStateHandle
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.fetchInventario()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val canAdd = when (val state = uiState) {
+        is InventarioUiState.Success -> state.userRole.canEditProducts()
+        else -> false
+    }
+
     val successMessage by navController.currentBackStackEntry
         ?.savedStateHandle
         ?.getStateFlow<String?>("success_message", null)
@@ -39,7 +65,6 @@ fun InventarioScreen(
     LaunchedEffect(successMessage) {
         successMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
-            // Limpa a mensagem para evitar que ela apareça novamente ao recompor ou voltar
             navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
         }
     }
@@ -48,6 +73,22 @@ fun InventarioScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Inventário Geral") },
+                navigationIcon = {
+                    IconButton(onClick = onChangeOngClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar para ONGs"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Configurações da ONG"
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -56,11 +97,13 @@ fun InventarioScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddProdutoClick,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+            if (canAdd) {
+                FloatingActionButton(
+                    onClick = onAddProdutoClick,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
+                }
             }
         }
     ) { padding ->
@@ -71,7 +114,11 @@ fun InventarioScreen(
         ) {
             when (val state = uiState) {
                 is InventarioUiState.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .testTag("loading_indicator")
+                    )
                 }
                 is InventarioUiState.Error -> {
                     Column(
@@ -79,6 +126,9 @@ fun InventarioScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                        Button(onClick = { viewModel.fetchInventario() }) {
+                            Text("Tentar Novamente")
+                        }
                     }
                 }
                 is InventarioUiState.Success -> {
@@ -103,7 +153,7 @@ fun InventarioList(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Você não possui produtos salvos, adicione um clicando no botão '+'.",
+                text = "Você não possui produtos salvos nesta ONG.\nAdicione um clicando no botão '+'.",
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(horizontal = 32.dp)
             )
@@ -115,14 +165,13 @@ fun InventarioList(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             inventario.forEach { (tipo, produtos) ->
-                //Soma de (unidade * quantidade) para obter o peso/volume total
-                val totalEstoque = produtos.sumOf { it.unidade * it.quantidade }
+                val totalQuantidade = produtos.sumOf { it.quantidade }
                 val unidadeMedida = produtos.firstOrNull()?.unidadeMedida ?: ""
 
                 item {
                     TipoSummaryItem(
                         tipo = tipo,
-                        totalEstoque = totalEstoque,
+                        totalQuantidade = totalQuantidade,
                         unidadeMedida = unidadeMedida,
                         quantidadeLotes = produtos.size
                     ) {
@@ -137,7 +186,7 @@ fun InventarioList(
 @Composable
 fun TipoSummaryItem(
     tipo: Tipo,
-    totalEstoque: Long,
+    totalQuantidade: Long,
     unidadeMedida: String,
     quantidadeLotes: Int,
     onClick: () -> Unit
@@ -162,12 +211,12 @@ fun TipoSummaryItem(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Total em estoque: $totalEstoque $unidadeMedida",
+                    text = "Total em estoque: $totalQuantidade $unidadeMedida",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    text = "$quantidadeLotes lote(s) cadastrado(s)",
+                    text = "$quantidadeLotes produtos(s) cadastrado(s)",
                     style = MaterialTheme.typography.bodySmall
                 )
             }

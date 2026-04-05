@@ -16,6 +16,12 @@ import com.cuscrud.presentation.detalhes.ProdutoDetalhesScreen
 import com.cuscrud.presentation.detalhes.ProdutoDetalhesViewModel
 import com.cuscrud.presentation.inventario.InventarioScreen
 import com.cuscrud.presentation.inventario.InventarioViewModel
+import com.cuscrud.presentation.ong.CreateOngScreen
+import com.cuscrud.presentation.ong.CreateOngViewModel
+import com.cuscrud.presentation.ong.SelectOngScreen
+import com.cuscrud.presentation.ong.SelectOngViewModel
+import com.cuscrud.presentation.ong.OngSettingsScreen
+import com.cuscrud.presentation.ong.OngSettingsViewModel
 import com.cuscrud.presentation.produtos.AddProdutoScreen
 import com.cuscrud.presentation.produtos.AddProdutoViewModel
 import com.cuscrud.presentation.produtos.ProdutosPorTipoScreen
@@ -30,13 +36,12 @@ fun CusCrudNavGraph(
         navController = navController,
         startDestination = "login"
     ) {
-        // Cenário 0: Login
         composable("login") {
             val viewModel = hiltViewModel<LoginViewModel>()
             LoginScreen(
                 viewModel = viewModel,
                 onLoginSuccess = {
-                    navController.navigate("inventario") {
+                    navController.navigate("select_ong") {
                         popUpTo("login") { inclusive = true }
                     }
                 },
@@ -51,8 +56,8 @@ fun CusCrudNavGraph(
             RegisterScreen(
                 viewModel = viewModel,
                 onRegisterSuccess = {
-                    navController.navigate("inventario") {
-                        popUpTo("login") { inclusive = true }
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
                     }
                 },
                 onBackClick = {
@@ -61,7 +66,50 @@ fun CusCrudNavGraph(
             )
         }
 
-        // Cenário 1: Inventário Geral
+        composable("select_ong") {
+            val viewModel = hiltViewModel<SelectOngViewModel>()
+            SelectOngScreen(
+                viewModel = viewModel,
+                onOngSelected = {
+                    navController.navigate("inventario") {
+                        popUpTo("select_ong") { inclusive = false }
+                    }
+                },
+                onCreateOngClick = {
+                    navController.navigate("create_ong")
+                }
+            )
+        }
+
+        composable("create_ong") {
+            val viewModel = hiltViewModel<CreateOngViewModel>()
+            CreateOngScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() },
+                onOngCreated = {
+                    navController.navigate("inventario") {
+                        popUpTo("select_ong") { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        composable("ong_settings") {
+            val viewModel = hiltViewModel<OngSettingsViewModel>()
+            OngSettingsScreen(
+                viewModel = viewModel,
+                onBackClick = { navController.popBackStack() },
+                onDeleteSuccess = {
+                    try {
+                        navController.getBackStackEntry("select_ong")
+                            .savedStateHandle
+                            .set("success_message", "ONG removida com sucesso!")
+                    } catch (e: Exception) {}
+                    navController.popBackStack("select_ong", inclusive = false)
+                }
+            )
+        }
+
         composable("inventario") {
             val viewModel = hiltViewModel<InventarioViewModel>()
             InventarioScreen(
@@ -73,11 +121,18 @@ fun CusCrudNavGraph(
                 onAddProdutoClick = {
                     navController.navigate("add_produto")
                 },
-                onAddSampleData = { mainActivity.viewModel.addSampleProduct() }
+                onAddSampleData = { mainActivity.viewModel.addSampleProduct() },
+                onChangeOngClick = {
+                    navController.navigate("select_ong") {
+                        popUpTo("select_ong") { inclusive = true }
+                    }
+                },
+                onSettingsClick = {
+                    navController.navigate("ong_settings")
+                }
             )
         }
 
-        // Cenário 2: Produtos por Tipo
         composable(
             route = "produtos/{tipoId}",
             arguments = listOf(navArgument("tipoId") { type = NavType.LongType })
@@ -95,7 +150,6 @@ fun CusCrudNavGraph(
             )
         }
 
-        // Cenário para Adicionar ou Editar Produto
         composable(
             route = "add_produto?tipoId={tipoId}&produtoId={produtoId}",
             arguments = listOf(
@@ -104,8 +158,8 @@ fun CusCrudNavGraph(
                     defaultValue = -1L
                 },
                 navArgument("produtoId") {
-                    type = NavType.IntType
-                    defaultValue = -1
+                    type = NavType.LongType
+                    defaultValue = -1L
                 }
             )
         ) {
@@ -114,35 +168,23 @@ fun CusCrudNavGraph(
                 viewModel = viewModel,
                 onBackClick = { message ->
                     if (message != null) {
-                        // Se a mensagem contém "editado", voltamos para o inventário
-                        if (message.contains("editado", ignoreCase = true)) {
-                            // Entrega a mensagem especificamente para a entrada do Inventário
-                            navController.getBackStackEntry("inventario")
-                                .savedStateHandle
-                                .set("success_message", message)
-                            navController.popBackStack("inventario", inclusive = false)
-                        } else {
-                            // Se for adição, volta para a tela anterior imediata (Categorias ou Inventário)
-                            navController.previousBackStackEntry
-                                ?.savedStateHandle
-                                ?.set("success_message", message)
-                            navController.popBackStack()
-                        }
-                    } else {
-                        navController.popBackStack()
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("success_message", message)
                     }
+                    navController.popBackStack()
                 }
             )
         }
 
-        // Cenário 3: Detalhes do Produto
         composable(
             route = "detalhes/{produtoId}",
-            arguments = listOf(navArgument("produtoId") { type = NavType.IntType })
+            arguments = listOf(navArgument("produtoId") { type = NavType.LongType })
         ) {
             val viewModel = hiltViewModel<ProdutoDetalhesViewModel>()
             ProdutoDetalhesScreen(
                 viewModel = viewModel,
+                navController = navController,
                 onBackClick = { navController.popBackStack() },
                 onEditClick = { produtoId ->
                     navController.navigate("add_produto?produtoId=$produtoId")

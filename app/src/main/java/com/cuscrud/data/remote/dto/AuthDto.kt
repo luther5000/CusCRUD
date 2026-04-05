@@ -43,9 +43,28 @@ data class RegisterResponse(
 
 @Serializable
 data class UserDto(
-    val id: String,
+    @SerialName("user_id") val id: String,
     val name: String,
-    val login: String
+    val login: String,
+    @SerialName("created_at") val createdAt: String? = null
+)
+
+/**
+ * Resposta para validação de token (Seção 5.1.3).
+ */
+@Serializable
+data class ValidateTokenResponse(
+    val user: UserDto,
+    val token: TokenInfo
+)
+
+/**
+ * Informações do token retornadas na validação.
+ */
+@Serializable
+data class TokenInfo(
+    @SerialName("expires_in") val expiresIn: Long,
+    @SerialName("issued_at") val issuedAt: String
 )
 
 @Serializable

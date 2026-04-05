@@ -1,8 +1,6 @@
 package com.cuscrud.data.mapper
 
 import android.util.Base64
-import com.cuscrud.data.local.entities.ProdutoEntity
-import com.cuscrud.data.local.entities.TipoEntity
 import com.cuscrud.data.remote.dto.*
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
@@ -10,151 +8,79 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * Formato ISO 8601 conforme Seção 3.12 da architecture.md:
- * Timezone America/Recife (UTC-3) com offset explícito.
+ * Utilitários de mapeamento para converter entre DTOs da API e modelos de domínio.
  */
-private fun getIsoFormat(): SimpleDateFormat {
-    return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("America/Recife")
-    }
+
+private val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).apply {
+    timeZone = TimeZone.getTimeZone("America/Recife")
 }
 
-/**
- * Decodifica uma string Base64 para ByteArray, removendo prefixos MIME se presentes.
- */
-private fun String.decodeBase64ToBytes(): ByteArray {
-    return try {
-        val cleanBase64 = if (this.startsWith("data:")) {
-            this.substringAfter("base64,")
-        } else {
-            this
+fun TipoDto.toDomain(): Tipo {
+    val rawImage = this.imagem
+    val decodedImage = if (rawImage != null && rawImage.contains(",")) {
+        val base64Data = rawImage.substringAfter(",")
+        try {
+            Base64.decode(base64Data, Base64.DEFAULT)
+        } catch (e: Exception) {
+            byteArrayOf()
         }
-        Base64.decode(cleanBase64, Base64.DEFAULT)
-    } catch (_: Exception) {
+    } else if (rawImage != null) {
+        try {
+            Base64.decode(rawImage, Base64.DEFAULT)
+        } catch (e: Exception) {
+            byteArrayOf()
+        }
+    } else {
         byteArrayOf()
     }
-}
 
-/**
- * Mapeia [TipoDto] (API) para [Tipo] (Domínio)
- */
-fun TipoDto.toDomain(): Tipo {
     return Tipo(
-        id = typeId,
-        nome = nome,
-        imagem = imagem?.decodeBase64ToBytes() ?: byteArrayOf()
+        id = this.typeId,
+        nome = this.nome,
+        imagem = decodedImage
     )
 }
 
 /**
- * Mapeia [TipoResponseDto] (API) para [Tipo] (Domínio)
+ * Converte um ProdutoResponseDto para Produto.
+ * @param tipoNome Nome opcional do tipo, caso não queira deixá-lo vazio.
  */
-fun TipoResponseDto.toDomain(): Tipo {
-    return Tipo(
-        id = id,
-        nome = nome,
-        imagem = imagem.decodeBase64ToBytes()
-    )
-}
-
-/**
- * Mapeia [ProdutoResponseDto] (API) para [Produto] (Domínio)
- */
-fun ProdutoResponseDto.toDomain(): Produto {
+fun ProdutoResponseDto.toDomain(tipoNome: String = ""): Produto {
     val date = try {
-        getIsoFormat().parse(dataValidade.replace("Z", "+0000")) ?: Date()
-    } catch (_: Exception) {
+        this.dataValidade?.let { isoFormat.parse(it) } ?: Date()
+    } catch (e: Exception) {
         Date()
     }
+
     return Produto(
-        id = id,
-        tipo = type.toDomain(),
-        marca = marca,
+        id = this.productId,
+        tipo = Tipo(id = this.typeId, nome = tipoNome, imagem = byteArrayOf()),
+        marca = this.marca ?: "",
         dataValidade = date,
-        unidade = unidade,
-        unidadeMedida = unidadeMedida,
-        quantidade = quantidade
+        unidade = this.unidade ?: 0L,
+        unidadeMedida = this.unidadeMedida ?: "",
+        quantidade = this.quantidade
     )
 }
 
-/**
- * Mapeia [Produto] (Domínio) para [ProdutoRequestDto] (API)
- */
 fun Produto.toRequestDto(): ProdutoRequestDto {
     return ProdutoRequestDto(
-        typeId = tipo.id,
-        marca = marca,
-        dataValidade = getIsoFormat().format(dataValidade),
-        unidade = unidade,
-        unidadeMedida = unidadeMedida,
-        quantidade = quantidade
+        typeId = this.tipo.id,
+        marca = this.marca,
+        dataValidade = try { isoFormat.format(this.dataValidade) } catch (e: Exception) { null },
+        unidade = this.unidade,
+        unidadeMedida = this.unidadeMedida,
+        quantidade = this.quantidade
     )
 }
 
-/**
- * Mapeia [Produto] (Domínio) para [ProdutoUpdateDto] (API)
- */
 fun Produto.toUpdateDto(): ProdutoUpdateDto {
     return ProdutoUpdateDto(
-        typeId = tipo.id,
-        marca = marca,
-        dataValidade = getIsoFormat().format(dataValidade),
-        unidade = unidade,
-        unidadeMedida = unidadeMedida,
-        quantidade = quantidade
-    )
-}
-
-// --- MAPEADORES ROOM (Para compatibilidade com OfflineRepository e Testes) ---
-
-/**
- * Mapeia [TipoEntity] (Banco de Dados) para [Tipo] (Domínio)
- */
-fun TipoEntity.toDomain(): Tipo {
-    return Tipo(
-        id = id,
-        nome = nome,
-        imagem = imagem
-    )
-}
-
-/**
- * Mapeia [Tipo] (Domínio) para [TipoEntity] (Banco de Dados)
- */
-fun Tipo.toEntity(): TipoEntity {
-    return TipoEntity(
-        id = id,
-        nome = nome,
-        imagem = imagem
-    )
-}
-
-/**
- * Mapeia [ProdutoEntity] (Banco de Dados) e [TipoEntity] (Banco de Dados) para [Produto] (Domínio)
- */
-fun ProdutoEntity.toDomain(tipoEntity: TipoEntity): Produto {
-    return Produto(
-        id = id,
-        tipo = tipoEntity.toDomain(),
-        marca = marca,
-        dataValidade = Date(dataValidade),
-        unidade = unidade,
-        unidadeMedida = unidadeMedida,
-        quantidade = quantidade
-    )
-}
-
-/**
- * Mapeia [Produto] (Domínio) para [ProdutoEntity] (Banco de Dados)
- */
-fun Produto.toEntity(): ProdutoEntity {
-    return ProdutoEntity(
-        id = id,
-        tipo = tipo.id,
-        marca = marca,
-        dataValidade = dataValidade.time,
-        unidade = unidade,
-        unidadeMedida = unidadeMedida,
-        quantidade = quantidade
+        typeId = this.tipo.id,
+        marca = this.marca,
+        dataValidade = try { isoFormat.format(this.dataValidade) } catch (e: Exception) { null },
+        unidade = this.unidade,
+        unidadeMedida = this.unidadeMedida,
+        quantidade = this.quantidade
     )
 }

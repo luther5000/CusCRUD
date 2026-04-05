@@ -1,4 +1,3 @@
-
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.local.SessionManager
@@ -71,9 +70,12 @@ class InventoryRepositoryImpl @Inject constructor(
                 
                 _activeInventoryId.value?.let { activeId ->
                     inventories.find { it.invId == activeId }?.let { activeInv ->
-                        val newRole = Role.fromInt(activeInv.role)
-                        if (newRole != _activeInventoryRole.value) {
-                            newRole?.let { sessionManager.saveActiveInventoryRole(it.value) }
+                        // activeInv.role pode ser nulo no DTO, mas o enum Role.fromInt espera Int.
+                        activeInv.role?.let { roleInt ->
+                            val newRole = Role.fromInt(roleInt)
+                            if (newRole != _activeInventoryRole.value) {
+                                newRole?.let { sessionManager.saveActiveInventoryRole(it.value) }
+                            }
                         }
                     }
                 }
@@ -83,7 +85,7 @@ class InventoryRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao buscar inventários."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Falha ao buscar inventários")
             Result.Error(Exception("Não foi possível carregar a lista de inventários."))
@@ -94,14 +96,14 @@ class InventoryRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.createInventory(CreateInventoryRequest(name))
             if (response.isSuccessful && response.body() != null) {
-                val inventory = response.body()!!
+                val inventory = response.body()!!.inventory
                 setActiveInventory(inventory.invId, Role.OWNER)
                 Result.Success(inventory)
             } else {
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao criar inventário."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (_: Exception) {
             Result.Error(Exception("Erro ao criar inventário."))
         }
@@ -111,12 +113,12 @@ class InventoryRepositoryImpl @Inject constructor(
         return try {
             val response = apiService.updateInventory(invId, UpdateInventoryRequest(name))
             if (response.isSuccessful && response.body() != null) {
-                Result.Success(response.body()!!)
+                Result.Success(response.body()!!.inventory)
             } else {
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao atualizar."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (_: Exception) {
             Result.Error(Exception("Erro ao atualizar inventário."))
         }
@@ -134,7 +136,7 @@ class InventoryRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão ao excluir."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor.."))
         } catch (_: Exception) {
             Result.Error(Exception("Erro ao excluir inventário."))
         }
@@ -155,22 +157,29 @@ class InventoryRepositoryImpl @Inject constructor(
      * definido no architecture.md.
      */
     private fun handleError(response: Response<*>): Result.Error {
+        // Prioridade 1: Mapeamento Estilizado por Contexto (Repositório de Inventário)
+        val friendlyMessage = when (response.code()) {
+            400 -> "Dados inválidos. Verifique as informações do inventário."
+            401 -> "Sessão expirada. Por favor, faça login novamente."
+            403 -> "Você não tem permissão para esta ação."
+            404 -> "O inventário solicitado não foi encontrado."
+            409 -> "Já existe um inventário com este nome."
+            500 -> "Erro interno no servidor. Tente novamente em instantes."
+            else -> null
+        }
+
+        if (friendlyMessage != null) {
+            return Result.Error(Exception(friendlyMessage))
+        }
+
+        // Prioridade 2: Fallback para a mensagem do servidor
         val errorBody = response.errorBody()?.string()
         return try {
             val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
             Result.Error(Exception(errorResponse.error.message))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
-            val friendlyMessage = when (response.code()) {
-                400 -> "Dados inválidos. Verifique as informações preenchidas."
-                401 -> "Sessão expirada. Por favor, faça login novamente."
-                403 -> "Você não tem permissão para esta ação."
-                404 -> "O inventário ou recurso não foi encontrado."
-                409 -> "Conflito de dados. Talvez este nome já esteja em uso."
-                500 -> "Erro interno no servidor. Tente novamente em instantes."
-                else -> "Ocorreu um erro inesperado (Código: ${response.code()})"
-            }
-            Result.Error(Exception(friendlyMessage))
+            Result.Error(Exception("Ocorreu um erro inesperado (Código: ${response.code()})"))
         }
     }
 }

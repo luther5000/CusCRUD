@@ -1,5 +1,6 @@
 package com.cuscrud.presentation.produtos
 
+import com.cuscrud.domain.model.Role
 import com.cuscrud.domain.model.Tipo
 import java.util.Date
 
@@ -18,5 +19,6 @@ data class AddProdutoUiState(
     val isLoading: Boolean = false,
     val userMessage: String? = null,
     val isProductSaved: Boolean = false,
-    val isEditMode: Boolean = false
+    val isEditMode: Boolean = false,
+    val userRole: Role? = null
 )

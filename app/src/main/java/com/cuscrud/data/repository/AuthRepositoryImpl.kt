@@ -1,4 +1,3 @@
-
 package com.cuscrud.data.repository
 
 import com.cuscrud.data.local.SessionManager
@@ -47,7 +46,7 @@ class AuthRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor.."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao realizar login")
             Result.Error(Exception("Não foi possível realizar o login. Tente novamente mais tarde."))
@@ -65,7 +64,7 @@ class AuthRepositoryImpl @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao realizar registro")
             Result.Error(Exception("Não foi possível realizar o cadastro no momento."))
@@ -81,22 +80,29 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     private fun handleError(response: Response<*>): Result.Error {
+        // Prioridade 1: Mapeamento Estilizado por Contexto (Autenticação)
+        val friendlyMessage = when (response.code()) {
+            400 -> "Verifique se os dados informados estão corretos."
+            401 -> "E-mail ou senha incorretos."
+            403 -> "Conta sem permissão de acesso."
+            404 -> "Serviço temporariamente indisponível."
+            409 -> "Este e-mail já está em uso por outro usuário."
+            500 -> "Erro interno no servidor. Tente novamente em instantes."
+            else -> null
+        }
+
+        if (friendlyMessage != null) {
+            return Result.Error(Exception(friendlyMessage))
+        }
+
+        // Prioridade 2: Fallback para a mensagem do servidor
         val errorBody = response.errorBody()?.string()
         return try {
             val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
             Result.Error(Exception(errorResponse.error.message))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
-            val friendlyMessage = when (response.code()) {
-                400 -> "Verifique se os dados informados estão corretos."
-                401 -> "E-mail ou senha incorretos."
-                403 -> "Conta sem permissão de acesso."
-                404 -> "Serviço temporariamente indisponível."
-                409 -> "Este e-mail já está em uso por outro usuário."
-                500 -> "Erro interno no servidor. Tente novamente em instantes."
-                else -> "Erro inesperado (Código: ${response.code()})"
-            }
-            Result.Error(Exception(friendlyMessage))
+            Result.Error(Exception("Erro inesperado (Código: ${response.code()})"))
         }
     }
 }

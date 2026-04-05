@@ -58,11 +58,11 @@ android {
     buildTypes {
         getByName("debug") {
             isMinifyEnabled = false
-            isTestCoverageEnabled = true
+            enableUnitTestCoverage = true
+            enableAndroidTestCoverage = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
             testProguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguardTest-rules.pro")
             
-            // Lê do local.properties. Se não existir, usa um fallback seguro.
             val baseUrl = getLocalProperty("API_BASE_URL").ifEmpty { "http://localhost/api/v1/" }
             buildConfigField("String", "BASE_URL", "\"$baseUrl\"")
         }
@@ -72,8 +72,6 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
             testProguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguardTest-rules.pro")
-            
-            // Em release, você pode manter fixo ou ler de uma variável de ambiente do CI/CD
             buildConfigField("String", "BASE_URL", "\"https://api.cuscrud.com/v1/\"")
         }
     }
@@ -160,6 +158,17 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation("io.mockk:mockk:1.13.12")
+    
+    // Android Test dependencies
+    androidTestImplementation(composeBom)
+    androidTestImplementation(libs.androidx.test.core.ktx)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.ext)
+    androidTestImplementation(libs.androidx.test.espresso.core) // Adicionado para closeSoftKeyboard
+    
+    androidTestImplementation(libs.androidx.compose.ui.test.junit)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
     
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)

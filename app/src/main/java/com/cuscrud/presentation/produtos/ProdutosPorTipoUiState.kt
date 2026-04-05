@@ -1,6 +1,7 @@
 package com.cuscrud.presentation.produtos
 
 import com.cuscrud.domain.model.Produto
+import com.cuscrud.domain.model.Role
 
 /**
  * Estado da UI para a tela de Produtos por Tipo.
@@ -10,5 +11,6 @@ data class ProdutosPorTipoUiState(
     val produtos: List<Produto> = emptyList(),
     val errorMessage: String? = null,
     val produtoParaRemover: Produto? = null,
-    val mensagemSucesso: String? = null
+    val mensagemSucesso: String? = null,
+    val userRole: Role? = null
 )

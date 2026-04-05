@@ -21,6 +21,8 @@ import javax.inject.Singleton
 /**
  * Implementação do repositório [ProdutoRepository] que gerencia as operações de produtos via API remota.
  * Refatorado para retornar [Result] e utilizar chamadas suspensas one-shot.
+ * 
+ * Segue as especificações da Seção 5.5 do documento de arquitetura.
  */
 
 @Singleton
@@ -39,12 +41,14 @@ class RemoteProdutoRepository @Inject constructor(
         try {
             val response = apiService.getProducts(invId, limit, offset)
             if (response.isSuccessful) {
-                Result.Success(response.body()?.map { it.toDomain() } ?: emptyList())
+                // Desembrulha a lista de produtos do wrapper ProdutoListResponse
+                val products = response.body()?.products?.map { it.toDomain() } ?: emptyList()
+                Result.Success(products)
             } else {
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Falha de conexão. Verifique sua internet."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar produtos")
             Result.Error(Exception("Não foi possível carregar os produtos."))
@@ -61,7 +65,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Não foi possível salvar o produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor.."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao inserir produto")
             Result.Error(Exception("Erro ao salvar o produto."))
@@ -78,7 +82,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao excluir produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao remover produto")
             Result.Error(Exception("Erro ao excluir produto."))
@@ -88,16 +92,16 @@ class RemoteProdutoRepository @Inject constructor(
     override suspend fun getProdutosByTipo(tipoId: Long): Result<List<Produto>> = withContext(Dispatchers.IO) {
         val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
-            val response = apiService.getProducts(invId)
+            // Utiliza o endpoint especializado da API (Seção 5.5.3) em vez de filtrar localmente
+            val response = apiService.getProductsByType(invId, tipoId)
             if (response.isSuccessful) {
-                val filtered = response.body()?.map { it.toDomain() }
-                    ?.filter { it.tipo.id == tipoId } ?: emptyList()
-                Result.Success(filtered)
+                val products = response.body()?.products?.map { it.toDomain() } ?: emptyList()
+                Result.Success(products)
             } else {
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao carregar produtos por categoria. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar produtos por tipo")
             Result.Error(Exception("Erro ao carregar produtos da categoria."))
@@ -116,7 +120,7 @@ class RemoteProdutoRepository @Inject constructor(
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao atualizar produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao editar produto")
             Result.Error(Exception("Não foi possível atualizar o produto."))
@@ -126,42 +130,51 @@ class RemoteProdutoRepository @Inject constructor(
     override suspend fun getProdutoById(id: Long): Result<Produto> = withContext(Dispatchers.IO) {
         val invId = getActiveInvIdOrNull() ?: return@withContext Result.Error(Exception("Identificador de inventário não encontrado."))
         try {
-            val response = apiService.getProducts(invId)
+            // Utiliza o endpoint especializado da API (Seção 5.5.2)
+            val response = apiService.getProductById(invId, id)
             if (response.isSuccessful) {
-                val produto = response.body()?.find { it.id == id }?.toDomain()
-                if (produto != null) {
-                    Result.Success(produto)
-                } else {
-                    Result.Error(Exception("Produto não encontrado."))
-                }
+                response.body()?.let {
+                    Result.Success(it.toDomain())
+                } ?: Result.Error(Exception("Produto não encontrado."))
             } else {
                 handleError(response)
             }
         } catch (_: IOException) {
-            Result.Error(Exception("Erro ao buscar detalhes do produto. Verifique sua conexão."))
+            Result.Error(Exception("Não foi possível se conectar ao servidor."))
         } catch (e: Exception) {
             Timber.e(e, "Erro ao buscar produto")
             Result.Error(Exception("Erro ao carregar detalhes do produto."))
         }
     }
 
+    /**
+     * Realiza o parse de erros vindos da API seguindo o padrão { "error": { "code": "...", "message": "..." } }
+     * definido no architecture.md.
+     */
     private fun handleError(response: Response<*>): Result.Error {
+        // Prioridade 1: Mapeamento Estilizado por Contexto (Repositório de Produtos)
+        val friendlyMessage = when (response.code()) {
+            400 -> "Dados inválidos. Verifique as informações do produto."
+            401 -> "Sessão expirada. Por favor, faça login novamente."
+            403 -> "Você não tem permissão de escrita para este inventário."
+            404 -> "O produto ou inventário não foi encontrado."
+            409 -> "Conflito de dados. Verifique se o item já existe."
+            500 -> "Erro interno no servidor. Tente novamente em instantes."
+            else -> null
+        }
+
+        if (friendlyMessage != null) {
+            return Result.Error(Exception(friendlyMessage))
+        }
+
+        // Prioridade 2: Fallback para a mensagem do servidor
         val errorBody = response.errorBody()?.string()
         return try {
             val errorResponse = json.decodeFromString<ErrorResponse>(errorBody ?: "")
             Result.Error(Exception(errorResponse.error.message))
         } catch (e: Exception) {
-            Timber.e(e, "Erro ao processar corpo de erro: ${'$'}errorBody")
-            val friendlyMessage = when (response.code()) {
-                400 -> "Dados inválidos. Verifique as informações preenchidas."
-                401 -> "Sessão expirada. Por favor, faça login novamente."
-                403 -> "Você não tem permissão para esta ação."
-                404 -> "O recurso solicitado não foi encontrado."
-                409 -> "Conflito de dados. O item pode já existir."
-                500 -> "Erro interno no servidor. Tente novamente em instantes."
-                else -> "Ocorreu um erro inesperado no servidor (${'$'}{response.code()})."
-            }
-            Result.Error(Exception(friendlyMessage))
+            Timber.e(e, "Erro ao processar corpo de erro: $errorBody")
+            Result.Error(Exception("Ocorreu um erro inesperado no servidor (${response.code()})."))
         }
     }
 }

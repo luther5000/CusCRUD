@@ -1,5 +1,6 @@
 package com.cuscrud.presentation.auth
 
+import android.util.Patterns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -40,10 +41,25 @@ class LoginViewModel @Inject constructor(
     }
 
     fun onLoginClick() {
+        // Validação: Campos obrigatórios
         if (email.isBlank() || password.isBlank()) {
-            viewModelScope.launch {
-                _uiEvent.send(LoginUiEvent.ShowError("É necessário preencher todos os campos"))
-            }
+            sendError("É necessário preencher todos os campos")
+            return
+        }
+
+        // Validação: Formato e Tamanho de e-mail (1-255)
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            sendError("E-mail com formato inválido. Use o padrão exemplo@dominio.com")
+            return
+        }
+        if (email.length > 255) {
+            sendError("O e-mail deve ter no máximo 255 caracteres")
+            return
+        }
+
+        // Validação: Tamanho da Senha (8-50)
+        if (password.length < 8 || password.length > 50) {
+            sendError("A senha deve ter entre 8 e 50 caracteres")
             return
         }
 
@@ -57,14 +73,17 @@ class LoginViewModel @Inject constructor(
                     _uiEvent.send(LoginUiEvent.LoginSuccess)
                 }
                 is Result.Error -> {
-                    val message = when {
-                        result.exception.message?.contains("401") == true -> "Credenciais inválidas"
-                        else -> "Não foi possível comunicar com o servidor. Tente novamente mais tarde."
-                    }
+                    val message = result.exception.message ?: "Ocorreu um erro inesperado."
                     _uiEvent.send(LoginUiEvent.ShowError(message))
                 }
                 is Result.Loading -> { /* Já tratado pelo isLoading */ }
             }
+        }
+    }
+
+    private fun sendError(message: String) {
+        viewModelScope.launch {
+            _uiEvent.send(LoginUiEvent.ShowError(message))
         }
     }
 
