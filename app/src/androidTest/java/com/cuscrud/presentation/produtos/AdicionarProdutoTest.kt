@@ -2,21 +2,23 @@ package com.cuscrud.presentation.produtos
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.espresso.Espresso
 import com.cuscrud.MainActivity
-import com.cuscrud.domain.model.Tipo
-import com.cuscrud.domain.repository.TipoRepository
+import com.cuscrud.domain.repository.AuthRepository
+import com.cuscrud.domain.repository.InventoryRepository
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
+import org.junit.FixMethodOrder
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
+import org.junit.runners.MethodSorters
 import javax.inject.Inject
+import kotlin.collections.isNotEmpty
 
 @HiltAndroidTest
-@RunWith(AndroidJUnit4::class)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class AdicionarProdutoTest {
 
     @get:Rule(order = 0)
@@ -26,170 +28,219 @@ class AdicionarProdutoTest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Inject
-    lateinit var tipoRepository: TipoRepository
+    lateinit var authRepository: AuthRepository
+
+    @Inject
+    lateinit var inventoryRepository: InventoryRepository
 
     @Before
     fun setup() {
         hiltRule.inject()
         runBlocking {
-            // Garante que o banco tenha o tipo necessário para o teste
-            // Usamos ID 999 para evitar conflitos com IDs gerados automaticamente
-            tipoRepository.insertTipo(
-                Tipo(id = 999, nome = "Carnes", imagem = byteArrayOf(0))
-            )
+            authRepository.logout()
+            inventoryRepository.clearActiveInventory()
+        }
+    }
+
+    private fun loginEIrParaInventario(ongName: String) {
+        // Login João Novo (Dono A, Editor B, Visualizador C)
+        composeRule.onNodeWithText("E-mail ou Login").performTextInput("joao.novo@example.com")
+        composeRule.onNodeWithText("Senha").performTextInput("senhaforte456")
+        Espresso.closeSoftKeyboard()
+        composeRule.onNodeWithText("ENTRAR").performClick()
+
+        composeRule.waitUntil(10000) {
+            composeRule.onAllNodesWithText(ongName, substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText(ongName, substring = true).performClick()
+
+        composeRule.waitUntil(10000) {
+            composeRule.onNodeWithText("Inventário Geral").isDisplayed()
         }
     }
 
     @Test
-    fun adicionarProdutoComSucesso() {
+    fun test01_adicionarProdutoComoDono_ComSucesso() {
+        loginEIrParaInventario("ONG A")
+        
         abrirTelaAdicao()
-        preencherFormularioValido()
+        preencherFormularioValido("Arroz Dono", "Limpeza")
         clicarEmAdicionar()
+        
         verificarMensagemSucesso()
-        verificarVoltaParaInventario()
-        verificarProdutoNaLista("Carnes", "Arroz")
+        verificarProdutoNaLista("Limpeza", "Arroz Dono")
     }
 
     @Test
-    fun cancelarAdicao() {
+    fun test02_adicionarProdutoComoEditor_ComSucesso() {
+        loginEIrParaInventario("ONG B") // João é Editor na ONG B
+        
         abrirTelaAdicao()
-        preencherFormularioValido()
-        clicarEmCancelar()
-        confirmarCancelamento()
-        verificarProdutoNaoExiste("Arroz")
-    }
-
-    @Test
-    fun validarCamposObrigatorios() {
-        abrirTelaAdicao()
-        preencherFormularioValido() // Preenche tudo primeiro
-        deixarMarcaEmBranco()       // Limpa apenas o campo obrigatório
-        clicarEmAdicionar()         // Confirma a adição para disparar a validação
-        verificarMensagemErro("preencher")
-    }
-
-    @Test
-    fun validarQuantidadePositiva() {
-        abrirTelaAdicao()
-        preencherFormularioValido()
-        inserirQuantidadeNegativa()
+        preencherFormularioValido("Arroz Editor", "Limpeza")
         clicarEmAdicionar()
-        verificarMensagemErro("quantidade")
+        
+        verificarMensagemSucesso()
+        verificarProdutoNaLista("Limpeza", "Arroz Editor")
     }
 
     @Test
-    fun erroInternoMantemDadosETela() {
-        abrirTelaAdicao()
-        preencherFormularioValido()
-        simularErroInterno() // Limpa campo obrigatório para simular falha de validação/inserção
-        clicarEmAdicionar()
-        verificarPermanenciaNaTelaAdicao()
-        verificarMensagemErro("preencher")
-    }
-
-    // =========================================================
-    // Métodos de Ação (DSL de Teste)
-    // =========================================================
-
-    private fun abrirTelaAdicao() {
-        // Espera a hierarquia do Compose estar pronta antes de interagir
+    fun test03_visualizadorNaoConsegueVerBotaoAdicionar() {
+        loginEIrParaInventario("ONG C") // João é Visualizador na ONG C
+        
+        // 1. Verifica no Inventário Geral (FAB não deve existir)
+        composeRule.onNodeWithContentDescription("Adicionar Produto").assertDoesNotExist()
+        
+        // 2. Entra em uma categoria existente (ex: Limpeza)
         composeRule.waitUntil(15000) {
-            composeRule.onAllNodesWithContentDescription("Adicionar Produto")
-                .fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithText("Limpeza").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Limpeza", substring = true).performClick()
+        
+        // 3. Verifica na tela de produtos da categoria (FAB não deve existir)
+        composeRule.onNodeWithContentDescription("Adicionar Produto").assertDoesNotExist()
+    }
+
+    @Test
+    fun test04_adicionarProdutoPelaTelaDeCategoria_MantemTipoPorPadrao() {
+        loginEIrParaInventario("ONG A")
+
+        composeRule.waitUntil(15000) {
+            composeRule.onAllNodesWithText("Limpeza").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Limpeza", substring = true).performClick()
+
+        composeRule.waitUntil(15000) {
+            composeRule.onAllNodesWithContentDescription("Adicionar Produto").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithContentDescription("Adicionar Produto").performClick()
+
+        composeRule.onNodeWithText("Limpeza").assertIsDisplayed()
+
+        composeRule.onNodeWithText("Marca/Nome").performTextInput("Picanha")
+        composeRule.onNodeWithText("Valor Unidade").performTextInput("60")
+        composeRule.onNodeWithText("Medida").performClick()
+        composeRule.onNodeWithText("kg").performClick()
+        composeRule.onNodeWithText("Quantidade no Inventário").performTextInput("2")
+
+        clicarEmAdicionar()
+
+        verificarMensagemSucesso()
+        composeRule.waitUntil(15000) {
+            composeRule.onAllNodesWithText("Picanha").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Picanha").assertIsDisplayed()
+    }
+
+    @Test
+    fun test05_validarCamposObrigatorios() {
+        loginEIrParaInventario("ONG A")
+        abrirTelaAdicao()
+        clicarEmAdicionar()
+        verificarMensagemErro("obrigatório")
+    }
+
+    @Test
+    fun test06_validarLimiteCaracteresMarca() {
+        loginEIrParaInventario("ONG A")
+        abrirTelaAdicao()
+        
+        val nomeLongo = "A".repeat(260)
+        preencherFormularioValido(nomeLongo, "Limpeza")
+
+        clicarEmAdicionar()
+        verificarMensagemErro("longo")
+    }
+
+    @Test
+    fun test07_validarValorUnitarioLongo() {
+        loginEIrParaInventario("ONG A")
+        abrirTelaAdicao()
+        preencherFormularioValido("Produto Teste", "Limpeza")
+
+        composeRule.onNodeWithText("Valor Unidade").performTextReplacement("10000000000000000000")
+        clicarEmAdicionar()
+        verificarMensagemErro("Valor unitário muito grande.")
+
+    }
+
+    @Test
+    fun test08_validarValorUnitarioNegativo() {
+        loginEIrParaInventario("ONG A")
+        abrirTelaAdicao()
+        preencherFormularioValido("Produto Teste", "Limpeza")
+
+        composeRule.onNodeWithText("Valor Unidade").performTextReplacement("-1")
+        clicarEmAdicionar()
+        verificarMensagemErro("Valor unitário inválido.")
+    }
+
+    @Test
+    fun test09_validarQuantidadeLonga() {
+        loginEIrParaInventario("ONG A")
+        abrirTelaAdicao()
+        preencherFormularioValido("Produto Teste", "Limpeza")
+
+        composeRule.onNodeWithText("Quantidade no Inventário").performTextReplacement("10000000000000000000")
+        clicarEmAdicionar()
+        verificarMensagemErro("Quantidade muito grande.")
+    }
+
+    @Test
+    fun test10_validarQuantidadeNegativa() {
+        loginEIrParaInventario("ONG A")
+        abrirTelaAdicao()
+        preencherFormularioValido("Produto Teste", "Limpeza")
+
+        composeRule.onNodeWithText("Quantidade no Inventário").performTextReplacement("-1")
+        clicarEmAdicionar()
+        verificarMensagemErro("Quantidade inválida.")
+    }
+
+    // Métodos Auxiliares
+    private fun abrirTelaAdicao() {
+        composeRule.waitUntil(10000) {
+            composeRule.onAllNodesWithContentDescription("Adicionar Produto").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithContentDescription("Adicionar Produto").performClick()
     }
 
-    private fun preencherFormularioValido() {
-        // Seleção de Tipo no Dropdown
-        composeRule.onNodeWithText("Tipo", ignoreCase = true).performClick()
-        composeRule.waitUntil(5000) {
-            composeRule.onAllNodesWithText("Carnes", ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
-        }
-        composeRule.onAllNodesWithText("Carnes", ignoreCase = true).onFirst().performClick()
-
-        composeRule.onNodeWithText("Marca/Nome", ignoreCase = true).performTextReplacement("Arroz")
-        composeRule.onNodeWithText("Valor Unidade", ignoreCase = true).performTextReplacement("5")
-
-        // Seleção de Medida
-        composeRule.onNodeWithText("Medida", ignoreCase = true).performClick()
-        composeRule.onNodeWithText("kg", ignoreCase = true).performClick()
-
-        composeRule.onNodeWithText("Quantidade no Inventário", ignoreCase = true).performTextReplacement("10")
+    private fun preencherFormularioValido(marca: String, tipo: String) {
+        composeRule.onNodeWithText("Tipo").performClick()
+        composeRule.onNodeWithText(tipo).performClick()
+        composeRule.onNodeWithText("Marca/Nome").performTextInput(marca)
+        composeRule.onNodeWithText("Valor Unidade").performTextInput("5")
+        composeRule.onNodeWithText("Medida").performClick()
+        composeRule.onNodeWithText("kg").performClick()
+        composeRule.onNodeWithText("Quantidade no Inventário").performTextInput("10")
+        Espresso.closeSoftKeyboard()
     }
 
     private fun clicarEmAdicionar() {
-        composeRule.onNodeWithText("Adicionar", ignoreCase = true).performClick()
+        Espresso.closeSoftKeyboard()
+        composeRule.onNodeWithText("Adicionar").performClick()
     }
-
-    private fun clicarEmCancelar() {
-        composeRule.onNodeWithText("Cancelar", ignoreCase = true).performClick()
-    }
-
-    private fun confirmarCancelamento() {
-        composeRule.onNodeWithText("Confirmar", ignoreCase = true).performClick()
-    }
-
-    private fun deixarMarcaEmBranco() {
-        composeRule.onNodeWithText("Marca/Nome", ignoreCase = true).performTextReplacement("")
-    }
-
-    private fun inserirQuantidadeNegativa() {
-        composeRule.onNodeWithText("Quantidade no Inventário", ignoreCase = true).performTextReplacement("-1")
-    }
-
-    private fun simularErroInterno() {
-        deixarMarcaEmBranco()
-    }
-
-    // =========================================================
-    // Métodos de Verificação
-    // =========================================================
 
     private fun verificarMensagemSucesso() {
-        composeRule.waitUntil(5000) {
-            composeRule.onAllNodesWithText("sucesso", ignoreCase = true, substring = true)
-                .fetchSemanticsNodes().isNotEmpty()
+        composeRule.waitUntil(10000) {
+            composeRule.onAllNodesWithText("sucesso", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText("sucesso", ignoreCase = true, substring = true).assertIsDisplayed()
-    }
-
-    private fun verificarVoltaParaInventario() {
-        composeRule.waitUntil(5000) {
-            composeRule.onAllNodesWithText("Inventário Geral", ignoreCase = true)
-                .fetchSemanticsNodes().isNotEmpty()
-        }
-        composeRule.onNodeWithText("Inventário Geral", ignoreCase = true).assertIsDisplayed()
     }
 
     private fun verificarProdutoNaLista(categoria: String, nome: String) {
-        // Clica na categoria para ver os produtos dentro dela
-        composeRule.onNodeWithText(categoria, ignoreCase = true).performClick()
-        composeRule.waitUntil(5000) {
-            composeRule.onAllNodesWithText(nome, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
+        composeRule.waitUntil(15000) {
+            composeRule.onAllNodesWithText(categoria).fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onNodeWithText(nome, ignoreCase = true).assertIsDisplayed()
-    }
-
-    private fun verificarProdutoNaoExiste(nome: String) {
-        composeRule.onNodeWithText(nome, ignoreCase = true).assertDoesNotExist()
+        composeRule.onAllNodesWithText(categoria, substring = true).onFirst().performClick()
+        
+        composeRule.waitUntil(15000) {
+            composeRule.onAllNodesWithText(nome).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText(nome).assertIsDisplayed()
     }
 
     private fun verificarMensagemErro(termo: String) {
-        // O erro ocorre porque "quantidade" aparece no label do campo E na mensagem de erro.
-        // Vamos usar filterToOne para garantir que estamos pegando a mensagem que NÃO é o campo de texto.
         composeRule.waitUntil(10000) {
-            composeRule.onAllNodesWithText(termo, ignoreCase = true, substring = true)
-                .fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithText(termo, substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
         }
-        
-        // Se houver mais de um, tentamos pegar o que é do tipo Snackbar ou apenas o último que apareceu
-        composeRule.onAllNodesWithText(termo, ignoreCase = true, substring = true)
-            .onLast()
-            .assertIsDisplayed()
-    }
-
-    private fun verificarPermanenciaNaTelaAdicao() {
-        composeRule.onNodeWithText("Adicionar Produto", ignoreCase = true).assertIsDisplayed()
     }
 }
