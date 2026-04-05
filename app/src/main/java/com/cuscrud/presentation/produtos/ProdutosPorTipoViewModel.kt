@@ -3,8 +3,8 @@ package com.cuscrud.presentation.produtos
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.cuscrud.domain.interactor.EditProdutoInteractor
 import com.cuscrud.domain.interactor.GetProdutosPorTipoInteractor
-import com.cuscrud.domain.interactor.RemoveProdutoInteractor
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
@@ -16,7 +16,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ProdutosPorTipoViewModel @Inject constructor(
     private val getProdutosPorTipoInteractor: GetProdutosPorTipoInteractor,
-    private val removeProdutoInteractor: RemoveProdutoInteractor,
+    private val editProdutoInteractor: EditProdutoInteractor,
     private val inventoryRepository: InventoryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -25,6 +25,10 @@ class ProdutosPorTipoViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ProdutosPorTipoUiState())
     val uiState: StateFlow<ProdutosPorTipoUiState> = _uiState.asStateFlow()
+
+    companion object {
+        const val MAX_VALUE = 999999999999999999L
+    }
 
     init {
         observeUserRole()
@@ -66,36 +70,38 @@ class ProdutosPorTipoViewModel @Inject constructor(
         }
     }
 
-    fun solicitarRemocao(produto: Produto) {
-        _uiState.update { it.copy(produtoParaRemover = produto) }
-    }
+    fun alterarQuantidade(produto: Produto, delta: Long) {
+        val novaQuantidade = produto.quantidade + delta
+        
+        if (novaQuantidade < 0) {
+            _uiState.update { it.copy(errorMessage = "Não é possível alterar o produto para menos de 0 itens") }
+            return
+        }
+        
+        if (novaQuantidade > MAX_VALUE) {
+            _uiState.update { it.copy(errorMessage = "Não é possível alterar o produto para mais de $MAX_VALUE itens") }
+            return
+        }
 
-    fun cancelarRemocao() {
-        _uiState.update { it.copy(produtoParaRemover = null) }
-    }
-
-    fun confirmarRemocao() {
-        val produtoParaRemover = _uiState.value.produtoParaRemover ?: return
+        val produtoAtualizado = produto.copy(quantidade = novaQuantidade)
         
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, produtoParaRemover = null) }
-            when (val result = removeProdutoInteractor(produtoParaRemover.id)) {
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = editProdutoInteractor(produto.id, produtoAtualizado)) {
                 is Result.Success -> {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false, 
-                            mensagemSucesso = "${produtoParaRemover.marca} removido com sucesso"
-                        ) 
+                    // Atualiza a lista localmente para resposta rápida
+                    _uiState.update { state ->
+                        state.copy(
+                            isLoading = false,
+                            produtos = state.produtos.map { 
+                                if (it.id == produto.id) produtoAtualizado else it 
+                            }
+                        )
                     }
-                    loadProdutos()
                 }
                 is Result.Error -> {
-                    val message = if (result.exception is java.io.IOException) {
-                        "Falha de conexão ao remover produto."
-                    } else {
-                        result.exception.message ?: "Erro ao excluir produto."
-                    }
-                    _uiState.update { it.copy(isLoading = false, errorMessage = message) }
+                    _uiState.update { it.copy(isLoading = false, errorMessage = result.exception.message) }
+                    loadProdutos() // Recarrega para garantir sincronia em caso de erro
                 }
                 Result.Loading -> {}
             }

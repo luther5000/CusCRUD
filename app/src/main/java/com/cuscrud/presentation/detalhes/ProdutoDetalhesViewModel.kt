@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cuscrud.domain.interactor.EditProdutoInteractor
 import com.cuscrud.domain.interactor.GetProdutoDetalhesInteractor
+import com.cuscrud.domain.interactor.RemoveProdutoInteractor
 import com.cuscrud.domain.repository.InventoryRepository
 import com.cuscrud.domain.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,6 +17,7 @@ import javax.inject.Inject
 class ProdutoDetalhesViewModel @Inject constructor(
     private val getProdutoDetalhesInteractor: GetProdutoDetalhesInteractor,
     private val editProdutoInteractor: EditProdutoInteractor,
+    private val removeProdutoInteractor: RemoveProdutoInteractor,
     private val inventoryRepository: InventoryRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -77,6 +79,28 @@ class ProdutoDetalhesViewModel @Inject constructor(
                 is Result.Error -> {
                     val message = result.exception.message ?: "Erro ao atualizar estoque."
                     _uiState.update { it.copy(isUpdatingQuantity = false, userMessage = message) }
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun removerProduto() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            when (val result = removeProdutoInteractor(produtoId)) {
+                is Result.Success -> {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            isDeleted = true,
+                            userMessage = "Produto removido com sucesso!"
+                        ) 
+                    }
+                }
+                is Result.Error -> {
+                    val message = result.exception.message ?: "Erro ao remover produto."
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 else -> {}
             }

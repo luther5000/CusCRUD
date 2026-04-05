@@ -158,10 +158,7 @@ fun CusCrudNavGraph(
                 onProdutoClick = { produtoId ->
                     navController.navigate("detalhes/$produtoId")
                 },
-                onAddProdutoClick = { navController.navigate("add_produto?tipoId=$tipoId") },
-                onEditProdutoClick = { produtoId ->
-                    navController.navigate("add_produto?produtoId=$produtoId")
-                }
+                onAddProdutoClick = { navController.navigate("add_produto?tipoId=$tipoId") }
             )
         }
 

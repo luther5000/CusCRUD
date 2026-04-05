@@ -5,11 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -29,12 +25,39 @@ fun ProdutoDetalhesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.snackbarMessageShown()
         }
+    }
+
+    LaunchedEffect(uiState.isDeleted) {
+        if (uiState.isDeleted) {
+            onBackClick()
+        }
+    }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Excluir Produto") },
+            text = { Text("Deseja realmente excluir o produto '${uiState.produto?.marca}'? Esta ação não pode ser desfeita.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.removerProduto()
+                        showDeleteConfirmation = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text("Excluir") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmation = false }) { Text("Cancelar") }
+            }
+        )
     }
 
     Scaffold(
@@ -45,11 +68,21 @@ fun ProdutoDetalhesScreen(
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
+                },
+                actions = {
+                    if (uiState.userRole.canEditProducts()) {
+                        IconButton(onClick = { showDeleteConfirmation = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Excluir Produto",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 }
             )
         },
         floatingActionButton = {
-            // RBAC: Oculta botão de editar se for apenas Visualizador
             if (uiState.userRole.canEditProducts()) {
                 uiState.produto?.let { produto ->
                     FloatingActionButton(onClick = { onEditClick(produto.id) }) {
@@ -110,7 +143,6 @@ fun ProdutoInfo(
         InfoCard(icon = Icons.Default.Store, label = "Marca", value = produto.marca)
         InfoCard(icon = Icons.Default.Category, label = "Tipo", value = produto.tipo.nome)
         
-        // Card de Quantidade com ajuste rápido (Bloqueado por RBAC)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -133,7 +165,6 @@ fun ProdutoInfo(
                     }
                 }
                 
-                // Controles de estoque rápido (Ocultos para Visualizadores)
                 if (canEdit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(

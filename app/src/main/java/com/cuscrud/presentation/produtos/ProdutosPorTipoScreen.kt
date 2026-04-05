@@ -5,10 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +21,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.canEditProducts
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,12 +31,12 @@ fun ProdutosPorTipoScreen(
     navController: NavController,
     onBackClick: () -> Unit,
     onAddProdutoClick: () -> Unit,
-    onEditProdutoClick: (Long) -> Unit,
     onProdutoClick: (Long) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
 
     // Força o refresh sempre que a tela volta ao primeiro plano (RESUME)
     DisposableEffect(lifecycleOwner) {
@@ -58,11 +59,8 @@ fun ProdutosPorTipoScreen(
 
     LaunchedEffect(successMessage) {
         successMessage?.let { message ->
-            // Força o recarregamento dos produtos desta categoria
             viewModel.loadProdutos()
-            
             snackbarHostState.showSnackbar(message)
-            // Limpa para não disparar novamente
             navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
         }
     }
@@ -74,44 +72,18 @@ fun ProdutosPorTipoScreen(
         }
     }
 
-    LaunchedEffect(uiState.mensagemSucesso) {
-        uiState.mensagemSucesso?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.limparMensagens()
-        }
-    }
-
-    // Alerta de confirmação de remoção
-    uiState.produtoParaRemover?.let { produto ->
-        AlertDialog(
-            onDismissRequest = { viewModel.cancelarRemocao() },
-            title = { Text("Excluir Produto") },
-            text = { Text("Deseja realmente excluir o produto '${produto.marca}'?") },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.confirmarRemocao() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Excluir") }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.cancelarRemocao() }) { Text("Cancelar") }
-            }
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Produtos") },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
                     }
                 }
             )
         },
         floatingActionButton = {
-            // RBAC: Oculta o botão de adicionar se for apenas Visualizador
             if (uiState.userRole.canEditProducts()) {
                 FloatingActionButton(onClick = onAddProdutoClick) {
                     Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
@@ -143,14 +115,14 @@ fun ProdutosPorTipoScreen(
                         ProdutoItem(
                             produto = produto,
                             canEdit = uiState.userRole.canEditProducts(),
+                            dateFormatter = dateFormatter,
                             onClick = { onProdutoClick(produto.id) },
-                            onEditClick = { onEditProdutoClick(produto.id) },
-                            onDeleteClick = { viewModel.solicitarRemocao(produto) }
+                            onAumentarQuantidade = { viewModel.alterarQuantidade(produto, 1) },
+                            onDiminuirQuantidade = { viewModel.alterarQuantidade(produto, -1) }
                         )
                     }
                 }
                 
-                // Overlay de carregamento para ações de mutação (ex: remoção)
                 if (uiState.isLoading && uiState.produtos.isNotEmpty()) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
@@ -163,9 +135,10 @@ fun ProdutosPorTipoScreen(
 fun ProdutoItem(
     produto: Produto,
     canEdit: Boolean,
+    dateFormatter: SimpleDateFormat,
     onClick: () -> Unit,
-    onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onAumentarQuantidade: () -> Unit,
+    onDiminuirQuantidade: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -187,21 +160,36 @@ fun ProdutoItem(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${produto.quantidade} ${produto.unidadeMedida}",
+                    text = "Vencimento: ${dateFormatter.format(produto.dataValidade)}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    text = "${produto.unidade} ${produto.unidadeMedida}",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             
-            // RBAC: Oculta botões de edição/remoção se for apenas Visualizador
             if (canEdit) {
-                Row {
-                    IconButton(onClick = onEditClick) {
-                        Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDiminuirQuantidade) {
+                        Icon(Icons.Default.Remove, contentDescription = "Diminuir")
                     }
-                    IconButton(onClick = onDeleteClick) {
-                        Icon(Icons.Default.Delete, contentDescription = "Excluir", tint = MaterialTheme.colorScheme.error)
+                    Text(
+                        text = produto.quantidade.toString(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                    IconButton(onClick = onAumentarQuantidade) {
+                        Icon(Icons.Default.Add, contentDescription = "Aumentar")
                     }
                 }
+            } else {
+                Text(
+                    text = "Qtd: ${produto.quantidade}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

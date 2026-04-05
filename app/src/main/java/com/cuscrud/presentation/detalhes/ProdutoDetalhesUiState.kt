@@ -11,5 +11,6 @@ data class ProdutoDetalhesUiState(
     val produto: Produto? = null,
     val userMessage: String? = null,
     val userRole: Role? = null,
-    val isUpdatingQuantity: Boolean = false
+    val isUpdatingQuantity: Boolean = false,
+    val isDeleted: Boolean = false
 )
