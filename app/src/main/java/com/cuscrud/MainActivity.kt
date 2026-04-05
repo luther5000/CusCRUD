@@ -64,48 +64,15 @@ class MainViewModel @Inject constructor(
     val produtos: StateFlow<List<Produto>> = _produtos.asStateFlow()
 
     init {
-        setupInitialData()
+        // Removido o setupInitialData() que inseria produtos de teste
+        fetchProdutos()
     }
 
     // Função dummy apenas para garantir a instanciação do VM
     fun touch() {}
 
-    private fun setupInitialData() {
-        viewModelScope.launch {
-            val result = tipoRepository.getTipos()
-            val tiposAtuais = if (result is Result.Success) result.data else emptyList()
-            
-            if (tiposAtuais.isEmpty()) {
-                // Inserção síncrona dentro da coroutine para garantir ordem
-                tipoRepository.insertTipo(nome = "Carnes")
-                tipoRepository.insertTipo(nome = "Laticínios")
-                tipoRepository.insertTipo(nome = "Bebidas")
-
-                // Busca as categorias inseridas para pegar o ID gerado
-                val updatedResult = tipoRepository.getTipos()
-                if (updatedResult is Result.Success) {
-                    val primeiraCategoria = updatedResult.data.firstOrNull()
-                    
-                    primeiraCategoria?.let { tipo ->
-                        val produtoTeste = Produto(
-                            id = 0,
-                            tipo = tipo,
-                            marca = "Produto de Teste Inicial",
-                            dataValidade = Date(),
-                            unidade = 1,
-                            unidadeMedida = "kg",
-                            quantidade = 10
-                        )
-                        produtoRepository.insertProduto(produtoTeste)
-                    }
-                }
-            }
-            fetchProdutos()
-        }
-    }
-
     /**
-     * Busca produtos da API para manter o estado local do MainViewModel (se necessário).
+     * Busca produtos da API para manter o estado local do MainViewModel.
      */
     fun fetchProdutos() {
         viewModelScope.launch {
