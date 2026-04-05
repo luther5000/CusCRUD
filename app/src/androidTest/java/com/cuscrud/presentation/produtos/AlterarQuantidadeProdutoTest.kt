@@ -120,7 +120,45 @@ class AlterarQuantidadeProdutoTest {
     }
 
     @Test
-    fun test04_editorConsegueAlterarQuantidade() {
+    fun test04_tentarAumentarQuantidadeAlemDoLimiteMaximo() {
+        loginEIrParaProdutos("ONG A", "Carnes")
+        // 1. Entra na tela de detalhes e depois edição para setar o valor limite
+        composeRule.onAllNodesWithTag("produto_item").onFirst().performClick()
+        composeRule.onNodeWithContentDescription("Editar Produto").performClick()
+
+        // Valor limite: 999.999.999.999.999.999 (18 noves)
+        val maxValue = "999999999999999999"
+        composeRule.waitUntil(10000) {
+            composeRule.onAllNodesWithText("Quantidade", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Quantidade", substring = true).performTextReplacement(maxValue)
+        Espresso.closeSoftKeyboard()
+        composeRule.onNodeWithText("Confirmar").performClick()
+
+        // 2. Volta para a lista de produtos
+        composeRule.waitUntil(10000) {
+            composeRule.onAllNodesWithText("sucesso", substring = true, ignoreCase = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithContentDescription("Voltar").performClick()
+
+        // 3. Tenta aumentar +1 na lista
+        composeRule.waitUntil(1000) {
+            composeRule.onAllNodesWithContentDescription("Aumentar").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onAllNodesWithContentDescription("Aumentar").onFirst().performClick()
+
+        // 4. Verifica se barrou e mostrou a mensagem de erro
+        composeRule.waitUntil(10000) {
+            composeRule.onAllNodesWithText("não é possível alterar o produto para mais de", substring = true, ignoreCase = true).fetchSemanticsNodes().isNotEmpty()
+        }
+
+        // O valor deve continuar sendo o maxValue
+        composeRule.onNodeWithText(maxValue, substring = true).assertIsDisplayed()
+    }
+
+        @Test
+    fun test05_editorConsegueAlterarQuantidade() {
         loginEIrParaProdutos("ONG B", "Carnes") // João é Editor na ONG B
         
         // Verifica se os botões estão presentes e funcionam
@@ -141,7 +179,7 @@ class AlterarQuantidadeProdutoTest {
     }
 
     @Test
-    fun test05_visualizadorNaoConsegueVerBotoesDeAlteracao() {
+    fun test06_visualizadorNaoConsegueVerBotoesDeAlteracao() {
         loginEIrParaProdutos("ONG C", "Carnes") // João é Visualizador na ONG C
         
         // Aguarda o carregamento da lista
