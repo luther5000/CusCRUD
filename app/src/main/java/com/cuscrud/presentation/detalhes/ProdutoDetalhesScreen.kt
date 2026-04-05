@@ -11,6 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.canEditProducts
 import java.text.SimpleDateFormat
@@ -20,12 +25,41 @@ import java.util.*
 @Composable
 fun ProdutoDetalhesScreen(
     viewModel: ProdutoDetalhesViewModel,
+    navController: NavController,
     onBackClick: () -> Unit,
     onEditClick: (Long) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Força o refresh sempre que a tela volta ao primeiro plano (RESUME)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.loadProduto()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Observa mensagens de sucesso vindas do AddProdutoScreen através do savedStateHandle
+    val successMessage by navController.currentBackStackEntry
+        ?.savedStateHandle
+        ?.getStateFlow<String?>("success_message", null)
+        ?.collectAsStateWithLifecycle() ?: remember { mutableStateOf(null) }
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            // Limpa para não disparar novamente
+            navController.currentBackStackEntry?.savedStateHandle?.remove<String>("success_message")
+        }
+    }
 
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let {
