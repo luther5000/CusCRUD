@@ -108,9 +108,7 @@ class AddProdutoViewModel @Inject constructor(
     }
 
     fun onMarcaChanged(marca: String) {
-        if (marca.length <= MAX_NAME_LENGTH) {
-            _uiState.update { it.copy(marca = marca) }
-        }
+        _uiState.update { it.copy(marca = marca) }
     }
 
     fun onUnidadeChanged(unidade: String) {
@@ -171,32 +169,44 @@ class AddProdutoViewModel @Inject constructor(
         
         val tipo = currentState.tipoSelecionado
         if (tipo == null) {
-            _uiState.update { it.copy(userMessage = "Selecione um tipo de produto") }
+            _uiState.update { it.copy(userMessage = "Selecionar um tipo de produto é obrigatório.") }
             return
         }
 
         if (currentState.marca.isBlank()) {
-            _uiState.update { it.copy(userMessage = "O preenchimento do nome/marca é obrigatório.") }
+            _uiState.update { it.copy(userMessage = "O preenchimento da marca é obrigatório.") }
+            return
+        }
+        if (currentState.marca.length > MAX_NAME_LENGTH) {
+            _uiState.update { it.copy(userMessage = "O nome da marca é muito longo.") }
             return
         }
 
-        val unidadeLong = currentState.unidade.toLongOrNull()
-        if (unidadeLong == null || unidadeLong < 0) {
-            _uiState.update { it.copy(userMessage = "Valor unitário inválido.") }
+        if (currentState.unidade.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O preenchimento da unidade é obrigatório.") }
             return
         }
-        if (unidadeLong >= MAX_VALUE) {
+        val unidadeLong = currentState.unidade.toLongOrNull()
+        if (unidadeLong == null || unidadeLong > MAX_VALUE) {
             _uiState.update { it.copy(userMessage = "Valor unitário muito grande.") }
             return
         }
-
-        val quantidadeLong = currentState.quantidade.toLongOrNull()
-        if (quantidadeLong == null || quantidadeLong < 0) {
-            _uiState.update { it.copy(userMessage = "Quantidade inválida.") }
+        if (unidadeLong < 0) {
+            _uiState.update { it.copy(userMessage = "Valor unitário inválido.") }
             return
         }
-        if (quantidadeLong >= MAX_VALUE) {
+
+        if (currentState.quantidade.isBlank()) {
+            _uiState.update { it.copy(userMessage = "O preenchimento da quantidade é obrigatório.") }
+            return
+        }
+        val quantidadeLong = currentState.quantidade.toLongOrNull()
+        if (quantidadeLong == null || quantidadeLong > MAX_VALUE) {
             _uiState.update { it.copy(userMessage = "Quantidade muito grande.") }
+            return
+        }
+        if (quantidadeLong < 0) {
+            _uiState.update { it.copy(userMessage = "Quantidade inválida.") }
             return
         }
 
