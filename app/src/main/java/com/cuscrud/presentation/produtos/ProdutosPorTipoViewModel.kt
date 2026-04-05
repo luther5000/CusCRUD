@@ -71,7 +71,9 @@ class ProdutosPorTipoViewModel @Inject constructor(
     }
 
     fun alterarQuantidade(produto: Produto, delta: Long) {
-        val novaQuantidade = produto.quantidade + delta
+        // Busca a versão mais recente do produto no estado para evitar race conditions
+        val produtoAtual = _uiState.value.produtos.find { it.id == produto.id } ?: produto
+        val novaQuantidade = produtoAtual.quantidade + delta
         
         if (novaQuantidade < 0) {
             _uiState.update { it.copy(errorMessage = "Não é possível alterar o produto para menos de 0 itens") }
@@ -83,25 +85,26 @@ class ProdutosPorTipoViewModel @Inject constructor(
             return
         }
 
-        val produtoAtualizado = produto.copy(quantidade = novaQuantidade)
+        val produtoAtualizado = produtoAtual.copy(quantidade = novaQuantidade)
         
+        // Otimismo na UI: atualiza localmente antes da chamada de rede
+        _uiState.update { state ->
+            state.copy(
+                produtos = state.produtos.map { 
+                    if (it.id == produto.id) produtoAtualizado else it 
+                }
+            )
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             when (val result = editProdutoInteractor(produto.id, produtoAtualizado)) {
                 is Result.Success -> {
-                    // Atualiza a lista localmente para resposta rápida
-                    _uiState.update { state ->
-                        state.copy(
-                            isLoading = false,
-                            produtos = state.produtos.map { 
-                                if (it.id == produto.id) produtoAtualizado else it 
-                            }
-                        )
-                    }
+                    _uiState.update { it.copy(isLoading = false) }
                 }
                 is Result.Error -> {
                     _uiState.update { it.copy(isLoading = false, errorMessage = result.exception.message) }
-                    loadProdutos() // Recarrega para garantir sincronia em caso de erro
+                    loadProdutos() // Reverte/Sincroniza em caso de erro
                 }
                 Result.Loading -> {}
             }
