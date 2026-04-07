@@ -24,6 +24,8 @@ import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.model.Tipo
 import com.cuscrud.domain.repository.canEditProducts
+import com.cuscrud.ui.components.CurvedHeader
+import com.cuscrud.ui.components.TactileButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,72 +72,90 @@ fun InventarioScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Inventário Geral") },
-                navigationIcon = {
-                    IconButton(onClick = onChangeOngClick) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Voltar para ONGs"
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onSettingsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Configurações da ONG"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            if (canAdd) {
-                FloatingActionButton(
-                    onClick = onAddProdutoClick,
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
-                }
-            }
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when (val state = uiState) {
-                is InventarioUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .testTag("loading_indicator")
-                    )
-                }
-                is InventarioUiState.Error -> {
-                    Column(
-                        modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = state.message, color = MaterialTheme.colorScheme.error)
-                        Button(onClick = { viewModel.fetchInventario() }) {
-                            Text("Tentar Novamente")
-                        }
+            Box {
+                CurvedHeader(
+                    title = "Inventário",
+                    subtitle = "Gerencie os itens da sua ONG"
+                )
+                
+                // Botões de navegação sobre o Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, start = 8.dp, end = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = onChangeOngClick) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Configurações",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
                 }
-                is InventarioUiState.Success -> {
-                    InventarioList(
-                        inventario = state.inventario,
-                        onTipoClick = onTipoSelected
-                    )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                when (val state = uiState) {
+                    is InventarioUiState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .testTag("loading_indicator")
+                        )
+                    }
+                    is InventarioUiState.Error -> {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                            TactileButton(
+                                text = "Tentar Novamente",
+                                onClick = { viewModel.fetchInventario() },
+                                modifier = Modifier.width(200.dp)
+                            )
+                        }
+                    }
+                    is InventarioUiState.Success -> {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            InventarioList(
+                                inventario = state.inventario,
+                                onTipoClick = onTipoSelected,
+                                modifier = Modifier.weight(1f)
+                            )
+                            
+                            if (canAdd) {
+                                TactileButton(
+                                    text = "Adicionar Produto",
+                                    onClick = onAddProdutoClick,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -145,24 +165,26 @@ fun InventarioScreen(
 @Composable
 fun InventarioList(
     inventario: Map<Tipo, List<Produto>>,
-    onTipoClick: (Long) -> Unit
+    onTipoClick: (Long) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     if (inventario.isEmpty()) {
         Box(
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Você não possui produtos salvos nesta ONG.\nAdicione um clicando no botão '+'.",
+                text = "Você não possui produtos salvos nesta ONG.\nAdicione um clicando no botão abaixo.",
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                modifier = Modifier.padding(horizontal = 32.dp),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
             )
         }
     } else {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             inventario.forEach { (tipo, produtos) ->
                 val totalQuantidade = produtos.sumOf { it.quantidade }
@@ -199,31 +221,35 @@ fun TipoSummaryItem(
         shape = MaterialTheme.shapes.medium
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = tipo.nome,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Total em estoque: $totalQuantidade $unidadeMedida",
+                    text = "$totalQuantidade $unidadeMedida em estoque",
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = "$quantidadeLotes produtos(s) cadastrado(s)",
-                    style = MaterialTheme.typography.bodySmall
+                    text = "$quantidadeLotes lote(s) cadastrado(s)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
                 )
             }
             Icon(
                 imageVector = Icons.Default.Inventory,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
             )
         }
     }

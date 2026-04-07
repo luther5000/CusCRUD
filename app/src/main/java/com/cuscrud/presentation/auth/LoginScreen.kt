@@ -1,25 +1,26 @@
 package com.cuscrud.presentation.auth
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.cuscrud.ui.components.CurvedHeader
+import com.cuscrud.ui.components.ModernInput
+import com.cuscrud.ui.components.TactileButton
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -35,9 +36,7 @@ fun LoginScreen(
     LaunchedEffect(key1 = true) {
         viewModel.uiEvent.collectLatest { event ->
             when (event) {
-                is LoginViewModel.LoginUiEvent.LoginSuccess -> {
-                    onLoginSuccess()
-                }
+                is LoginViewModel.LoginUiEvent.LoginSuccess -> onLoginSuccess()
                 is LoginViewModel.LoginUiEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,
@@ -49,92 +48,76 @@ fun LoginScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "CusCRUD",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            
-            Text(
-                text = "Gestão de Inventário",
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(bottom = 32.dp)
+            CurvedHeader(
+                title = "CusCRUD",
+                subtitle = "Bem-vindo ao seu Inventário"
             )
 
-            OutlinedTextField(
-                value = viewModel.email,
-                onValueChange = viewModel::onEmailChanged,
-                label = { Text("E-mail ou Login") },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email,
-                    imeAction = ImeAction.Next
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                ModernInput(
+                    value = viewModel.email,
+                    onValueChange = viewModel::onEmailChanged,
+                    label = "E-mail ou Login",
+                    placeholder = "seu@email.com",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
                 )
-            )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            OutlinedTextField(
-                value = viewModel.password,
-                onValueChange = viewModel::onPasswordChanged,
-                label = { Text("Senha") },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                singleLine = true,
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = image, contentDescription = null)
-                    }
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        focusManager.clearFocus()
-                        viewModel.onLoginClick()
-                    }
+                ModernInput(
+                    value = viewModel.password,
+                    onValueChange = viewModel::onPasswordChanged,
+                    label = "Senha",
+                    placeholder = "********",
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    )
                 )
-            )
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-            if (viewModel.isLoading) {
-                CircularProgressIndicator()
-            } else {
-                Button(
+                TactileButton(
+                    text = "Acessar Sistema",
                     onClick = {
                         focusManager.clearFocus()
                         viewModel.onLoginClick()
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text("ENTRAR", fontWeight = FontWeight.Bold)
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    isLoading = viewModel.isLoading
+                )
 
-                TextButton(onClick = onRegisterClick) {
-                    Text("Não tem uma conta? Cadastre-se")
-                }
+                TactileButton(
+                    text = "Criar nova conta",
+                    onClick = onRegisterClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    isPrimary = false
+                )
             }
         }
     }

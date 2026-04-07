@@ -16,6 +16,7 @@ import com.cuscrud.domain.repository.ProdutoRepository
 import com.cuscrud.domain.repository.TipoRepository
 import com.cuscrud.domain.util.Result
 import com.cuscrud.presentation.navigation.CusCrudNavGraph
+import com.cuscrud.ui.theme.CusCRUDTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +39,7 @@ class MainActivity : ComponentActivity() {
         viewModel.touch() 
 
         setContent {
-            MaterialTheme {
+            CusCRUDTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
