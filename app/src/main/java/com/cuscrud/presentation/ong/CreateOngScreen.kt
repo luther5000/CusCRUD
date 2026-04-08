@@ -8,6 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.cuscrud.ui.components.CurvedHeader
+import com.cuscrud.ui.components.ModernInput
+import com.cuscrud.ui.components.TactileButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,57 +36,55 @@ fun CreateOngScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Nova ONG") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .fillMaxSize()
+                .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Dê um nome para a sua nova ONG. Isso criará um inventário exclusivo para ela.",
-                style = MaterialTheme.typography.bodyMedium
+            CurvedHeader(
+                title = "Nova ONG",
+                subtitle = "Crie um novo espaço de trabalho"
             )
 
-            OutlinedTextField(
-                value = uiState.name,
-                onValueChange = { viewModel.onNameChanged(it) },
-                label = { Text("Nome da ONG") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                enabled = !uiState.isLoading
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Button(
-                onClick = { viewModel.onCreateClick() },
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp),
-                enabled = !uiState.isLoading
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (uiState.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("CRIAR ONG")
-                }
+                Text(
+                    text = "Dê um nome para a sua nova ONG. Isso criará um inventário exclusivo para ela.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                )
+
+                ModernInput(
+                    value = uiState.name,
+                    onValueChange = { viewModel.onNameChanged(it) },
+                    label = "Nome da Organização",
+                    placeholder = "Ex: SOS Mata Atlântica"
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                TactileButton(
+                    text = "Criar Organização",
+                    onClick = { viewModel.onCreateClick() },
+                    modifier = Modifier.fillMaxWidth(),
+                    isLoading = uiState.isLoading
+                )
+
+                TactileButton(
+                    text = "Voltar",
+                    onClick = onBackClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    isPrimary = false
+                )
             }
         }
     }

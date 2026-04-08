@@ -1,9 +1,11 @@
 package com.cuscrud.presentation.produtos
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -22,6 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.cuscrud.domain.model.Produto
 import com.cuscrud.domain.repository.canEditProducts
+import com.cuscrud.ui.components.CurvedHeader
+import com.cuscrud.ui.components.TactileButton
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -72,57 +76,78 @@ fun ProdutosPorTipoScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Produtos") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            if (uiState.userRole.canEditProducts()) {
-                FloatingActionButton(onClick = onAddProdutoClick) {
-                    Icon(Icons.Default.Add, contentDescription = "Adicionar Produto")
-                }
-            }
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .testTag("loading_indicator")
+            Box {
+                CurvedHeader(
+                    title = "Produtos",
+                    subtitle = "Itens nesta categoria"
                 )
-            } else if (uiState.produtos.isEmpty()) {
-                Text(
-                    text = "Nenhum produto cadastrado nesta categoria.",
-                    modifier = Modifier.align(Alignment.Center),
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                
+                IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.padding(top = 8.dp, start = 8.dp)
                 ) {
-                    items(uiState.produtos) { produto ->
-                        ProdutoItem(
-                            produto = produto,
-                            canEdit = uiState.userRole.canEditProducts(),
-                            dateFormatter = dateFormatter,
-                            onClick = { onProdutoClick(produto.id) },
-                            onAumentarQuantidade = { viewModel.alterarQuantidade(produto, 1) },
-                            onDiminuirQuantidade = { viewModel.alterarQuantidade(produto, -1) }
-                        )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .testTag("loading_indicator")
+                    )
+                } else if (uiState.produtos.isEmpty()) {
+                    Text(
+                        text = "Nenhum produto cadastrado.",
+                        modifier = Modifier.align(Alignment.Center),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                } else {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(uiState.produtos) { produto ->
+                                ProdutoItem(
+                                    produto = produto,
+                                    canEdit = uiState.userRole.canEditProducts(),
+                                    dateFormatter = dateFormatter,
+                                    onClick = { onProdutoClick(produto.id) },
+                                    onAumentarQuantidade = { viewModel.alterarQuantidade(produto, 1) },
+                                    onDiminuirQuantidade = { viewModel.alterarQuantidade(produto, -1) }
+                                )
+                            }
+                        }
+                        
+                        if (uiState.userRole.canEditProducts()) {
+                            TactileButton(
+                                text = "Novo Item",
+                                onClick = onAddProdutoClick,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -139,12 +164,13 @@ fun ProdutoItem(
     onAumentarQuantidade: () -> Unit,
     onDiminuirQuantidade: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("produto_item")
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier
@@ -157,39 +183,66 @@ fun ProdutoItem(
                 Text(
                     text = produto.marca,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Text(
                     text = "Vencimento: ${dateFormatter.format(produto.dataValidade)}",
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
                 )
                 Text(
-                    text = "${produto.unidade} ${produto.unidadeMedida}",
-                    style = MaterialTheme.typography.bodyMedium
+                    text = "${produto.quantidade} ${produto.unidadeMedida}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
                 )
             }
             
             if (canEdit) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .background(
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                            CircleShape
+                        )
+                        .padding(horizontal = 4.dp)
+                ) {
                     IconButton(onClick = onDiminuirQuantidade) {
-                        Icon(Icons.Default.Remove, contentDescription = "Diminuir")
+                        Icon(
+                            imageVector = Icons.Default.Remove,
+                            contentDescription = "Diminuir",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     Text(
                         text = produto.quantidade.toString(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 4.dp)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(onClick = onAumentarQuantidade) {
-                        Icon(Icons.Default.Add, contentDescription = "Aumentar")
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Aumentar",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             } else {
-                Text(
-                    text = "Qtd: ${produto.quantidade}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = produto.quantidade.toString(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
             }
         }
     }

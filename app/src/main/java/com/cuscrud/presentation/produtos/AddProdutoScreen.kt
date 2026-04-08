@@ -4,7 +4,9 @@ import android.app.DatePickerDialog
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
@@ -17,6 +19,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.cuscrud.domain.repository.canEditProducts
+import com.cuscrud.ui.components.CurvedHeader
+import com.cuscrud.ui.components.ModernInput
+import com.cuscrud.ui.components.TactileButton
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -34,7 +39,6 @@ fun AddProdutoScreen(
     var showExitConfirmation by remember { mutableStateOf(false) }
     var showAddTipoDialog by remember { mutableStateOf(false) }
     
-    // RBAC: Verifica se o usuário tem permissão para editar/adicionar
     val canEdit = uiState.userRole.canEditProducts()
 
     BackHandler {
@@ -104,24 +108,38 @@ fun AddProdutoScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(if (uiState.isEditMode) "Editar Produto" else "Adicionar Produto") },
-                navigationIcon = {
-                    IconButton(onClick = { if (canEdit) showExitConfirmation = true else onBackClick(null) }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Voltar")
-                    }
-                }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Box {
+                CurvedHeader(
+                    title = if (uiState.isEditMode) "Editar" else "Adicionar",
+                    subtitle = if (uiState.isEditMode) "Atualize os dados do item" else "Cadastre um novo item"
+                )
+                
+                IconButton(
+                    onClick = { if (canEdit) showExitConfirmation = true else onBackClick(null) },
+                    modifier = Modifier.padding(top = 8.dp, start = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+
             Column(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(20.dp)
                     .fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Seleção de Tipo
                 var expandedTipo by remember { mutableStateOf(false) }
@@ -129,14 +147,13 @@ fun AddProdutoScreen(
                     expanded = expandedTipo && canEdit,
                     onExpandedChange = { if (canEdit) expandedTipo = !expandedTipo }
                 ) {
-                    OutlinedTextField(
-                        value = uiState.tipoSelecionado?.nome ?: "Selecione o Tipo",
+                    ModernInput(
+                        value = uiState.tipoSelecionado?.nome ?: "Selecione a Categoria",
                         onValueChange = {},
+                        label = "Categoria",
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
                         readOnly = true,
-                        enabled = canEdit,
-                        label = { Text("Tipo") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipo) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTipo) }
                     )
                     ExposedDropdownMenu(
                         expanded = expandedTipo && canEdit,
@@ -157,7 +174,7 @@ fun AddProdutoScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Default.Add, contentDescription = null)
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Adicionar Nova Categoria") 
+                                    Text("Nova Categoria") 
                                 }
                             },
                             onClick = {
@@ -168,12 +185,12 @@ fun AddProdutoScreen(
                     }
                 }
 
-                OutlinedTextField(
+                ModernInput(
                     value = uiState.marca,
                     onValueChange = { viewModel.onMarcaChanged(it) },
-                    label = { Text("Marca/Nome") },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = canEdit
+                    label = "Marca/Nome",
+                    placeholder = "Ex: Arroz Tio João",
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 // Data de Validade
@@ -196,31 +213,23 @@ fun AddProdutoScreen(
                             ).show()
                         }
                 ) {
-                    OutlinedTextField(
+                    ModernInput(
                         value = dateFormatter.format(uiState.dataValidade),
                         onValueChange = {},
-                        readOnly = true,
-                        enabled = false,
-                        label = { Text("Data de Validade") },
-                        trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+                        label = "Data de Validade",
                         modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
-                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        readOnly = true,
+                        trailingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) }
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    ModernInput(
                         value = uiState.unidade,
                         onValueChange = { viewModel.onUnidadeChanged(it) },
-                        label = { Text("Valor Unidade") },
+                        label = "Peso/Valor",
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        enabled = canEdit
+                        modifier = Modifier.weight(1f)
                     )
 
                     var expandedMedida by remember { mutableStateOf(false) }
@@ -229,14 +238,13 @@ fun AddProdutoScreen(
                         onExpandedChange = { if (canEdit) expandedMedida = !expandedMedida },
                         modifier = Modifier.weight(1f)
                     ) {
-                        OutlinedTextField(
+                        ModernInput(
                             value = uiState.unidadeMedida,
                             onValueChange = {},
+                            label = "Medida",
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
                             readOnly = true,
-                            enabled = canEdit,
-                            label = { Text("Medida") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMedida) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedMedida) }
                         )
                         ExposedDropdownMenu(
                             expanded = expandedMedida && canEdit,
@@ -255,39 +263,31 @@ fun AddProdutoScreen(
                     }
                 }
 
-                OutlinedTextField(
+                ModernInput(
                     value = uiState.quantidade,
                     onValueChange = { viewModel.onQuantidadeChanged(it) },
-                    label = { Text("Quantidade no Inventário") },
+                    label = "Qtd. Total",
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = canEdit
+                    modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 if (canEdit) {
-                    Row(
+                    TactileButton(
+                        text = if (uiState.isEditMode) "Salvar Alterações" else "Cadastrar Produto",
+                        onClick = { viewModel.onSaveProduto() },
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(onClick = { showExitConfirmation = true }, modifier = Modifier.weight(1f)) {
-                            Text("Cancelar")
-                        }
-                        Button(
-                            onClick = { viewModel.onSaveProduto() },
-                            modifier = Modifier.weight(1f),
-                            enabled = !uiState.isLoading
-                        ) {
-                            if (uiState.isLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                            else Text(if (uiState.isEditMode) "Confirmar" else "Adicionar")
-                        }
-                    }
+                        isLoading = uiState.isLoading
+                    )
+                    
+                    TactileButton(
+                        text = "Cancelar",
+                        onClick = { showExitConfirmation = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        isPrimary = false
+                    )
                 }
-            }
-            
-            if (uiState.isLoading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
         }
     }

@@ -1,23 +1,26 @@
 package com.cuscrud.presentation.auth
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.cuscrud.ui.components.CurvedHeader
+import com.cuscrud.ui.components.ModernInput
+import com.cuscrud.ui.components.TactileButton
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -29,6 +32,7 @@ fun RegisterScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
     LaunchedEffect(key1 = true) {
         viewModel.uiEvent.collectLatest { event ->
@@ -45,99 +49,104 @@ fun RegisterScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Criar Conta",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 32.dp)
+            CurvedHeader(
+                title = "Criar Conta",
+                subtitle = "Preencha os dados abaixo"
             )
 
-            OutlinedTextField(
-                value = viewModel.name,
-                onValueChange = viewModel::onNameChanged,
-                label = { Text("Nome Completo") },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
-                singleLine = true
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                ModernInput(
+                    value = viewModel.name,
+                    onValueChange = viewModel::onNameChanged,
+                    label = "Nome Completo",
+                    placeholder = "Seu Nome",
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                ModernInput(
+                    value = viewModel.email,
+                    onValueChange = viewModel::onEmailChanged,
+                    label = "E-mail",
+                    placeholder = "seu@email.com",
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
+                )
 
-            OutlinedTextField(
-                value = viewModel.email,
-                onValueChange = viewModel::onEmailChanged,
-                label = { Text("E-mail") },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-            )
+                ModernInput(
+                    value = viewModel.password,
+                    onValueChange = viewModel::onPasswordChanged,
+                    label = "Senha",
+                    placeholder = "Min. 8 caracteres",
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Next
+                    )
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
+                ModernInput(
+                    value = viewModel.confirmPassword,
+                    onValueChange = viewModel::onConfirmPasswordChanged,
+                    label = "Confirmar Senha",
+                    placeholder = "Repita a senha",
+                    visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val image = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                        IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                            Icon(imageVector = image, contentDescription = null, tint = Color.Gray)
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done
+                    )
+                )
 
-            OutlinedTextField(
-                value = viewModel.password,
-                onValueChange = viewModel::onPasswordChanged,
-                label = { Text("Senha") },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                singleLine = true,
-                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    val image = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                    IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = image, contentDescription = null)
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
+                Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+                TactileButton(
+                    text = "Registrar Agora",
+                    onClick = {
+                        focusManager.clearFocus()
+                        viewModel.onRegisterClick()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    isLoading = viewModel.isLoading
+                )
 
-            OutlinedTextField(
-                value = viewModel.confirmPassword,
-                onValueChange = viewModel::onConfirmPasswordChanged,
-                label = { Text("Confirmar Senha") },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                singleLine = true,
-                visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    val image = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
-                    IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                        Icon(imageVector = image, contentDescription = null)
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-            )
+                TactileButton(
+                    text = "Voltar para o login",
+                    onClick = onBackClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    isPrimary = false
+                )
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            if (viewModel.isLoading) {
-                CircularProgressIndicator()
-            } else {
-                Button(
-                    onClick = viewModel::onRegisterClick,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Text("CADASTRAR", fontWeight = FontWeight.Bold)
-                }
-                
-                TextButton(onClick = onBackClick) {
-                    Text("Já tem uma conta? Faça Login")
-                }
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

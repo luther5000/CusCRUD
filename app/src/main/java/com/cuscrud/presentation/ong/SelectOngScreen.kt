@@ -16,6 +16,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cuscrud.data.remote.dto.InventoryDto
 import com.cuscrud.domain.model.Role
+import com.cuscrud.ui.components.CurvedHeader
+import com.cuscrud.ui.components.TactileButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,59 +44,68 @@ fun SelectOngScreen(
     }
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Selecione sua ONG") },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onCreateOngClick,
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("Nova ONG") },
-                containerColor = MaterialTheme.colorScheme.primary
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (uiState.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (uiState.ongs.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Você não possui acesso a nenhuma ONG.",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Button(onClick = onCreateOngClick) {
-                        Text("CRIAR MINHA PRIMEIRA ONG")
+            CurvedHeader(
+                title = "Suas ONGs",
+                subtitle = "Selecione uma organização para gerenciar"
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp)
+            ) {
+                if (uiState.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else if (uiState.ongs.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .padding(bottom = 64.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Você não possui acesso a nenhuma ONG.",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        TactileButton(
+                            text = "CRIAR MINHA PRIMEIRA ONG",
+                            onClick = onCreateOngClick,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(uiState.ongs) { ong ->
-                        OngItem(
-                            ong = ong,
-                            onClick = { viewModel.onOngSelected(ong) }
+                } else {
+                    Column {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(vertical = 24.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(uiState.ongs) { ong ->
+                                OngItem(
+                                    ong = ong,
+                                    onClick = { viewModel.onOngSelected(ong) }
+                                )
+                            }
+                        }
+                        
+                        TactileButton(
+                            text = "Nova ONG",
+                            onClick = onCreateOngClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 24.dp),
+                            isPrimary = false
                         )
                     }
                 }
@@ -108,11 +119,12 @@ fun OngItem(
     ong: InventoryDto,
     onClick: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = MaterialTheme.shapes.medium
     ) {
         Row(
             modifier = Modifier
@@ -130,13 +142,14 @@ fun OngItem(
             Column {
                 Text(
                     text = ong.invName,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
                 Text(
                     text = "Nível de acesso: ${ong.role?.let { Role.fromInt(it) }?.name ?: "Desconhecido"}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                 )
             }
         }
