@@ -110,23 +110,26 @@ Há também uma pasta de apoio a testes compartilhados:
 
 - `shared-test/`
 
-## Estrutura do projeto
+## Estrutura do Projeto
+
+O projeto está organizado seguindo os princípios da **Clean Architecture**, o que garante um código desacoplado, testável e de fácil manutenção. Abaixo, descreve-se a responsabilidade de cada diretório:
 
 ```text
 CusCRUD/
 ├── app/
 │   ├── src/main/java/com/cuscrud/
-│   │   ├── data/
-│   │   ├── di/
-│   │   ├── domain/
-│   │   ├── presentation/
-│   │   └── ui/
-│   ├── src/test/
-│   ├── src/androidTest/
-│   └── src/sharedTest/
-├── shared-test/
-├── docs/
-└── gradle/
+│   │   ├── data/           # Camada de Dados: Repositórios, APIs e Persistência
+│   │   ├── domain/         # Camada de Domínio: Regras de negócio e Casos de Uso
+│   │   ├── presentation/   # Camada de Apresentação: ViewModels e Estados da UI
+│   │   ├── ui/             # Camada de UI: Telas (Screens), Componentes e Tema
+│   │   ├── di/             # Injeção de Dependência (Hilt Modules)
+│   │   └── InventarioApp.kt # Classe base da aplicação
+│   ├── src/test/           # Testes Unitários (JVM)
+│   ├── src/androidTest/    # Testes Instrumentados e de UI (Android)
+│   └── src/sharedTest/     # Recursos e utilitários compartilhados entre testes
+├── shared-test/            # Módulo de utilitários de teste (ex: Geradores de Dados)
+├── docs/                   # Documentação do projeto (Gherkin, Diagramas)
+└── gradle/                 # Configurações de build e dependências
 ```
 
 ## Arquitetura
