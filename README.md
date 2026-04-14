@@ -6,6 +6,13 @@ Aplicativo Android para gestão de inventários voltado a bancos de alimentos, O
 
 O projeto foi construído em Kotlin para Android, com interface em Jetpack Compose e integração com uma API REST. O fluxo principal do app cobre autenticação de usuários, seleção ou criação de inventários/ONGs, consulta de estoque, cadastro e edição de produtos, além do gerenciamento de colaboradores e permissões.
 
+## Telas da Aplicação
+<p align="center">
+  <img src="./docs/imagens/selecionar_ong_exemplo.jpeg" width="200" />
+  <img src="./docs/imagens/selecionar_categoria_exemplo.jpeg" width="200" />
+  <img src="./docs/imagens/visualizar_produto_exemplo.jpeg" width="200" />
+</p>
+
 ## Funcionalidades principais
 
 - Login e cadastro de usuários
