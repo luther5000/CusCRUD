@@ -1,160 +1,159 @@
-# CusCRUD
+# CusCRUD — Sistema de Gestão de Inventários Sociais
 
-Aplicativo Android para gestão de inventários voltado a bancos de alimentos, ONGs e iniciativas sociais que precisam organizar tipos de produtos, itens em estoque e acessos de colaboradores por inventário.
+O **CusCRUD** é uma plataforma completa (Mobile e Server) projetada para a gestão inteligente de inventários em bancos de alimentos, ONGs e iniciativas sociais. O sistema permite organizar de forma eficiente tipos de produtos, lotes em estoque, e gerenciar permissões e acessos de múltiplos colaboradores por inventário de forma segura e auditável.
 
-## Visão geral
+## Índice
 
-O projeto foi construído em Kotlin para Android, com interface em Jetpack Compose e integração com uma API REST. O fluxo principal do app cobre autenticação de usuários, seleção ou criação de inventários/ONGs, consulta de estoque, cadastro e edição de produtos, além do gerenciamento de colaboradores e permissões.
+* [Visão Geral da Solução](https://www.google.com/search?q=%23-vis%C3%A3o-geral-da-solu%C3%A7%C3%A3o)
+* [Arquitetura do Repositório](https://www.google.com/search?q=%23-arquitetura-do-reposit%C3%B3rio)
+* [Telas da Aplicação Mobile](https://www.google.com/search?q=%23-telas-da-aplica%C3%A7%C3%A3o-mobile)
+* [Funcionalidades do Ecossistema](https://www.google.com/search?q=%23-funcionalidades-do-ecossistema)
+* [Ambiente de Desenvolvimento Rápido](https://www.google.com/search?q=%23-ambiente-de-desenvolvimento-r%C3%A1pido)
+* [Componentes do Ecossistema](https://www.google.com/search?q=%23-componentes-do-ecossistema)
+* [1. Backend (Server API)](https://www.google.com/search?q=%231-backend-server-api)
+* [2. Frontend (Mobile Android)](https://www.google.com/search?q=%232-frontend-mobile-android)
 
-## Telas da Aplicação
-<p align="center">
-  <img src="./docs/imagens/selecionar_ong_exemplo.jpeg" width="200" />
-  <img src="./docs/imagens/selecionar_categoria_exemplo.jpeg" width="200" />
-  <img src="./docs/imagens/visualizar_produto_exemplo.jpeg" width="200" />
-</p>
 
-## Funcionalidades principais
+* [Licença](https://www.google.com/search?q=%23-licen%C3%A7a)
 
-- Login e cadastro de usuários
-- Seleção do inventário ativo
-- Criação, edição e remoção de inventários
-- Visualização do inventário agrupado por tipo de produto
-- Cadastro, edição, consulta e remoção de produtos
-- Consulta de detalhes de produto
-- Gerenciamento de colaboradores do inventário
-- Controle de permissões por papel de acesso
-- Persistência segura da sessão do usuário
+---
 
-## Stack e tecnologias
+## Visão Geral da Solução
 
-- Kotlin 2.1
-- Android Gradle Plugin 8.7
-- Java 17
-- Jetpack Compose
-- Navigation Compose
-- Hilt para injeção de dependências
-- Retrofit + OkHttp + Kotlinx Serialization
-- DataStore para sessão e preferências
-- JUnit4, MockWebServer, MockK e testes instrumentados Android
+A plataforma é composta por duas aplicações independentes integradas:
 
-## Requisitos
+1. **CusCRUD REST (Server):** Uma API robusta desenvolvida em **Java + Spring Boot**, que centraliza as regras de negócio, persistência em banco de dados **PostgreSQL**, segurança com **JWT** e controle de acessos adaptável.
+2. **CusCRUD Mobile (App):** Um cliente Android nativo moderno desenvolvido em **Kotlin + Jetpack Compose**, seguindo os princípios da *Clean Architecture*, otimizado para operação em campo e com armazenamento local seguro de sessões.
 
-- Android Studio recente com suporte a Kotlin 2.1 e Compose
-- JDK 17
-- Android SDK:
-  - `compileSdk = 35`
-  - `targetSdk = 35`
-  - `minSdk = 21`
-- Emulador Android ou dispositivo físico para executar o app
-- Backend da API disponível para autenticação, inventários, tipos, produtos e acessos
+---
 
-## Configuração do ambiente
+## Arquitetura do Repositório
 
-O app lê a URL base da API a partir do arquivo `local.properties`, usando a chave `API_BASE_URL`.
-
-Se a chave não estiver definida, o build `debug` usa o valor padrão:
-
-```properties
-http://localhost/api/v1/
-```
-
-Exemplo de configuração no `local.properties`:
-
-```properties
-API_BASE_URL=http://10.0.2.2:8080/api/v1/
-```
-
-Observações:
-
-- Em emulador Android, `10.0.2.2` normalmente aponta para a máquina host.
-- O app está com `usesCleartextTraffic="true"` no manifesto, o que facilita desenvolvimento local com HTTP.
-- No build `release`, a URL base é definida diretamente em `BuildConfig` como `https://api.cuscrud.com/v1/`.
-
-## Como executar
-
-1. Clone o repositório.
-2. Configure a propriedade `API_BASE_URL` no `local.properties`.
-3. Abra o projeto no Android Studio.
-4. Sincronize as dependências do Gradle.
-5. Execute o módulo `app` em um emulador ou dispositivo.
-
-Se preferir usar o terminal:
-
-```bash
-./gradlew assembleDebug
-```
-
-No Windows:
-
-```bat
-gradlew.bat assembleDebug
-```
-
-## Testes
-
-O projeto possui testes unitários e testes instrumentados Android.
-
-Executar testes unitários:
-
-```bash
-./gradlew testDebugUnitTest
-```
-
-Executar testes instrumentados:
-
-```bash
-./gradlew connectedDebugAndroidTest
-```
-
-Há também uma pasta de apoio a testes compartilhados:
-
-- `shared-test/`
-
-## Estrutura do Projeto
-
-O projeto está organizado seguindo os princípios da **Clean Architecture**, o que garante um código desacoplado, testável e de fácil manutenção. Abaixo, descreve-se a responsabilidade de cada diretório:
+Com a unificação dos repositórios, o projeto passa a adotar uma estrutura modular no estilo monorepo:
 
 ```text
-CusCRUD/
-├── app/
-│   ├── src/main/java/com/cuscrud/
-│   │   ├── data/           # Camada de Dados: Repositórios, APIs e Persistência
-│   │   ├── domain/         # Camada de Domínio: Regras de negócio e Casos de Uso
-│   │   ├── presentation/   # Camada de Apresentação: ViewModels e Estados da UI
-│   │   ├── ui/             # Camada de UI: Telas (Screens), Componentes e Tema
-│   │   ├── di/             # Injeção de Dependência (Hilt Modules)
-│   │   └── InventarioApp.kt # Classe base da aplicação
-│   ├── src/test/           # Testes Unitários (JVM)
-│   ├── src/androidTest/    # Testes Instrumentados e de UI (Android)
-│   └── src/sharedTest/     # Recursos e utilitários compartilhados entre testes
-├── shared-test/            # Módulo de utilitários de teste (ex: Geradores de Dados)
-├── docs/                   # Documentação do projeto (Gherkin, Diagramas)
-└── gradle/                 # Configurações de build e dependências
+.
+├── backend/               # Código-fonte da API REST (Spring Boot)
+│   ├── src/               # Implementação dos casos de uso, pacotes e testes
+│   ├── Dockerfile         # Containerização da aplicação Java
+│   └── pom.xml            # Gerenciador de dependências Maven
+├── mobile/                # Código-fonte do Aplicativo Android (Kotlin)
+│   ├── src/               # Camadas Clean (data, domain, presentation, ui)
+│   └── build.gradle.kts   # Configurações do módulo mobile
+├── shared-test/           # Recursos e geradores de dados compartilhados do Mobile
+├── db/                    # Scripts de inicialização do Banco de Dados (PostgreSQL)
+│   └── init/              # Esquemas DDL (.sql) aplicados no bootstrap do container
+├── docs/                  # Documentações globais (Gherkin, Diagramas de Classes, etc.)
+├── infra/                 # Arquivos de infraestrutura local (Nginx reversa, Logrotate)
+├── docker-compose.yaml    # Orquestração do ambiente completo de desenvolvimento
+└── README.md              # Este guia global
+
 ```
 
-## Arquitetura
+---
 
-O projeto segue uma separação em camadas que facilita manutenção e testes:
+## Telas da Aplicação Mobile
 
-- `presentation`: telas, estados de UI, navegação e ViewModels
-- `domain`: modelos, contratos de repositório e interactors
-- `data`: integração com API, DTOs, mapeadores, interceptors e persistência de sessão
-- `di`: módulos de injeção de dependências com Hilt
-- `ui`: tema e componentes reutilizáveis
+---
 
-## Fluxo principal da aplicação
+## ⚙️ Funcionalidades do Ecossistema
 
-1. O usuário realiza login ou cadastro.
-2. O app valida a sessão e recupera o contexto salvo.
-3. O usuário seleciona ou cria um inventário/ONG.
-4. O inventário é exibido agrupado por tipos de produtos.
-5. A partir daí, é possível adicionar, editar, consultar e remover produtos.
-6. Usuários com permissão adequada podem administrar inventário e colaboradores.
+* **Autenticação Segura:** Cadastro de usuários e login com senhas criptografadas por `BCrypt` e tokens `JWT (HS256)`.
+* **Escopo por Inventário:** Criação, edição e isolamento completo de dados entre inventários/ONGs distintos.
+* **Gestão de Estoque:** Cadastro detalhado de itens com controle de marca, quantidade, datas de validade (lotes) e unidades de medida (`un`, `kg`, `cx`, etc.).
+* **Agrupamento Inteligente:** Separação do inventário por categorias/tipos de produtos para facilitar a triagem em doações.
+* **Controle de Acesso Fino (RBAC):** Adição, edição de papel e exclusão de colaboradores vinculados a um inventário específico diretamente pelo app/API.
 
-## Documentação adicional
+---
 
-- Diagrama de classes: `docs/degsin/diagrama_de_classes.md`
+## ⚡ Ambiente de Desenvolvimento Rápido
+
+A forma mais rápida de rodar o ecossistema completo localmente é utilizando o **Docker Compose** disponível na raiz. O compose irá subir:
+
+* A API do Backend na porta `53919`
+* O Banco PostgreSQL 17
+* O servidor Nginx como proxy reverso
+
+### Passo 1: Subir o Backend + Banco
+
+Na raiz do repositório, execute:
+
+```bash
+# 1. Copie o arquivo de variáveis de ambiente do backend e ajuste se necessário
+cp backend/.env.example backend/.env
+
+# 2. Suba toda a infraestrutura automaticamente
+docker compose up --build
+
+```
+
+Para validar se o backend está respondendo perfeitamente, acesse o endpoint de saúde:
+
+```bash
+curl -i http://localhost:53919/api/v1/health
+
+```
+
+### Passo 2: Configurar e rodar o Mobile
+
+Com o backend rodando localmente na sua máquina:
+
+1. Abra a pasta raiz no **Android Studio**.
+2. Abra ou crie o arquivo `local.properties` (dentro da pasta `mobile/` ou na raiz do projeto, dependendo da configuração do seu Gradle) e adicione a URL que aponta para o host local do emulador:
+```properties
+API_BASE_URL=http://10.0.2.2:8080/api/v1/
+
+```
+
+
+*(Nota: `10.0.2.2` é o endereço padrão que o emulador Android usa para enxergar o `localhost` da máquina hospedeira).*
+3. Sincronize o Gradle e execute o módulo `mobile` no seu dispositivo ou emulador.
+
+---
+
+## Componentes do Ecossistema
+
+### 1. Backend (Server API)
+
+Construído com foco em arquitetura limpa orientada a casos de uso e alta taxa de cobertura de testes.
+
+* **Tecnologias principais:** Java 17, Spring Boot, Spring Security, Spring JDBC, PostgreSQL 17, Maven.
+* **Logs organizados:** O backend gera logs rotacionáveis divididos em `cuscrud-backend.log` (fluxo de infra e rotas) e `cuscrud-backend-application.log` (fluxo exclusivo do domínio de negócio).
+* **Como testar manualmente (Maven):**
+```bash
+cd backend/
+mvn test
+
+```
+
+
+
+> Para detalhes sobre rotas disponíveis da API, payloads do cURL e convenções detalhadas, veja o [README do Backend](https://www.google.com/search?q=./backend/README.md).
+
+### 2. Frontend (Mobile Android)
+
+App construído sob o paradigma reativo e focado em padrões estritos de arquitetura móvel testável (*Clean Architecture* + *MVVM/MVP*).
+
+* **Tecnologias principais:** Kotlin 2.1, Jetpack Compose, Navigation Compose, Hilt (Injeção de dependência), Retrofit + OkHttp, Jetpack DataStore (persistência local de sessão).
+* **Alvos de Build:** `compileSdk = 35`, `minSdk = 21`.
+* **Como rodar a suíte de testes:**
+```bash
+# Na raiz do projeto, execute:
+
+# Testes Unitários de JVM
+./gradlew :mobile:testDebugUnitTest
+
+# Testes Instrumentados e de UI (requer emulador/celular conectado)
+./gradlew :mobile:connectedDebugAndroidTest
+
+```
+
+
+
+> Para detalhes de organização de pastas da arquitetura móvel, veja o [README do Mobile](https://www.google.com/search?q=./mobile/README.md).
+
+---
 
 ## Licença
 
-Este projeto está distribuído sob a licença GNU General Public License v2. Consulte o arquivo `LICENSE` para mais detalhes.
+Este ecossistema completo está distribuído sob a licença **GNU General Public License v2**. Consulte o arquivo `LICENSE` na raiz para mais detalhes e permissões de uso.

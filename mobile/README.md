@@ -1,0 +1,151 @@
+# CusCRUD
+
+## Telas da Aplicação
+<p align="center">
+  <img src="./docs/imagens/selecionar_ong_exemplo.jpeg" width="200" />
+  <img src="./docs/imagens/selecionar_categoria_exemplo.jpeg" width="200" />
+  <img src="./docs/imagens/visualizar_produto_exemplo.jpeg" width="200" />
+</p>
+
+## Funcionalidades principais
+
+- Login e cadastro de usuários
+- Seleção do inventário ativo
+- Criação, edição e remoção de inventários
+- Visualização do inventário agrupado por tipo de produto
+- Cadastro, edição, consulta e remoção de produtos
+- Consulta de detalhes de produto
+- Gerenciamento de colaboradores do inventário
+- Controle de permissões por papel de acesso
+- Persistência segura da sessão do usuário
+
+## Stack e tecnologias
+
+- Kotlin 2.1
+- Android Gradle Plugin 8.7
+- Java 17
+- Jetpack Compose
+- Navigation Compose
+- Hilt para injeção de dependências
+- Retrofit + OkHttp + Kotlinx Serialization
+- DataStore para sessão e preferências
+- JUnit4, MockWebServer, MockK e testes instrumentados Android
+
+## Requisitos
+
+- Android Studio recente com suporte a Kotlin 2.1 e Compose
+- JDK 17
+- Android SDK:
+  - `compileSdk = 35`
+  - `targetSdk = 35`
+  - `minSdk = 21`
+- Emulador Android ou dispositivo físico para executar o app
+- Backend da API disponível para autenticação, inventários, tipos, produtos e acessos
+
+## Configuração do ambiente
+
+O app lê a URL base da API a partir do arquivo `local.properties`, usando a chave `API_BASE_URL`.
+
+Se a chave não estiver definida, o build `debug` usa o valor padrão:
+
+```properties
+http://localhost/api/v1/
+```
+
+Exemplo de configuração no `local.properties`:
+
+```properties
+API_BASE_URL=http://10.0.2.2:8080/api/v1/
+```
+
+Observações:
+
+- Em emulador Android, `10.0.2.2` normalmente aponta para a máquina host.
+- O app está com `usesCleartextTraffic="true"` no manifesto, o que facilita desenvolvimento local com HTTP.
+- No build `release`, a URL base é definida diretamente em `BuildConfig` como `https://api.cuscrud.com/v1/`.
+
+## Como executar
+
+1. Clone o repositório.
+2. Configure a propriedade `API_BASE_URL` no `local.properties`.
+3. Abra o projeto no Android Studio.
+4. Sincronize as dependências do Gradle.
+5. Execute o módulo `app` em um emulador ou dispositivo.
+
+Se preferir usar o terminal:
+
+```bash
+./gradlew assembleDebug
+```
+
+No Windows:
+
+```bat
+gradlew.bat assembleDebug
+```
+
+## Testes
+
+O projeto possui testes unitários e testes instrumentados Android.
+
+Executar testes unitários:
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+Executar testes instrumentados:
+
+```bash
+./gradlew connectedDebugAndroidTest
+```
+
+Há também uma pasta de apoio a testes compartilhados:
+
+- `shared-test/`
+
+## Estrutura do Projeto
+
+O projeto está organizado seguindo os princípios da **Clean Architecture**, o que garante um código desacoplado, testável e de fácil manutenção. Abaixo, descreve-se a responsabilidade de cada diretório:
+
+```text
+CusCRUD/mobile
+├── app/
+│   ├── src/main/java/com/cuscrud/
+│   │   ├── data/           # Camada de Dados: Repositórios, APIs e Persistência
+│   │   ├── domain/         # Camada de Domínio: Regras de negócio e Casos de Uso
+│   │   ├── presentation/   # Camada de Apresentação: ViewModels e Estados da UI
+│   │   ├── ui/             # Camada de UI: Telas (Screens), Componentes e Tema
+│   │   ├── di/             # Injeção de Dependência (Hilt Modules)
+│   │   └── InventarioApp.kt # Classe base da aplicação
+│   ├── src/test/           # Testes Unitários (JVM)
+│   ├── src/androidTest/    # Testes Instrumentados e de UI (Android)
+│   └── src/sharedTest/     # Recursos e utilitários compartilhados entre testes
+├── shared-test/            # Módulo de utilitários de teste (ex: Geradores de Dados)
+├── docs/                   # Documentação do projeto (Gherkin, Diagramas)
+└── gradle/                 # Configurações de build e dependências
+```
+
+## Arquitetura
+
+O projeto segue uma separação em camadas que facilita manutenção e testes:
+
+- `presentation`: telas, estados de UI, navegação e ViewModels
+- `domain`: modelos, contratos de repositório e interactors
+- `data`: integração com API, DTOs, mapeadores, interceptors e persistência de sessão
+- `di`: módulos de injeção de dependências com Hilt
+- `ui`: tema e componentes reutilizáveis
+
+## Fluxo principal da aplicação
+
+1. O usuário realiza login ou cadastro.
+2. O app valida a sessão e recupera o contexto salvo.
+3. O usuário seleciona ou cria um inventário/ONG.
+4. O inventário é exibido agrupado por tipos de produtos.
+5. A partir daí, é possível adicionar, editar, consultar e remover produtos.
+6. Usuários com permissão adequada podem administrar inventário e colaboradores.
+
+## Documentação adicional
+
+- Diagrama de classes: `docs/degsin/diagrama_de_classes.md`
+
