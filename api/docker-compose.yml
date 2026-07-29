@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: cuscrud-backend
+    ports:
+      - "53919:53919"
+    env_file:
+      - .env
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/cuscrud
+      DB_USER: cuscrud_app
+      DB_PASSWORD: ${CUSCRUD_APP_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      LOG_DIR: ${LOG_DIR}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/logs:/app/logs
+
+  db:
+    image: postgres:17
+    container_name: cuscrud-db
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD}
+      CUSCRUD_APP_PASSWORD: ${CUSCRUD_APP_PASSWORD}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  db_data:

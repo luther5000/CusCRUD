@@ -1,0 +1,27 @@
+server:
+  port: ${PORT:53919}
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: cuscrud-backend
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  jackson:
+    time-zone: America/Recife
+
+logging:
+  level:
+    root: WARN
+    br.com.cuscrudrest: ${LOG_LEVEL:INFO}
+
+cuscrud:
+  auth:
+    jwt-secret: ${JWT_SECRET:local-dev-secret-for-cuscrud-backend}
+    jwt-ttl-seconds: 3600
+  database:
+    url: ${DB_URL:}
+    user: ${DB_USER:}
+    password: ${DB_PASSWORD:}
